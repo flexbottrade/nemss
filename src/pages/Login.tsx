@@ -53,25 +53,25 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary flex items-center justify-center p-4">
       <Card className="w-full max-w-md border-border/50 shadow-xl">
-        <CardHeader className="space-y-1">
+        <CardHeader className="space-y-1 p-4 md:p-6">
           <Button
             variant="ghost"
             size="sm"
-            className="w-fit mb-2"
+            className="w-fit mb-2 h-8 text-xs md:text-sm"
             asChild
           >
             <Link to="/">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ArrowLeft className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
               Back
             </Link>
           </Button>
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>Login to your NEMSS09 Set account</CardDescription>
+          <CardTitle className="text-xl md:text-2xl font-bold">Welcome Back</CardTitle>
+          <CardDescription className="text-xs md:text-sm">Login to your NEMSS09 Set account</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number</Label>
+        <CardContent className="p-4 md:p-6 pt-0">
+          <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
+            <div className="space-y-1 md:space-y-2">
+              <Label htmlFor="phoneNumber" className="text-xs md:text-sm">Phone Number</Label>
               <Input
                 id="phoneNumber"
                 placeholder="08030010010"
@@ -81,8 +81,8 @@ const Login = () => {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+            <div className="space-y-1 md:space-y-2">
+              <Label htmlFor="password" className="text-xs md:text-sm">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -103,13 +103,13 @@ const Login = () => {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-primary to-primary-dark hover:opacity-90"
+              className="w-full bg-gradient-to-r from-primary to-primary-dark hover:opacity-90 h-9 md:h-10 text-sm md:text-base"
               disabled={loading}
             >
               {loading ? "Logging in..." : "Login"}
             </Button>
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-xs md:text-sm text-muted-foreground">
               Don't have an account?{" "}
               <Link to="/signup" className="text-primary hover:underline">
                 Sign up

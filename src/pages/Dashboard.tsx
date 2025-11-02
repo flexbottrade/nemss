@@ -81,16 +81,16 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary pb-20 md:pb-8">
       {/* Header */}
-      <header className="bg-gradient-to-r from-primary to-primary-dark text-primary-foreground p-6 rounded-b-3xl shadow-lg">
+      <header className="bg-gradient-to-r from-primary to-primary-dark text-primary-foreground p-4 md:p-6 rounded-b-3xl shadow-lg">
         <div className="container mx-auto">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-2 md:mb-4">
             <div>
-              <h1 className="text-2xl font-bold">
+              <h1 className="text-lg md:text-2xl font-bold">
                 {profile.first_name} {profile.last_name}
               </h1>
-              <p className="text-primary-foreground/80">ID: {profile.member_id}</p>
+              <p className="text-xs md:text-sm text-primary-foreground/80">ID: {profile.member_id}</p>
               {profile.position && (
-                <p className="text-sm bg-accent text-accent-foreground px-2 py-1 rounded-full inline-block mt-1">
+                <p className="text-xs md:text-sm bg-accent text-accent-foreground px-2 py-1 rounded-full inline-block mt-1">
                   {profile.position}
                 </p>
               )}
@@ -99,9 +99,9 @@ const Dashboard = () => {
               variant="ghost"
               size="icon"
               onClick={handleLogout}
-              className="text-primary-foreground hover:bg-primary-foreground/10"
+              className="text-primary-foreground hover:bg-primary-foreground/10 h-8 w-8 md:h-10 md:w-10"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4 md:w-5 md:h-5" />
             </Button>
           </div>
         </div>
@@ -109,54 +109,54 @@ const Dashboard = () => {
 
       {/* Stats Cards */}
       <div className="container mx-auto px-4 -mt-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card className="border-border/50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Total Dues Paid
               </CardTitle>
-              <Wallet className="w-4 h-4 text-primary" />
+              <Wallet className="w-3 h-3 md:w-4 md:h-4 text-primary" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₦{stats.totalDuesPaid.toLocaleString()}</div>
+            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+              <div className="text-lg md:text-2xl font-bold">₦{stats.totalDuesPaid.toLocaleString()}</div>
             </CardContent>
           </Card>
 
           <Card className="border-border/50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Event Contributions
               </CardTitle>
-              <Calendar className="w-4 h-4 text-accent" />
+              <Calendar className="w-3 h-3 md:w-4 md:h-4 text-accent" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₦{stats.totalEventContributions.toLocaleString()}</div>
+            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+              <div className="text-lg md:text-2xl font-bold">₦{stats.totalEventContributions.toLocaleString()}</div>
             </CardContent>
           </Card>
 
           <Card className="border-border/50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Outstanding Dues
               </CardTitle>
-              <TrendingUp className="w-4 h-4 text-destructive" />
+              <TrendingUp className="w-3 h-3 md:w-4 md:h-4 text-destructive" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">
+            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+              <div className="text-lg md:text-2xl font-bold text-destructive">
                 ₦{stats.outstandingDues.toLocaleString()}
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-border/50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Outstanding Events
               </CardTitle>
-              <Calendar className="w-4 h-4 text-destructive" />
+              <Calendar className="w-3 h-3 md:w-4 md:h-4 text-destructive" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">
+            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
+              <div className="text-lg md:text-2xl font-bold text-destructive">
                 ₦{stats.outstandingEvents.toLocaleString()}
               </div>
             </CardContent>
@@ -164,35 +164,35 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mt-6 md:mt-8">
           <Button
-            className="h-24 bg-gradient-to-r from-primary to-primary-dark hover:opacity-90"
+            className="h-16 md:h-24 bg-gradient-to-r from-primary to-primary-dark hover:opacity-90"
             onClick={() => navigate("/payments")}
           >
-            <div className="flex flex-col items-center gap-2">
-              <Wallet className="w-6 h-6" />
-              <span>Pay Dues</span>
+            <div className="flex flex-col items-center gap-1 md:gap-2">
+              <Wallet className="w-4 h-4 md:w-6 md:h-6" />
+              <span className="text-sm md:text-base">Pay Dues</span>
             </div>
           </Button>
 
           <Button
-            className="h-24 bg-gradient-to-r from-accent to-highlight hover:opacity-90"
+            className="h-16 md:h-24 bg-gradient-to-r from-accent to-highlight hover:opacity-90"
             onClick={() => navigate("/events")}
           >
-            <div className="flex flex-col items-center gap-2">
-              <Calendar className="w-6 h-6" />
-              <span>View Events</span>
+            <div className="flex flex-col items-center gap-1 md:gap-2">
+              <Calendar className="w-4 h-4 md:w-6 md:h-6" />
+              <span className="text-sm md:text-base">View Events</span>
             </div>
           </Button>
 
           <Button
             variant="outline"
-            className="h-24 border-border/50"
+            className="h-16 md:h-24 border-border/50"
             onClick={() => navigate("/profile")}
           >
-            <div className="flex flex-col items-center gap-2">
-              <TrendingUp className="w-6 h-6" />
-              <span>Payment Summary</span>
+            <div className="flex flex-col items-center gap-1 md:gap-2">
+              <TrendingUp className="w-4 h-4 md:w-6 md:h-6" />
+              <span className="text-sm md:text-base">Payment Summary</span>
             </div>
           </Button>
         </div>
