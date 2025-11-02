@@ -16,6 +16,7 @@ const Signup = () => {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
+    email: "",
     phoneNumber: "",
     password: "",
     confirmPassword: "",
@@ -34,6 +35,11 @@ const Signup = () => {
       return;
     }
 
+    if (!formData.email || !formData.email.includes('@')) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
     const phoneRegex = /^0\d{10}$/;
     if (!phoneRegex.test(formData.phoneNumber)) {
       toast.error("Phone number must be 11 digits starting with 0");
@@ -49,31 +55,23 @@ const Signup = () => {
       
       const memberId = memberIdData as string;
 
-      // Create auth user
+      // Create auth user with metadata
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: `${formData.phoneNumber}@nemss09.local`,
+        email: formData.email,
         password: formData.password,
+        options: {
+          data: {
+            first_name: formData.firstName,
+            last_name: formData.lastName,
+            phone_number: formData.phoneNumber,
+            member_id: memberId,
+          }
+        }
       });
 
       if (authError) throw authError;
 
       if (authData.user) {
-        // Create profile
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .insert([
-            {
-              id: authData.user.id,
-              first_name: formData.firstName,
-              last_name: formData.lastName,
-              phone_number: formData.phoneNumber,
-              member_id: memberId,
-              role: "member",
-            },
-          ]);
-
-        if (profileError) throw profileError;
-
         toast.success(`Account created successfully! Your Member ID is ${memberId}`);
         navigate("/dashboard");
       }
@@ -125,6 +123,18 @@ const Signup = () => {
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-1 md:space-y-2">
+              <Label htmlFor="email" className="text-xs md:text-sm">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="your.email@example.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+              />
             </div>
 
             <div className="space-y-1 md:space-y-2">

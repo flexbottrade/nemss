@@ -13,7 +13,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    phoneNumber: "",
+    email: "",
     password: "",
   });
 
@@ -23,22 +23,22 @@ const Login = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: `${formData.phoneNumber}@nemss09.local`,
+        email: formData.email,
         password: formData.password,
       });
 
       if (error) throw error;
 
-      // Get user profile to check role
-      const { data: profile } = await supabase
-        .from("profiles")
+      // Get user role to check if admin
+      const { data: roleData } = await supabase
+        .from("user_roles")
         .select("role")
-        .eq("id", data.user.id)
+        .eq("user_id", data.user.id)
         .single();
 
       toast.success("Login successful!");
       
-      if (profile?.role === "admin") {
+      if (roleData?.role === "admin") {
         navigate("/admin");
       } else {
         navigate("/dashboard");
@@ -71,12 +71,13 @@ const Login = () => {
         <CardContent className="p-4 md:p-6 pt-0">
           <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
             <div className="space-y-1 md:space-y-2">
-              <Label htmlFor="phoneNumber" className="text-xs md:text-sm">Phone Number</Label>
+              <Label htmlFor="email" className="text-xs md:text-sm">Email Address</Label>
               <Input
-                id="phoneNumber"
-                placeholder="08030010010"
-                value={formData.phoneNumber}
-                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                id="email"
+                type="email"
+                placeholder="your.email@example.com"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
             </div>
