@@ -108,7 +108,7 @@ const Dashboard = () => {
       </header>
 
       {/* Stats Cards */}
-      <div className="container mx-auto px-4 -mt-8">
+      <div className="container mx-auto px-4 mt-4 md:-mt-8">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <Card className="border-border/50 shadow-md hover:shadow-lg transition-all">
             <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">

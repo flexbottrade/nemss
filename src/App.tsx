@@ -10,6 +10,15 @@ import Dashboard from "./pages/Dashboard";
 import Payments from "./pages/Payments";
 import Events from "./pages/Events";
 import Profile from "./pages/Profile";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import Members from "./pages/admin/Members";
+import Transactions from "./pages/admin/Transactions";
+import PaymentAccounts from "./pages/admin/PaymentAccounts";
+import Finance from "./pages/admin/Finance";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AdminEvents from "./pages/admin/AdminEvents";
+import Elections from "./pages/admin/Elections";
+import Reports from "./pages/admin/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,7 +37,15 @@ const App = () => (
           <Route path="/payments" element={<Payments />} />
           <Route path="/events" element={<Events />} />
           <Route path="/profile" element={<Profile />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/members" element={<Members />} />
+          <Route path="/admin/transactions" element={<Transactions />} />
+          <Route path="/admin/accounts" element={<PaymentAccounts />} />
+          <Route path="/admin/finance" element={<Finance />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/events" element={<AdminEvents />} />
+          <Route path="/admin/elections" element={<Elections />} />
+          <Route path="/admin/reports" element={<Reports />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
