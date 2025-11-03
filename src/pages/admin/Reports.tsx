@@ -236,8 +236,8 @@ const Reports = () => {
       .select("*, event_payments(amount, status, profiles(first_name, last_name))")
       .order("event_date", { ascending: false });
     
-    // Only filter by specific event if selectedEventId has a value
-    if (selectedEventId && selectedEventId.trim() !== "") {
+    // Only filter by specific event if selectedEventId is not empty string
+    if (selectedEventId && selectedEventId !== "") {
       query = query.eq("id", selectedEventId);
     }
     if (startDate) query = query.gte("event_date", startDate);
@@ -320,7 +320,11 @@ const Reports = () => {
   };
 
   if (loading || !isAdmin) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/20 border-t-primary"></div>
+      </div>
+    );
   }
 
   return (

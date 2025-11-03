@@ -116,7 +116,19 @@ const Vote = () => {
         })
       );
 
-      setElections(electionsWithVoteStatus);
+      // Sort elections by position hierarchy
+      const positionOrder = ['President', 'Vice President', 'Secretary', 'Treasurer', 'Financial Secretary', 'PRO', 'Organizing Secretary'];
+      const sortedElections = electionsWithVoteStatus.sort((a, b) => {
+        const aIndex = positionOrder.findIndex(pos => a.position.toLowerCase().includes(pos.toLowerCase()));
+        const bIndex = positionOrder.findIndex(pos => b.position.toLowerCase().includes(pos.toLowerCase()));
+        
+        if (aIndex === -1 && bIndex === -1) return 0;
+        if (aIndex === -1) return 1;
+        if (bIndex === -1) return -1;
+        return aIndex - bIndex;
+      });
+
+      setElections(sortedElections);
     }
     setLoading(false);
   };
@@ -170,8 +182,8 @@ const Vote = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/20 border-t-primary"></div>
       </div>
     );
   }

@@ -73,11 +73,11 @@ const Home = () => {
       </section>
 
       {/* Who We Are */}
-      <section className="bg-secondary py-16 md:py-24">
+      <section className="bg-card py-16 md:py-24">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center space-y-6">
-            <h3 className="text-3xl md:text-4xl font-bold text-foreground">Who We Are</h3>
-            <p className="text-lg text-muted-foreground leading-relaxed">
+            <h3 className="text-3xl md:text-4xl font-bold text-card-foreground">Who We Are</h3>
+            <p className="text-lg text-card-foreground/90 leading-relaxed">
               We are proud alumni of New Era Model Secondary School, Class of 2009 — a family bound by memories, friendship, and a shared commitment to growth and impact. This platform connects us, keeps us informed, and helps us stay united as one family.
             </p>
           </div>
@@ -115,15 +115,15 @@ const Home = () => {
 
       {/* Upcoming Events */}
       {upcomingEvents.length > 0 && (
-        <section className="bg-secondary py-16 md:py-24">
+        <section className="bg-card py-16 md:py-24">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Upcoming Events</h3>
-              <p className="text-muted-foreground">Stay connected and join us at our upcoming gatherings</p>
+              <h3 className="text-3xl md:text-4xl font-bold text-card-foreground mb-4">Upcoming Events</h3>
+              <p className="text-card-foreground/80">Stay connected and join us at our upcoming gatherings</p>
             </div>
             <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
               {upcomingEvents.map((event) => (
-                <Card key={event.id} className="hover:shadow-lg transition-shadow">
+                <Card key={event.id} className="hover:shadow-lg transition-shadow bg-background border-border">
                   <CardContent className="pt-6 space-y-3">
                     <div className="flex items-center gap-2 text-primary">
                       <Calendar className="w-5 h-5" />
@@ -160,7 +160,7 @@ const Home = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-secondary py-12">
+      <footer className="border-t border-border bg-card py-12">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-8 mb-8">
             <div>
@@ -168,22 +168,22 @@ const Home = () => {
                 <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
                   <span className="text-primary-foreground font-bold">N</span>
                 </div>
-                <span className="font-bold text-lg">NEMSS09 Set</span>
+                <span className="font-bold text-lg text-card-foreground">NEMSS09 Set</span>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-card-foreground/70">
                 Building a lasting legacy since 2009
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <h4 className="font-semibold mb-4 text-card-foreground">Quick Links</h4>
               <div className="space-y-2">
-                <Link to="/about" className="block text-sm text-muted-foreground hover:text-primary transition-colors">About</Link>
-                <Link to="/contact" className="block text-sm text-muted-foreground hover:text-primary transition-colors">Contact</Link>
-                <a href="#" className="block text-sm text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a>
+                <Link to="/about" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">About</Link>
+                <Link to="/contact" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">Contact</Link>
+                <a href="#" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">Privacy Policy</a>
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Connect With Us</h4>
+              <h4 className="font-semibold mb-4 text-card-foreground">Connect With Us</h4>
               <div className="flex gap-4">
                 <a href="#" className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
                   <Facebook className="w-5 h-5" />
@@ -199,7 +199,7 @@ const Home = () => {
               </div>
             </div>
           </div>
-          <div className="border-t border-border pt-8 text-center text-sm text-muted-foreground">
+          <div className="border-t border-border pt-8 text-center text-sm text-card-foreground/70">
             <p>&copy; 2025 NEMSS09 Set Association. All rights reserved.</p>
           </div>
         </div>

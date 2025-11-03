@@ -180,7 +180,7 @@ const Contact = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border bg-secondary py-12">
+      <footer className="border-t border-border bg-card py-12">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-8 mb-8">
             <div>
@@ -188,22 +188,22 @@ const Contact = () => {
                 <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
                   <span className="text-primary-foreground font-bold">N</span>
                 </div>
-                <span className="font-bold text-lg">NEMSS09 Set</span>
+                <span className="font-bold text-lg text-card-foreground">NEMSS09 Set</span>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-card-foreground/70">
                 Building a lasting legacy since 2009
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <h4 className="font-semibold mb-4 text-card-foreground">Quick Links</h4>
               <div className="space-y-2">
-                <Link to="/about" className="block text-sm text-muted-foreground hover:text-primary transition-colors">About</Link>
-                <Link to="/contact" className="block text-sm text-muted-foreground hover:text-primary transition-colors">Contact</Link>
-                <a href="#" className="block text-sm text-muted-foreground hover:text-primary transition-colors">Privacy Policy</a>
+                <Link to="/about" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">About</Link>
+                <Link to="/contact" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">Contact</Link>
+                <a href="#" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">Privacy Policy</a>
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Connect With Us</h4>
+              <h4 className="font-semibold mb-4 text-card-foreground">Connect With Us</h4>
               <div className="flex gap-4">
                 <a href="#" className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors">
                   <Facebook className="w-5 h-5" />
@@ -219,7 +219,7 @@ const Contact = () => {
               </div>
             </div>
           </div>
-          <div className="border-t border-border pt-8 text-center text-sm text-muted-foreground space-y-2">
+          <div className="border-t border-border pt-8 text-center text-sm text-card-foreground/70 space-y-2">
             <p>&copy; 2025 NEMSS09 Set Association. All rights reserved.</p>
             <p className="text-xs">
               Built by <a href="https://lotechdgs.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Lotech Digitals</a>
