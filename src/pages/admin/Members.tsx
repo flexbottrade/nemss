@@ -13,6 +13,7 @@ const Members = () => {
   const { isAdmin, loading } = useRole();
   const [members, setMembers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [membersWithOwing, setMembersWithOwing] = useState<any[]>([]);
 
   useEffect(() => {
     if (!loading && !isAdmin) {
@@ -39,9 +40,48 @@ const Members = () => {
     }
 
     setMembers(data || []);
+
+    // Calculate owing status
+    const { data: settings } = await supabase.from("settings").select("monthly_dues_amount").single();
+    const monthlyDues = settings?.monthly_dues_amount || 3000;
+
+    const { data: duesPayments } = await supabase
+      .from("dues_payments")
+      .select("*")
+      .eq("status", "approved");
+
+    const { data: eventPayments } = await supabase
+      .from("event_payments")
+      .select("*, events(amount)")
+      .eq("status", "approved");
+
+    const membersData = data?.map(member => {
+      const memberDues = duesPayments?.filter(p => p.user_id === member.id) || [];
+      const totalDuesPaid = memberDues.reduce((sum, p) => sum + Number(p.amount), 0);
+      
+      const monthsSinceJoin = Math.floor(
+        (new Date().getTime() - new Date(member.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)
+      );
+      const expectedDues = monthsSinceJoin * monthlyDues;
+      const duesOwing = expectedDues - totalDuesPaid;
+
+      const memberEvents = eventPayments?.filter(p => p.user_id === member.id) || [];
+      const totalEventsPaid = memberEvents.reduce((sum, p) => sum + Number(p.amount), 0);
+      const totalEventsExpected = memberEvents.reduce((sum, p) => sum + Number(p.events?.amount || 0), 0);
+      const eventsOwing = totalEventsExpected - totalEventsPaid;
+
+      return {
+        ...member,
+        duesOwing: duesOwing > 0 ? duesOwing : 0,
+        eventsOwing: eventsOwing > 0 ? eventsOwing : 0,
+        totalOwing: (duesOwing > 0 ? duesOwing : 0) + (eventsOwing > 0 ? eventsOwing : 0)
+      };
+    }) || [];
+
+    setMembersWithOwing(membersData);
   };
 
-  const filteredMembers = members.filter(
+  const filteredMembers = membersWithOwing.filter(
     (m) =>
       m.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -100,6 +140,31 @@ const Members = () => {
                     <p className="text-xs text-muted-foreground">
                       Joined: {new Date(member.created_at).toLocaleDateString()}
                     </p>
+                    
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="font-medium mb-2">Financial Status:</p>
+                      {member.totalOwing > 0 ? (
+                        <div className="space-y-1">
+                          {member.duesOwing > 0 && (
+                            <p className="text-red-600 dark:text-red-400">
+                              <span className="font-medium">Dues Owing:</span> ₦{member.duesOwing.toLocaleString()}
+                            </p>
+                          )}
+                          {member.eventsOwing > 0 && (
+                            <p className="text-orange-600 dark:text-orange-400">
+                              <span className="font-medium">Events Owing:</span> ₦{member.eventsOwing.toLocaleString()}
+                            </p>
+                          )}
+                          <p className="font-bold text-red-600 dark:text-red-400">
+                            Total Owing: ₦{member.totalOwing.toLocaleString()}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-green-600 dark:text-green-400 font-medium">
+                          ✓ Up-to-date
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>

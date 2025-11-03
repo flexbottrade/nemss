@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -18,21 +19,48 @@ const Reports = () => {
   const [reportType, setReportType] = useState("");
   const [memberFilter, setMemberFilter] = useState("all");
   const [generating, setGenerating] = useState(false);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState("");
+  const [events, setEvents] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadEvents = async () => {
+      const { data } = await supabase.from("events").select("*").order("event_date", { ascending: false });
+      setEvents(data || []);
+    };
+    loadEvents();
+  }, []);
 
   const generateFinanceReport = async () => {
-    const { data: duesPayments } = await supabase
+    let duesQuery = supabase
       .from("dues_payments")
       .select("*, profiles(first_name, last_name, member_id)")
       .eq("status", "approved");
+    
+    if (startDate) duesQuery = duesQuery.gte("created_at", startDate);
+    if (endDate) duesQuery = duesQuery.lte("created_at", endDate);
+    
+    const { data: duesPayments } = await duesQuery;
 
-    const { data: eventPayments } = await supabase
+    let eventQuery = supabase
       .from("event_payments")
       .select("*, profiles(first_name, last_name, member_id), events(title)")
       .eq("status", "approved");
+    
+    if (startDate) eventQuery = eventQuery.gte("created_at", startDate);
+    if (endDate) eventQuery = eventQuery.lte("created_at", endDate);
+    
+    const { data: eventPayments } = await eventQuery;
 
-    const { data: adjustments } = await supabase
+    let adjustmentQuery = supabase
       .from("finance_adjustments")
       .select("*, profiles(first_name, last_name)");
+    
+    if (startDate) adjustmentQuery = adjustmentQuery.gte("created_at", startDate);
+    if (endDate) adjustmentQuery = adjustmentQuery.lte("created_at", endDate);
+    
+    const { data: adjustments } = await adjustmentQuery;
 
     const doc = new jsPDF();
     
@@ -40,6 +68,10 @@ const Reports = () => {
     doc.text("NEMSS09 Set - Finance Report", 14, 20);
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    if (startDate || endDate) {
+      const period = `Period: ${startDate ? new Date(startDate).toLocaleDateString() : 'Start'} - ${endDate ? new Date(endDate).toLocaleDateString() : 'Now'}`;
+      doc.text(period, 14, 34);
+    }
 
     // Summary
     const totalDues = duesPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
@@ -148,10 +180,15 @@ const Reports = () => {
   };
 
   const generateDuesReport = async () => {
-    const { data: payments } = await supabase
+    let query = supabase
       .from("dues_payments")
       .select("*, profiles(first_name, last_name, member_id)")
       .order("created_at", { ascending: false });
+    
+    if (startDate) query = query.gte("created_at", startDate);
+    if (endDate) query = query.lte("created_at", endDate);
+    
+    const { data: payments } = await query;
 
     const doc = new jsPDF();
     
@@ -159,6 +196,10 @@ const Reports = () => {
     doc.text("NEMSS09 Set - Dues Payment Report", 14, 20);
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    if (startDate || endDate) {
+      const period = `Period: ${startDate ? new Date(startDate).toLocaleDateString() : 'Start'} - ${endDate ? new Date(endDate).toLocaleDateString() : 'Now'}`;
+      doc.text(period, 14, 34);
+    }
 
     const pending = payments?.filter(p => p.status === "pending").length || 0;
     const approved = payments?.filter(p => p.status === "approved").length || 0;
@@ -190,10 +231,18 @@ const Reports = () => {
   };
 
   const generateEventReport = async () => {
-    const { data: events } = await supabase
+    let query = supabase
       .from("events")
       .select("*, event_payments(amount, status, profiles(first_name, last_name))")
       .order("event_date", { ascending: false });
+    
+    if (selectedEventId) {
+      query = query.eq("id", selectedEventId);
+    }
+    if (startDate) query = query.gte("event_date", startDate);
+    if (endDate) query = query.lte("event_date", endDate);
+    
+    const { data: events } = await query;
 
     const doc = new jsPDF();
     
@@ -201,6 +250,10 @@ const Reports = () => {
     doc.text("NEMSS09 Set - Events Report", 14, 20);
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    if (startDate || endDate) {
+      const period = `Period: ${startDate ? new Date(startDate).toLocaleDateString() : 'Start'} - ${endDate ? new Date(endDate).toLocaleDateString() : 'Now'}`;
+      doc.text(period, 14, 34);
+    }
 
     let yPos = 38;
 
@@ -306,6 +359,48 @@ const Reports = () => {
                       <SelectItem value="all">All Members</SelectItem>
                       <SelectItem value="uptodate">Up-to-date Members</SelectItem>
                       <SelectItem value="owing">Owing Members</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {(reportType === "finance" || reportType === "dues" || reportType === "events") && (
+                <>
+                  <div>
+                    <Label className="text-xs md:text-sm">Start Date (Optional)</Label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="text-xs md:text-sm h-8 md:h-10"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs md:text-sm">End Date (Optional)</Label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="text-xs md:text-sm h-8 md:h-10"
+                    />
+                  </div>
+                </>
+              )}
+
+              {reportType === "events" && (
+                <div>
+                  <Label className="text-xs md:text-sm">Select Event (Optional)</Label>
+                  <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                    <SelectTrigger className="text-xs md:text-sm h-8 md:h-10">
+                      <SelectValue placeholder="All events" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Events</SelectItem>
+                      {events.map((event) => (
+                        <SelectItem key={event.id} value={event.id}>
+                          {event.title}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
