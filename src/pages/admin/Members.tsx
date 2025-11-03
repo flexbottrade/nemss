@@ -81,7 +81,38 @@ const Members = () => {
     setMembersWithOwing(membersData);
   };
 
-  const filteredMembers = membersWithOwing.filter(
+  // Sort members: positions first (in hierarchy order), then alphabetically by first name
+  const positionHierarchy = [
+    "Admin",
+    "President", 
+    "Vice President",
+    "Treasurer",
+    "Financial Secretary",
+    "Provost",
+    "General Secretary",
+    "Social Director"
+  ];
+
+  const sortedMembers = [...membersWithOwing].sort((a, b) => {
+    // If both have positions, sort by hierarchy
+    if (a.position && b.position) {
+      const aIndex = positionHierarchy.indexOf(a.position);
+      const bIndex = positionHierarchy.indexOf(b.position);
+      if (aIndex !== -1 && bIndex !== -1) {
+        return aIndex - bIndex;
+      }
+      if (aIndex !== -1) return -1;
+      if (bIndex !== -1) return 1;
+      return a.position.localeCompare(b.position);
+    }
+    // Position holders come first
+    if (a.position && !b.position) return -1;
+    if (!a.position && b.position) return 1;
+    // Both have no position, sort alphabetically by first name
+    return a.first_name.localeCompare(b.first_name);
+  });
+
+  const filteredMembers = sortedMembers.filter(
     (m) =>
       m.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       m.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||

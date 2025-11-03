@@ -236,13 +236,18 @@ const Reports = () => {
       .select("*, event_payments(amount, status, profiles(first_name, last_name))")
       .order("event_date", { ascending: false });
     
-    if (selectedEventId) {
+    if (selectedEventId && selectedEventId !== "") {
       query = query.eq("id", selectedEventId);
     }
     if (startDate) query = query.gte("event_date", startDate);
     if (endDate) query = query.lte("event_date", endDate);
     
     const { data: events } = await query;
+
+    if (!events || events.length === 0) {
+      toast.error("No events found for the selected criteria");
+      return;
+    }
 
     const doc = new jsPDF();
     

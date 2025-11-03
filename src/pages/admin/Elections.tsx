@@ -57,6 +57,26 @@ const Elections = () => {
   useEffect(() => {
     if (isAdmin) {
       loadData();
+      
+      // Set up real-time subscription for vote updates
+      const channel = supabase
+        .channel('election-votes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'votes'
+          },
+          () => {
+            loadData();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [isAdmin]);
 
@@ -71,7 +91,23 @@ const Elections = () => {
       .select("*")
       .order("first_name");
 
-    setElections(electionsData || []);
+    // Check for elections past deadline and auto-end them
+    if (electionsData) {
+      const now = new Date();
+      for (const election of electionsData) {
+        if (election.status === "active" && new Date(election.deadline) < now) {
+          await handleEndElection(election.id, true);
+        }
+      }
+    }
+
+    // Reload data after auto-ending elections
+    const { data: updatedElections } = await supabase
+      .from("elections")
+      .select("*, election_nominees(*, profiles(first_name, last_name, member_id))")
+      .order("created_at", { ascending: false });
+
+    setElections(updatedElections || []);
     setMembers(membersData || []);
   };
 
@@ -80,6 +116,12 @@ const Elections = () => {
       toast.error("Please fill all fields and select at least one nominee");
       return;
     }
+
+    // Clear position from any previous holders of this position
+    await supabase
+      .from("profiles")
+      .update({ position: null })
+      .eq("position", formData.position);
 
     const { data: election, error: electionError } = await supabase
       .from("elections")
@@ -92,7 +134,8 @@ const Elections = () => {
       .single();
 
     if (electionError || !election) {
-      toast.error("Failed to create election");
+      console.error("Election creation error:", electionError);
+      toast.error("Failed to create election: " + electionError.message);
       return;
     }
 
@@ -104,7 +147,8 @@ const Elections = () => {
     const { error: nomineesError } = await supabase.from("election_nominees").insert(nominees);
 
     if (nomineesError) {
-      toast.error("Failed to add nominees");
+      console.error("Nominees error:", nomineesError);
+      toast.error("Failed to add nominees: " + nomineesError.message);
       return;
     }
 
@@ -115,8 +159,8 @@ const Elections = () => {
     loadData();
   };
 
-  const handleEndElection = async (electionId: string) => {
-    if (!confirm("End this election and declare winner?")) return;
+  const handleEndElection = async (electionId: string, auto = false) => {
+    if (!auto && !confirm("End this election and declare winner?")) return;
 
     const { data: nominees } = await supabase
       .from("election_nominees")
@@ -135,15 +179,25 @@ const Elections = () => {
 
     await supabase.from("elections").update({ status: "closed" }).eq("id", electionId);
 
-    if (election && winner.profiles) {
+    if (election && winner.profiles && winner.votes_count > 0) {
+      // Clear position from any previous holder
+      await supabase
+        .from("profiles")
+        .update({ position: null })
+        .eq("position", election.position)
+        .neq("id", winner.profiles.id);
+
+      // Assign position to winner
       await supabase
         .from("profiles")
         .update({ position: election.position })
         .eq("id", winner.profiles.id);
     }
 
-    toast.success("Election ended and winner declared");
-    loadData();
+    if (!auto) {
+      toast.success("Election ended and winner declared");
+      loadData();
+    }
   };
 
   if (loading || !isAdmin) {
@@ -165,56 +219,109 @@ const Elections = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-            {elections.map((election) => (
-              <Card key={election.id}>
-                <CardHeader className="p-3 md:p-6">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-sm md:text-lg">{election.position}</CardTitle>
-                    <span
-                      className={`text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded ${
-                        election.status === "active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {election.status}
-                  </span>
-                </div>
-                <p className="text-xs md:text-sm text-muted-foreground">
-                  Deadline: {new Date(election.deadline).toLocaleString()}
-                </p>
-              </CardHeader>
-              <CardContent className="p-3 md:p-6 pt-0">
-                <div className="space-y-2 md:space-y-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Users className="w-3 h-3 md:w-4 md:h-4" />
-                    <span className="text-xs md:text-sm font-medium">Nominees:</span>
-                  </div>
-                  {election.election_nominees?.map((nominee: any) => (
-                    <div
-                      key={nominee.id}
-                      className="flex justify-between items-center p-1.5 md:p-2 bg-muted rounded"
-                    >
-                      <span className="text-xs md:text-sm">
-                        {nominee.profiles?.first_name} {nominee.profiles?.last_name}
+            {elections.map((election) => {
+              const isPastDeadline = new Date(election.deadline) < new Date();
+              const sortedNominees = [...(election.election_nominees || [])].sort(
+                (a, b) => (b.votes_count || 0) - (a.votes_count || 0)
+              );
+              const winner = election.status === "closed" && sortedNominees[0];
+              const totalVotes = sortedNominees.reduce((sum, n) => sum + (n.votes_count || 0), 0);
+
+              return (
+                <Card key={election.id}>
+                  <CardHeader className="p-3 md:p-6">
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-sm md:text-lg">{election.position}</CardTitle>
+                      <span
+                        className={`text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded ${
+                          election.status === "active"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {election.status}
                       </span>
-                      <span className="font-bold text-xs md:text-base">{nominee.votes_count || 0} votes</span>
                     </div>
-                  ))}
-                  {election.status === "active" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full mt-3 md:mt-4 text-xs h-7 md:h-9"
-                      onClick={() => handleEndElection(election.id)}
-                    >
-                      End Election
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    <p className="text-xs md:text-sm text-muted-foreground">
+                      Deadline: {new Date(election.deadline).toLocaleString()}
+                      {isPastDeadline && election.status === "active" && (
+                        <span className="text-red-600 ml-2">(Expired)</span>
+                      )}
+                    </p>
+                  </CardHeader>
+                  <CardContent className="p-3 md:p-6 pt-0">
+                    <div className="space-y-2 md:space-y-3">
+                      {election.status === "closed" && winner && (
+                        <div className="bg-primary/10 border border-primary p-2 md:p-3 rounded-lg mb-3">
+                          <p className="text-xs md:text-sm font-semibold text-primary mb-1">🏆 Winner</p>
+                          <p className="text-sm md:text-base font-bold">
+                            {winner.profiles?.first_name} {winner.profiles?.last_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {winner.votes_count || 0} votes ({totalVotes > 0 ? Math.round(((winner.votes_count || 0) / totalVotes) * 100) : 0}%)
+                          </p>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users className="w-3 h-3 md:w-4 md:h-4" />
+                        <span className="text-xs md:text-sm font-medium">
+                          {election.status === "closed" ? "Final Results:" : "Live Vote Count:"}
+                        </span>
+                        <span className="text-xs text-muted-foreground ml-auto">
+                          Total: {totalVotes} votes
+                        </span>
+                      </div>
+                      {sortedNominees?.map((nominee: any, index: number) => {
+                        const voteCount = nominee.votes_count || 0;
+                        const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+                        const isWinner = election.status === "closed" && index === 0;
+                        
+                        return (
+                          <div
+                            key={nominee.id}
+                            className={`flex flex-col p-1.5 md:p-2 rounded ${
+                              isWinner ? "bg-primary/5 border border-primary" : "bg-muted"
+                            }`}
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="text-xs md:text-sm">
+                                {isWinner && "👑 "}
+                                {nominee.profiles?.first_name} {nominee.profiles?.last_name}
+                              </span>
+                              <span className="font-bold text-xs md:text-base">
+                                {voteCount} votes
+                              </span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                              <div
+                                className={`h-1.5 rounded-full ${
+                                  isWinner ? "bg-primary" : "bg-gray-400"
+                                }`}
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground mt-0.5">
+                              {percentage}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                      {election.status === "active" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full mt-3 md:mt-4 text-xs h-7 md:h-9"
+                          onClick={() => handleEndElection(election.id, false)}
+                        >
+                          End Election Now
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
 
           {elections.length === 0 && (

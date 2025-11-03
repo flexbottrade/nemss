@@ -104,16 +104,21 @@ const Finance = () => {
     }
 
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      toast.error("User not authenticated");
+      return;
+    }
 
     const { error } = await supabase.from("finance_adjustments").insert({
-      ...formData,
+      adjustment_type: formData.adjustment_type,
       amount: parseFloat(formData.amount),
+      reason: formData.reason,
       created_by: user.id,
     });
 
     if (error) {
-      toast.error("Failed to add adjustment");
+      console.error("Finance adjustment error:", error);
+      toast.error("Failed to add adjustment: " + error.message);
       return;
     }
 
