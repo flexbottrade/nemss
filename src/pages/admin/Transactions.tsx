@@ -122,26 +122,22 @@ const Transactions = () => {
                 View Proof
               </Button>
             )}
-            {payment.status === "pending" && (
-              <>
-                <Button
-                  size="sm"
-                  variant="default"
-                  onClick={() => setSelectedPayment({ ...payment, type })}
-                >
-                  <Check className="w-4 h-4 mr-1" />
-                  Approve
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => handleUpdatePayment(payment.id, "rejected", type)}
-                >
-                  <X className="w-4 h-4 mr-1" />
-                  Reject
-                </Button>
-              </>
-            )}
+            <Button
+              size="sm"
+              variant={payment.status === "approved" ? "secondary" : "default"}
+              onClick={() => setSelectedPayment({ ...payment, type, action: "approved" })}
+            >
+              <Check className="w-4 h-4 mr-1" />
+              {payment.status === "approved" ? "Approved" : "Approve"}
+            </Button>
+            <Button
+              size="sm"
+              variant={payment.status === "rejected" ? "secondary" : "destructive"}
+              onClick={() => setSelectedPayment({ ...payment, type, action: "rejected" })}
+            >
+              <X className="w-4 h-4 mr-1" />
+              {payment.status === "rejected" ? "Rejected" : "Reject"}
+            </Button>
           </div>
         </div>
       </CardContent>
@@ -184,8 +180,10 @@ const Transactions = () => {
           <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Approve Payment</DialogTitle>
-              <DialogDescription>Add an optional note before approving</DialogDescription>
+              <DialogTitle>
+                {selectedPayment?.action === "approved" ? "Approve" : "Reject"} Payment
+              </DialogTitle>
+              <DialogDescription>Add an optional note before updating status</DialogDescription>
             </DialogHeader>
             <Textarea
               placeholder="Admin note (optional)"
@@ -196,10 +194,11 @@ const Transactions = () => {
               <Button
                 onClick={() =>
                   selectedPayment &&
-                  handleUpdatePayment(selectedPayment.id, "approved", selectedPayment.type)
+                  handleUpdatePayment(selectedPayment.id, selectedPayment.action, selectedPayment.type)
                 }
+                variant={selectedPayment?.action === "rejected" ? "destructive" : "default"}
               >
-                Confirm Approval
+                Confirm {selectedPayment?.action === "approved" ? "Approval" : "Rejection"}
               </Button>
               <Button variant="outline" onClick={() => setSelectedPayment(null)}>
                 Cancel

@@ -131,26 +131,30 @@ const Events = () => {
     }
   };
 
+  const hasPaidForEvent = (eventId: string) => {
+    return payments.some(p => p.event_id === eventId && p.status === "approved");
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-primary">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-accent/20 border-t-accent"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-primary pb-20 md:pb-8">
-      <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
+      <div className="container mx-auto px-4 py-4 md:py-6">
         {/* Header */}
-        <div className="mb-6 text-white">
+        <div className="mb-4 md:mb-6">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-primary" />
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent flex items-center justify-center">
+              <Calendar className="w-5 h-5 md:w-6 md:h-6 text-accent-foreground" />
             </div>
-            <h1 className="text-3xl font-bold">Events</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Events</h1>
           </div>
-          <p className="text-white/80">View events and submit payments</p>
+          <p className="text-sm md:text-base text-muted-foreground">View events and submit payments</p>
         </div>
 
         {/* Upcoming Events */}
@@ -283,8 +287,13 @@ const Events = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {events.map((event) => (
-                      <SelectItem key={event.id} value={event.id}>
+                      <SelectItem 
+                        key={event.id} 
+                        value={event.id}
+                        disabled={hasPaidForEvent(event.id)}
+                      >
                         {event.title} - ₦{Number(event.amount).toLocaleString()}
+                        {hasPaidForEvent(event.id) && " (Already Paid)"}
                       </SelectItem>
                     ))}
                   </SelectContent>

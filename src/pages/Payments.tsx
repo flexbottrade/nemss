@@ -7,10 +7,11 @@ import { CreditCard, Upload, CheckCircle, XCircle, Clock, DollarSign, Calendar, 
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Spinner } from "@/components/ui/spinner";
 
 const Payments = () => {
   const navigate = useNavigate();
@@ -20,10 +21,10 @@ const Payments = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [paidMonths, setPaidMonths] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
-    start_month: new Date().getMonth() + 1,
-    start_year: new Date().getFullYear(),
-    months_paid: 1,
+    year: 2026,
+    selectedMonths: [] as number[],
     proof: null as File | null,
   });
 
@@ -54,6 +55,19 @@ const Payments = () => {
       .order("created_at", { ascending: false });
     setPayments(paymentsData || []);
 
+    // Build set of paid months (approved only)
+    const paid = new Set<string>();
+    paymentsData?.forEach((payment) => {
+      if (payment.status === "approved") {
+        for (let i = 0; i < payment.months_paid; i++) {
+          const month = ((payment.start_month - 1 + i) % 12) + 1;
+          const year = payment.start_year + Math.floor((payment.start_month - 1 + i) / 12);
+          paid.add(`${year}-${month}`);
+        }
+      }
+    });
+    setPaidMonths(paid);
+
     const { data: accountsData } = await supabase
       .from("payment_accounts")
       .select("*")
@@ -64,6 +78,10 @@ const Payments = () => {
   };
 
   const handleSubmitPayment = async () => {
+    if (formData.selectedMonths.length === 0) {
+      toast.error("Please select at least one month");
+      return;
+    }
     if (!formData.proof) {
       toast.error("Please upload payment proof");
       return;
@@ -85,13 +103,14 @@ const Payments = () => {
         .from("payment-proofs")
         .getPublicUrl(fileName);
 
-      const amount = monthlyDues * formData.months_paid;
+      const sortedMonths = [...formData.selectedMonths].sort((a, b) => a - b);
+      const amount = monthlyDues * sortedMonths.length;
       
       const { error } = await supabase.from("dues_payments").insert({
         user_id: user.id,
-        start_month: formData.start_month,
-        start_year: formData.start_year,
-        months_paid: formData.months_paid,
+        start_month: sortedMonths[0],
+        start_year: formData.year,
+        months_paid: sortedMonths.length,
         amount,
         payment_proof_url: publicUrl,
         status: "pending",
@@ -102,9 +121,8 @@ const Payments = () => {
       toast.success("Payment submitted successfully");
       setIsDialogOpen(false);
       setFormData({
-        start_month: new Date().getMonth() + 1,
-        start_year: new Date().getFullYear(),
-        months_paid: 1,
+        year: 2026,
+        selectedMonths: [],
         proof: null,
       });
       loadData();
@@ -114,6 +132,24 @@ const Payments = () => {
       setUploading(false);
     }
   };
+
+  const toggleMonth = (month: number) => {
+    const key = `${formData.year}-${month}`;
+    if (paidMonths.has(key)) return;
+    
+    setFormData(prev => ({
+      ...prev,
+      selectedMonths: prev.selectedMonths.includes(month)
+        ? prev.selectedMonths.filter(m => m !== month)
+        : [...prev.selectedMonths, month]
+    }));
+  };
+
+  const currentYear = new Date().getFullYear();
+  const availableYears = Array.from(
+    { length: currentYear - 2026 + 1 },
+    (_, i) => 2026 + i
+  );
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -132,55 +168,53 @@ const Payments = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-primary">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
-      </div>
-    );
+    return <Spinner />;
   }
 
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
   return (
-    <div className="min-h-screen bg-primary pb-20 md:pb-8">
-      <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
+      <div className="container mx-auto px-4 py-4 md:py-6">
         {/* Header */}
-        <div className="mb-6 text-white">
+        <div className="mb-4 md:mb-6">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center">
-              <CreditCard className="w-6 h-6 text-primary" />
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent flex items-center justify-center">
+              <CreditCard className="w-5 h-5 md:w-6 md:h-6 text-accent-foreground" />
             </div>
-            <h1 className="text-3xl font-bold">Monthly Dues</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Monthly Dues</h1>
           </div>
-          <p className="text-white/80">Manage your monthly dues payments</p>
+          <p className="text-sm md:text-base text-muted-foreground">Manage your monthly dues payments</p>
         </div>
 
         {/* Dues Amount Card */}
-        <Card className="mb-6 border-accent/20 bg-white/95 backdrop-blur shadow-lg">
-          <CardContent className="p-6">
+        <Card className="mb-4 md:mb-6 bg-card border-border">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Monthly Dues Amount</p>
-                <p className="text-3xl font-bold text-primary">₦{monthlyDues.toLocaleString()}</p>
+                <p className="text-xs md:text-sm text-card-foreground/70 mb-1">Monthly Dues Amount</p>
+                <p className="text-2xl md:text-3xl font-bold text-accent">₦{monthlyDues.toLocaleString()}</p>
               </div>
-              <DollarSign className="w-12 h-12 text-accent" />
+              <DollarSign className="w-10 h-10 md:w-12 md:h-12 text-accent" />
             </div>
           </CardContent>
         </Card>
 
         {/* Payment Accounts */}
         {accounts.length > 0 && (
-          <Card className="mb-6 border-accent/20 bg-white/95 backdrop-blur shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-accent" />
+          <Card className="mb-4 md:mb-6 bg-card border-border">
+            <CardHeader className="p-4 md:p-6">
+              <CardTitle className="flex items-center gap-2 text-card-foreground text-base md:text-lg">
+                <FileText className="w-4 h-4 md:w-5 md:h-5 text-accent" />
                 Payment Accounts
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2 md:space-y-3 p-4 md:p-6 pt-0">
               {accounts.map((account) => (
-                <div key={account.id} className="p-4 rounded-lg bg-secondary/50 border border-accent/10">
-                  <p className="font-semibold text-primary">{account.account_name}</p>
-                  <p className="text-sm text-muted-foreground">{account.bank_name}</p>
-                  <p className="text-lg font-mono font-bold text-accent mt-1">{account.account_number}</p>
+                <div key={account.id} className="p-3 md:p-4 rounded-lg bg-background border border-border">
+                  <p className="font-semibold text-card-foreground text-sm md:text-base">{account.account_name}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">{account.bank_name}</p>
+                  <p className="text-base md:text-lg font-mono font-bold text-accent mt-1">{account.account_number}</p>
                 </div>
               ))}
             </CardContent>
@@ -190,51 +224,51 @@ const Payments = () => {
         {/* Submit Payment Button */}
         <Button
           onClick={() => setIsDialogOpen(true)}
-          className="w-full mb-6 h-12 text-base bg-accent hover:bg-accent/90 text-primary font-semibold shadow-lg"
+          className="w-full mb-4 md:mb-6 h-10 md:h-12 text-sm md:text-base"
         >
-          <Upload className="w-5 h-5 mr-2" />
+          <Upload className="w-4 h-4 md:w-5 md:h-5 mr-2" />
           Submit Payment
         </Button>
 
         {/* Payment History */}
-        <Card className="border-accent/20 bg-white/95 backdrop-blur shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-accent" />
+        <Card className="bg-card border-border">
+          <CardHeader className="p-4 md:p-6">
+            <CardTitle className="flex items-center gap-2 text-card-foreground text-base md:text-lg">
+              <Calendar className="w-4 h-4 md:w-5 md:h-5 text-accent" />
               Payment History
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 md:p-6 pt-0">
             {payments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No payments yet</p>
+              <p className="text-center text-muted-foreground py-8 text-sm md:text-base">No payments yet</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 {payments.map((payment) => (
-                  <div key={payment.id} className="p-4 rounded-lg border border-border bg-card">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <p className="font-semibold text-primary">
-                          {payment.start_month}/{payment.start_year}
+                  <div key={payment.id} className="p-3 md:p-4 rounded-lg border border-border bg-background">
+                    <div className="flex items-start justify-between mb-2 gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-card-foreground text-sm md:text-base">
+                          {monthNames[payment.start_month - 1]} {payment.start_year}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs md:text-sm text-muted-foreground">
                           {payment.months_paid} month{payment.months_paid > 1 ? "s" : ""}
                         </p>
                       </div>
                       <Badge className={getStatusColor(payment.status)}>
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 text-xs">
                           {getStatusIcon(payment.status)}
                           {payment.status}
                         </span>
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
-                      <p className="text-xl font-bold text-accent">₦{Number(payment.amount).toLocaleString()}</p>
+                      <p className="text-lg md:text-xl font-bold text-accent">₦{Number(payment.amount).toLocaleString()}</p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(payment.created_at).toLocaleDateString()}
                       </p>
                     </div>
                     {payment.admin_note && (
-                      <div className="mt-2 p-2 bg-muted rounded text-xs">
+                      <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
                         <span className="font-semibold">Note: </span>
                         {payment.admin_note}
                       </div>
@@ -248,75 +282,99 @@ const Payments = () => {
 
         {/* Submit Payment Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Submit Payment</DialogTitle>
-              <DialogDescription>Upload proof of payment for verification</DialogDescription>
+              <DialogDescription>Select year and months, then upload proof of payment</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Start Month</Label>
-                  <Select
-                    value={formData.start_month.toString()}
-                    onValueChange={(value) => setFormData({ ...formData, start_month: parseInt(value) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                        <SelectItem key={month} value={month.toString()}>
-                          {new Date(2000, month - 1).toLocaleString('default', { month: 'long' })}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Year</Label>
-                  <Select
-                    value={formData.start_year.toString()}
-                    onValueChange={(value) => setFormData({ ...formData, start_year: parseInt(value) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
               <div>
-                <Label>Months to Pay</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  max="12"
-                  value={formData.months_paid}
-                  onChange={(e) => setFormData({ ...formData, months_paid: parseInt(e.target.value) || 1 })}
-                />
+                <Label>Select Year</Label>
+                <Select
+                  value={formData.year.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, year: parseInt(value), selectedMonths: [] })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="p-3 bg-accent/10 rounded-lg">
-                <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="text-2xl font-bold text-primary">₦{(monthlyDues * formData.months_paid).toLocaleString()}</p>
-              </div>
+
               <div>
-                <Label>Payment Proof</Label>
-                <Input
+                <Label className="mb-3 block">Select Months to Pay</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {monthNames.map((month, index) => {
+                    const monthNum = index + 1;
+                    const key = `${formData.year}-${monthNum}`;
+                    const isPaid = paidMonths.has(key);
+                    const isSelected = formData.selectedMonths.includes(monthNum);
+                    
+                    return (
+                      <div
+                        key={monthNum}
+                        className={`flex items-center space-x-2 p-2 rounded border ${
+                          isPaid
+                            ? "bg-muted/50 border-muted cursor-not-allowed opacity-50"
+                            : isSelected
+                            ? "bg-accent/10 border-accent"
+                            : "border-border hover:border-accent/50 cursor-pointer"
+                        }`}
+                        onClick={() => !isPaid && toggleMonth(monthNum)}
+                      >
+                        <Checkbox
+                          id={`month-${monthNum}`}
+                          checked={isSelected}
+                          disabled={isPaid}
+                          onCheckedChange={() => toggleMonth(monthNum)}
+                        />
+                        <label
+                          htmlFor={`month-${monthNum}`}
+                          className="text-sm cursor-pointer flex-1"
+                        >
+                          {month}
+                          {isPaid && " (Paid)"}
+                        </label>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {formData.selectedMonths.length > 0 && (
+                <div className="p-3 bg-card rounded-lg border border-border">
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {formData.selectedMonths.length} month{formData.selectedMonths.length > 1 ? "s" : ""} selected
+                  </p>
+                  <p className="text-2xl font-bold text-accent">
+                    ₦{(monthlyDues * formData.selectedMonths.length).toLocaleString()}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <Label>Payment Proof (Image)</Label>
+                <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setFormData({ ...formData, proof: e.target.files?.[0] || null })}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-input text-card-foreground text-sm"
                 />
               </div>
+
               <div className="flex gap-2">
-                <Button onClick={handleSubmitPayment} disabled={uploading} className="flex-1">
-                  {uploading ? "Uploading..." : "Submit"}
+                <Button 
+                  onClick={handleSubmitPayment} 
+                  disabled={uploading || formData.selectedMonths.length === 0} 
+                  className="flex-1"
+                >
+                  {uploading ? "Uploading..." : "Submit Payment"}
                 </Button>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
