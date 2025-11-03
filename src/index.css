@@ -23,11 +23,11 @@ All colors MUST be HSL.
 
     /* Cconey Palette - Warm Gold Buttons (#E7B343) */
     --primary: 41 77% 58%;
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 191 65% 16%;
     
     /* Warm Gold Accent for hover states */
     --accent: 41 77% 58%;
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: 191 65% 16%;
     
     /* Light Gold for secondary elements */
     --secondary: 46 88% 79%;
@@ -77,10 +77,10 @@ All colors MUST be HSL.
     --popover-foreground: 46 88% 79%;
 
     --primary: 41 77% 58%;
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 191 65% 16%;
 
     --accent: 41 77% 58%;
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: 191 65% 16%;
 
     --secondary: 46 88% 79%;
     --secondary-foreground: 191 65% 12%;

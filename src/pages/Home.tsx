@@ -199,8 +199,11 @@ const Home = () => {
               </div>
             </div>
           </div>
-          <div className="border-t border-border pt-8 text-center text-sm text-card-foreground/70">
+          <div className="border-t border-border pt-8 text-center text-sm text-card-foreground/70 space-y-2">
             <p>&copy; 2025 NEMSS09 Set Association. All rights reserved.</p>
+            <p className="text-xs">
+              Built by <a href="https://lotechdgs.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">Lotech Digitals</a>
+            </p>
           </div>
         </div>
       </footer>

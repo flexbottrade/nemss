@@ -191,27 +191,25 @@ const Vote = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
-      <div className="container mx-auto px-4 py-4 md:py-6">
+      <div className="container mx-auto px-4 py-3 md:py-6">
         {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent flex items-center justify-center">
-              <VoteIcon className="w-5 h-5 md:w-6 md:h-6 text-accent-foreground" />
+        <div className="mb-3 md:mb-6">
+          <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-2">
+            <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-primary flex items-center justify-center">
+              <VoteIcon className="w-4 h-4 md:w-6 md:h-6 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Elections</h1>
+            <h1 className="text-xl md:text-3xl font-bold text-foreground">Elections</h1>
           </div>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Cast your vote for leadership positions
-          </p>
+          <p className="text-xs md:text-base text-muted-foreground">Cast your votes</p>
         </div>
 
         {/* Elections List */}
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           {elections.length === 0 ? (
             <Card>
-              <CardContent className="p-8 text-center">
-                <VoteIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No elections available at the moment</p>
+              <CardContent className="p-6 md:p-8 text-center">
+                <VoteIcon className="w-10 h-10 md:w-12 md:h-12 text-muted-foreground mx-auto mb-3 md:mb-4" />
+                <p className="text-xs md:text-sm text-muted-foreground">No elections available</p>
               </CardContent>
             </Card>
           ) : (
@@ -224,60 +222,60 @@ const Vote = () => {
 
               return (
                 <Card key={election.id} className="overflow-hidden bg-card border-border">
-                  <CardHeader className="bg-card p-4 md:p-6 border-b border-border">
-                    <div className="flex items-start justify-between gap-4">
+                  <CardHeader className="bg-card p-3 md:p-6 border-b border-border">
+                    <div className="flex items-start justify-between gap-2 md:gap-4">
                       <div className="flex-1">
-                        <CardTitle className="text-lg md:text-xl mb-2 text-foreground">
+                        <CardTitle className="text-base md:text-xl mb-1 md:mb-2 text-foreground">
                           {election.position}
                         </CardTitle>
-                        <div className="flex flex-wrap gap-2 text-xs md:text-sm text-muted-foreground">
+                        <div className="flex flex-wrap gap-1 md:gap-2 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
+                            <Clock className="w-3 h-3 md:w-4 md:h-4" />
                             <span>
-                              {active ? "Ends" : "Ended"}: {new Date(election.deadline).toLocaleDateString()}
+                              {new Date(election.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                             </span>
                           </div>
                           {election.totalVotes !== undefined && (
-                            <span>• {election.totalVotes} total votes</span>
+                            <span>• {election.totalVotes} votes</span>
                           )}
                         </div>
                       </div>
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-1 md:gap-2">
                         {active && !election.userVoted && (
-                          <Badge className="bg-success text-success-foreground">Active</Badge>
+                          <Badge className="bg-success text-success-foreground text-xs">Active</Badge>
                         )}
                         {election.userVoted && (
-                          <Badge className="bg-primary text-primary-foreground">
+                          <Badge className="bg-primary text-primary-foreground text-xs">
                             <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Voted
+                            <span className="hidden md:inline">Voted</span>
                           </Badge>
                         )}
                         {closed && (
-                          <Badge variant="secondary">Closed</Badge>
+                          <Badge variant="secondary" className="text-xs">Closed</Badge>
                         )}
                       </div>
                     </div>
                   </CardHeader>
 
-                  <CardContent className="p-4 md:p-6 bg-card">
+                  <CardContent className="p-3 md:p-6 bg-card">
                     {closed && winner && (
-                      <div className="mb-4 p-3 bg-accent/10 rounded-lg border-2 border-accent">
+                      <div className="mb-3 md:mb-4 p-2 md:p-3 bg-accent/10 rounded-lg border-2 border-accent">
                         <div className="flex items-center gap-2 mb-1">
-                          <Trophy className="w-5 h-5 text-accent" />
-                          <span className="font-semibold text-accent">Winner</span>
+                          <Trophy className="w-4 h-4 md:w-5 md:h-5 text-accent" />
+                          <span className="font-semibold text-xs md:text-sm text-accent">Winner</span>
                         </div>
-                        <p className="font-bold text-foreground">
+                        <p className="text-sm md:text-base font-bold text-foreground">
                           {winner.profiles.first_name} {winner.profiles.last_name}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs md:text-sm text-muted-foreground">
                           {winner.votes_count} votes ({election.totalVotes ? Math.round((winner.votes_count / election.totalVotes) * 100) : 0}%)
                         </p>
                       </div>
                     )}
 
-                    <div className="space-y-3">
-                      <h3 className="font-semibold text-sm md:text-base text-foreground">
-                        {closed ? "Final Results:" : "Candidates:"}
+                    <div className="space-y-2 md:space-y-3">
+                      <h3 className="font-semibold text-xs md:text-base text-foreground">
+                        {closed ? "Results" : "Candidates"}
                       </h3>
                       {election.nominees
                         .sort((a: any, b: any) => (b.votes_count || 0) - (a.votes_count || 0))
@@ -290,20 +288,20 @@ const Vote = () => {
                            return (
                              <div
                                key={nominee.id}
-                               className={`p-3 rounded-lg border ${
+                               className={`p-2 md:p-3 rounded-lg border ${
                                  isWinner ? "border-accent bg-accent/5" : "border-border bg-card"
                                }`}
                              >
-                               <div className="flex items-start justify-between gap-2 mb-2">
+                               <div className="flex items-start justify-between gap-2 mb-1 md:mb-2">
                                  <div className="flex-1">
                                    <div className="flex items-center gap-2">
-                                     <p className="font-medium text-sm md:text-base text-foreground">
+                                     <p className="font-medium text-xs md:text-base text-foreground">
                                        {nominee.profiles.first_name} {nominee.profiles.last_name}
                                      </p>
-                                     {isWinner && <Trophy className="w-4 h-4 text-accent" />}
+                                     {isWinner && <Trophy className="w-3 h-3 md:w-4 md:h-4 text-accent" />}
                                    </div>
                                    <p className="text-xs text-muted-foreground">
-                                     ID: {nominee.profiles.member_id}
+                                     {nominee.profiles.member_id}
                                     </p>
                                   </div>
                                   {/* Only show vote button if election is active and user hasn't voted */}
@@ -311,7 +309,7 @@ const Vote = () => {
                                     <Button
                                       size="sm"
                                       onClick={() => handleVote(election.id, nominee.id)}
-                                      className="shrink-0"
+                                      className="shrink-0 h-7 md:h-9 text-xs md:text-sm"
                                     >
                                       Vote
                                     </Button>
@@ -322,11 +320,11 @@ const Vote = () => {
                                 <div className="space-y-1">
                                   <div className="flex items-center justify-between text-xs">
                                     <span className="text-muted-foreground">
-                                      {nominee.votes_count || 0} votes
+                                      {nominee.votes_count || 0}
                                     </span>
                                     <span className="font-medium">{percentage}%</span>
                                   </div>
-                                  <Progress value={percentage} className="h-2" />
+                                  <Progress value={percentage} className="h-1.5 md:h-2" />
                                 </div>
                               )}
                             </div>
