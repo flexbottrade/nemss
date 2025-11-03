@@ -236,7 +236,8 @@ const Reports = () => {
       .select("*, event_payments(amount, status, profiles(first_name, last_name))")
       .order("event_date", { ascending: false });
     
-    if (selectedEventId && selectedEventId !== "") {
+    // Only filter by specific event if selectedEventId has a value
+    if (selectedEventId && selectedEventId.trim() !== "") {
       query = query.eq("id", selectedEventId);
     }
     if (startDate) query = query.gte("event_date", startDate);

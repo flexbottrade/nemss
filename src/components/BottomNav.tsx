@@ -7,7 +7,7 @@ const BottomNav = () => {
 
   const navItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
-    { icon: CreditCard, label: "Payments", path: "/payments" },
+    { icon: CreditCard, label: "Dues", path: "/payments" },
     { icon: Calendar, label: "Events", path: "/events" },
     { icon: Vote, label: "Vote", path: "/vote" },
     { icon: User, label: "Profile", path: "/profile" },

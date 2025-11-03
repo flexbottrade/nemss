@@ -3,46 +3,29 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Wallet, Upload, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { CreditCard, Upload, CheckCircle, XCircle, Clock, DollarSign, Calendar, FileText } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-
-interface PaymentAccount {
-  id: string;
-  account_name: string;
-  account_number: string;
-  bank_name: string;
-}
-
-interface DuesPayment {
-  id: string;
-  start_month: number;
-  start_year: number;
-  months_paid: number;
-  amount: number;
-  status: string;
-  payment_proof_url: string | null;
-  admin_note: string | null;
-  created_at: string;
-}
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Payments = () => {
   const navigate = useNavigate();
-  const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
-  const [duesPayments, setDuesPayments] = useState<DuesPayment[]>([]);
-  const [monthlyDuesAmount, setMonthlyDuesAmount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  
+  const [payments, setPayments] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [monthlyDues, setMonthlyDues] = useState(3000);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     start_month: new Date().getMonth() + 1,
     start_year: new Date().getFullYear(),
     months_paid: 1,
+    proof: null as File | null,
   });
-  const [proofFile, setProofFile] = useState<File | null>(null);
 
   useEffect(() => {
     checkAuth();
@@ -55,283 +38,205 @@ const Payments = () => {
       navigate("/login");
       return;
     }
-    setUserId(user.id);
   };
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Load payment accounts
-    const { data: accounts } = await supabase
-      .from("payment_accounts")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data: settings } = await supabase.from("settings").select("monthly_dues_amount").single();
+    setMonthlyDues(settings?.monthly_dues_amount || 3000);
 
-    if (accounts) setPaymentAccounts(accounts);
-
-    // Load settings for monthly dues amount
-    const { data: settings } = await supabase
-      .from("settings")
-      .select("monthly_dues_amount")
-      .single();
-
-    if (settings) setMonthlyDuesAmount(settings.monthly_dues_amount);
-
-    // Load user's dues payments
-    const { data: payments } = await supabase
+    const { data: paymentsData } = await supabase
       .from("dues_payments")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
+    setPayments(paymentsData || []);
 
-    if (payments) setDuesPayments(payments);
+    const { data: accountsData } = await supabase
+      .from("payment_accounts")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setAccounts(accountsData || []);
+
+    setLoading(false);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setProofFile(e.target.files[0]);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userId || !proofFile) {
-      toast.error("Please select a payment proof image");
+  const handleSubmitPayment = async () => {
+    if (!formData.proof) {
+      toast.error("Please upload payment proof");
       return;
     }
 
-    setLoading(true);
+    setUploading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
     try {
-      // Upload payment proof
-      const fileExt = proofFile.name.split('.').pop();
-      const fileName = `${userId}-${Date.now()}.${fileExt}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const fileName = `${user.id}/${Date.now()}_${formData.proof.name}`;
+      const { error: uploadError } = await supabase.storage
         .from("payment-proofs")
-        .upload(fileName, proofFile);
+        .upload(fileName, formData.proof);
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from("payment-proofs")
         .getPublicUrl(fileName);
 
-      // Calculate amount
-      const amount = monthlyDuesAmount * formData.months_paid;
+      const amount = monthlyDues * formData.months_paid;
+      
+      const { error } = await supabase.from("dues_payments").insert({
+        user_id: user.id,
+        start_month: formData.start_month,
+        start_year: formData.start_year,
+        months_paid: formData.months_paid,
+        amount,
+        payment_proof_url: publicUrl,
+        status: "pending",
+      });
 
-      // Create payment record
-      const { error: insertError } = await supabase
-        .from("dues_payments")
-        .insert({
-          user_id: userId,
-          start_month: formData.start_month,
-          start_year: formData.start_year,
-          months_paid: formData.months_paid,
-          amount,
-          payment_proof_url: publicUrl,
-          status: "pending",
-        });
+      if (error) throw error;
 
-      if (insertError) throw insertError;
-
-      toast.success("Payment submitted successfully! Awaiting admin approval.");
-      setProofFile(null);
+      toast.success("Payment submitted successfully");
+      setIsDialogOpen(false);
       setFormData({
         start_month: new Date().getMonth() + 1,
         start_year: new Date().getFullYear(),
         months_paid: 1,
+        proof: null,
       });
       loadData();
     } catch (error: any) {
       toast.error(error.message || "Failed to submit payment");
     } finally {
-      setLoading(false);
+      setUploading(false);
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "approved": return "bg-green-500";
+      case "rejected": return "bg-red-500";
+      default: return "bg-yellow-500";
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "approved":
-        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-      case "rejected":
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-yellow-500" />;
+      case "approved": return <CheckCircle className="w-4 h-4" />;
+      case "rejected": return <XCircle className="w-4 h-4" />;
+      default: return <Clock className="w-4 h-4" />;
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "approved":
-        return <Badge className="bg-green-500">Approved</Badge>;
-      case "rejected":
-        return <Badge className="bg-red-500">Rejected</Badge>;
-      default:
-        return <Badge className="bg-yellow-500">Pending</Badge>;
-    }
-  };
-
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-primary">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary pb-20 md:pb-8">
-      <div className="container mx-auto px-4 py-4 md:py-6">
+    <div className="min-h-screen bg-primary pb-20 md:pb-8">
+      <div className="container mx-auto px-4 py-6">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-6 text-white">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center">
-              <Wallet className="w-5 h-5 md:w-6 md:h-6 text-primary-foreground" />
+            <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center">
+              <CreditCard className="w-6 h-6 text-primary" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold">Dues Payment</h1>
+            <h1 className="text-3xl font-bold">Monthly Dues</h1>
           </div>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Pay your monthly dues - ₦{monthlyDuesAmount.toLocaleString()} per month
-          </p>
+          <p className="text-white/80">Manage your monthly dues payments</p>
         </div>
 
-        {/* Payment Accounts */}
-        {paymentAccounts.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader className="p-4 md:p-6">
-              <CardTitle className="text-lg md:text-xl">Payment Accounts</CardTitle>
-              <p className="text-sm text-muted-foreground">Transfer to any of these accounts</p>
-            </CardHeader>
-            <CardContent className="p-4 md:p-6 pt-0">
-              <div className="space-y-3">
-                {paymentAccounts.map((account) => (
-                  <div key={account.id} className="p-3 md:p-4 bg-muted/50 rounded-lg">
-                    <p className="font-semibold text-sm md:text-base">{account.bank_name}</p>
-                    <p className="text-lg md:text-xl font-mono font-bold">{account.account_number}</p>
-                    <p className="text-sm text-muted-foreground">{account.account_name}</p>
-                  </div>
-                ))}
+        {/* Dues Amount Card */}
+        <Card className="mb-6 border-accent/20 bg-white/95 backdrop-blur shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Monthly Dues Amount</p>
+                <p className="text-3xl font-bold text-primary">₦{monthlyDues.toLocaleString()}</p>
               </div>
+              <DollarSign className="w-12 h-12 text-accent" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payment Accounts */}
+        {accounts.length > 0 && (
+          <Card className="mb-6 border-accent/20 bg-white/95 backdrop-blur shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-accent" />
+                Payment Accounts
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {accounts.map((account) => (
+                <div key={account.id} className="p-4 rounded-lg bg-secondary/50 border border-accent/10">
+                  <p className="font-semibold text-primary">{account.account_name}</p>
+                  <p className="text-sm text-muted-foreground">{account.bank_name}</p>
+                  <p className="text-lg font-mono font-bold text-accent mt-1">{account.account_number}</p>
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}
 
-        {/* Payment Form */}
-        <Card className="mb-6">
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="text-lg md:text-xl">Submit Payment</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="start_month">Start Month</Label>
-                  <select
-                    id="start_month"
-                    className="w-full mt-1.5 px-3 py-2 bg-background border border-input rounded-md"
-                    value={formData.start_month}
-                    onChange={(e) => setFormData({ ...formData, start_month: parseInt(e.target.value) })}
-                  >
-                    {monthNames.map((month, index) => (
-                      <option key={index + 1} value={index + 1}>{month}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <Label htmlFor="start_year">Start Year</Label>
-                  <Input
-                    id="start_year"
-                    type="number"
-                    min={2020}
-                    max={2050}
-                    value={formData.start_year}
-                    onChange={(e) => setFormData({ ...formData, start_year: parseInt(e.target.value) })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="months_paid">Number of Months</Label>
-                <Input
-                  id="months_paid"
-                  type="number"
-                  min={1}
-                  max={12}
-                  value={formData.months_paid}
-                  onChange={(e) => setFormData({ ...formData, months_paid: parseInt(e.target.value) })}
-                />
-              </div>
-
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <p className="text-sm font-semibold">Total Amount: ₦{(monthlyDuesAmount * formData.months_paid).toLocaleString()}</p>
-              </div>
-
-              <div>
-                <Label htmlFor="proof">Payment Proof (Screenshot/Receipt)</Label>
-                <div className="mt-1.5">
-                  <Input
-                    id="proof"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="cursor-pointer"
-                  />
-                </div>
-                {proofFile && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Selected: {proofFile.name}
-                  </p>
-                )}
-              </div>
-
-              <Button type="submit" disabled={loading || !proofFile} className="w-full">
-                {loading ? (
-                  "Submitting..."
-                ) : (
-                  <>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Submit Payment
-                  </>
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        {/* Submit Payment Button */}
+        <Button
+          onClick={() => setIsDialogOpen(true)}
+          className="w-full mb-6 h-12 text-base bg-accent hover:bg-accent/90 text-primary font-semibold shadow-lg"
+        >
+          <Upload className="w-5 h-5 mr-2" />
+          Submit Payment
+        </Button>
 
         {/* Payment History */}
-        <Card>
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="text-lg md:text-xl">Payment History</CardTitle>
+        <Card className="border-accent/20 bg-white/95 backdrop-blur shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-accent" />
+              Payment History
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
-            {duesPayments.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No payment history yet
-              </p>
+          <CardContent>
+            {payments.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No payments yet</p>
             ) : (
               <div className="space-y-3">
-                {duesPayments.map((payment) => (
-                  <div key={payment.id} className="p-3 md:p-4 border rounded-lg">
+                {payments.map((payment) => (
+                  <div key={payment.id} className="p-4 rounded-lg border border-border bg-card">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <p className="font-semibold text-sm md:text-base">
-                          {monthNames[payment.start_month - 1]} {payment.start_year}
+                        <p className="font-semibold text-primary">
+                          {payment.start_month}/{payment.start_year}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                          {payment.months_paid} month{payment.months_paid > 1 ? 's' : ''}
+                          {payment.months_paid} month{payment.months_paid > 1 ? "s" : ""}
                         </p>
                       </div>
-                      {getStatusBadge(payment.status)}
+                      <Badge className={getStatusColor(payment.status)}>
+                        <span className="flex items-center gap-1">
+                          {getStatusIcon(payment.status)}
+                          {payment.status}
+                        </span>
+                      </Badge>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">₦{Number(payment.amount).toLocaleString()}</span>
-                      <span className="text-muted-foreground">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xl font-bold text-accent">₦{Number(payment.amount).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">
                         {new Date(payment.created_at).toLocaleDateString()}
-                      </span>
+                      </p>
                     </div>
                     {payment.admin_note && (
-                      <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
-                        <p className="font-semibold mb-1">Admin Note:</p>
-                        <p>{payment.admin_note}</p>
+                      <div className="mt-2 p-2 bg-muted rounded text-xs">
+                        <span className="font-semibold">Note: </span>
+                        {payment.admin_note}
                       </div>
                     )}
                   </div>
@@ -340,6 +245,86 @@ const Payments = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Submit Payment Dialog */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Submit Payment</DialogTitle>
+              <DialogDescription>Upload proof of payment for verification</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Start Month</Label>
+                  <Select
+                    value={formData.start_month.toString()}
+                    onValueChange={(value) => setFormData({ ...formData, start_month: parseInt(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                        <SelectItem key={month} value={month.toString()}>
+                          {new Date(2000, month - 1).toLocaleString('default', { month: 'long' })}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Year</Label>
+                  <Select
+                    value={formData.start_year.toString()}
+                    onValueChange={(value) => setFormData({ ...formData, start_year: parseInt(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Months to Pay</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="12"
+                  value={formData.months_paid}
+                  onChange={(e) => setFormData({ ...formData, months_paid: parseInt(e.target.value) || 1 })}
+                />
+              </div>
+              <div className="p-3 bg-accent/10 rounded-lg">
+                <p className="text-sm text-muted-foreground">Total Amount</p>
+                <p className="text-2xl font-bold text-primary">₦{(monthlyDues * formData.months_paid).toLocaleString()}</p>
+              </div>
+              <div>
+                <Label>Payment Proof</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFormData({ ...formData, proof: e.target.files?.[0] || null })}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleSubmitPayment} disabled={uploading} className="flex-1">
+                  {uploading ? "Uploading..." : "Submit"}
+                </Button>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
       <BottomNav />
     </div>

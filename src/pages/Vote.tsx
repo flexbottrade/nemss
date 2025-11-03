@@ -137,7 +137,7 @@ const Vote = () => {
     }
 
     try {
-      // Cast vote
+      // Cast vote - nomineeId is the election_nominees.id
       const { error: voteError } = await supabase
         .from("votes")
         .insert({

@@ -3,52 +3,28 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Calendar, Upload, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Calendar, Upload, CheckCircle, XCircle, Clock, MapPin, FileText } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-
-interface Event {
-  id: string;
-  title: string;
-  description: string;
-  event_date: string;
-  amount: number;
-  created_at: string;
-}
-
-interface EventPayment {
-  id: string;
-  event_id: string;
-  amount: number;
-  status: string;
-  payment_proof_url: string | null;
-  admin_note: string | null;
-  created_at: string;
-  events: {
-    title: string;
-    event_date: string;
-  };
-}
-
-interface PaymentAccount {
-  id: string;
-  account_name: string;
-  account_number: string;
-  bank_name: string;
-}
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Events = () => {
   const navigate = useNavigate();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [eventPayments, setEventPayments] = useState<EventPayment[]>([]);
-  const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<string>("");
-  const [proofFile, setProofFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [events, setEvents] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    event_id: "",
+    proof: null as File | null,
+  });
 
   useEffect(() => {
     checkAuth();
@@ -61,272 +37,221 @@ const Events = () => {
       navigate("/login");
       return;
     }
-    setUserId(user.id);
   };
 
   const loadData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Load upcoming events
     const { data: eventsData } = await supabase
       .from("events")
       .select("*")
-      .gte("event_date", new Date().toISOString().split('T')[0])
-      .order("event_date", { ascending: true });
+      .order("event_date", { ascending: false });
+    setEvents(eventsData || []);
 
-    if (eventsData) setEvents(eventsData);
+    const { data: paymentsData } = await supabase
+      .from("event_payments")
+      .select("*, events(title, amount)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    setPayments(paymentsData || []);
 
-    // Load payment accounts
-    const { data: accounts } = await supabase
+    const { data: accountsData } = await supabase
       .from("payment_accounts")
       .select("*")
       .order("created_at", { ascending: false });
+    setAccounts(accountsData || []);
 
-    if (accounts) setPaymentAccounts(accounts);
-
-    // Load user's event payments
-    const { data: payments } = await supabase
-      .from("event_payments")
-      .select(`
-        *,
-        events (
-          title,
-          event_date
-        )
-      `)
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (payments) setEventPayments(payments as any);
+    setLoading(false);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setProofFile(e.target.files[0]);
+  const handleSubmitPayment = async () => {
+    if (!formData.event_id) {
+      toast.error("Please select an event");
+      return;
     }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userId || !proofFile || !selectedEvent) {
-      toast.error("Please select an event and upload payment proof");
+    if (!formData.proof) {
+      toast.error("Please upload payment proof");
       return;
     }
 
-    const event = events.find(e => e.id === selectedEvent);
-    if (!event) return;
+    setUploading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
-    setLoading(true);
     try {
-      // Upload payment proof
-      const fileExt = proofFile.name.split('.').pop();
-      const fileName = `${userId}-${Date.now()}.${fileExt}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const fileName = `${user.id}/${Date.now()}_${formData.proof.name}`;
+      const { error: uploadError } = await supabase.storage
         .from("payment-proofs")
-        .upload(fileName, proofFile);
+        .upload(fileName, formData.proof);
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from("payment-proofs")
         .getPublicUrl(fileName);
 
-      // Create payment record
-      const { error: insertError } = await supabase
-        .from("event_payments")
-        .insert({
-          user_id: userId,
-          event_id: selectedEvent,
-          amount: event.amount,
-          payment_proof_url: publicUrl,
-          status: "pending",
-        });
+      const event = events.find(e => e.id === formData.event_id);
+      
+      const { error } = await supabase.from("event_payments").insert({
+        user_id: user.id,
+        event_id: formData.event_id,
+        amount: event.amount,
+        payment_proof_url: publicUrl,
+        status: "pending",
+      });
 
-      if (insertError) throw insertError;
+      if (error) throw error;
 
-      toast.success("Payment submitted successfully! Awaiting admin approval.");
-      setProofFile(null);
-      setSelectedEvent("");
+      toast.success("Payment submitted successfully");
+      setIsDialogOpen(false);
+      setFormData({ event_id: "", proof: null });
+      setSelectedEvent(null);
       loadData();
     } catch (error: any) {
       toast.error(error.message || "Failed to submit payment");
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case "approved":
-        return <Badge className="bg-green-500">Approved</Badge>;
-      case "rejected":
-        return <Badge className="bg-red-500">Rejected</Badge>;
-      default:
-        return <Badge className="bg-yellow-500">Pending</Badge>;
+      case "approved": return "bg-green-500";
+      case "rejected": return "bg-red-500";
+      default: return "bg-yellow-500";
     }
   };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "approved": return <CheckCircle className="w-4 h-4" />;
+      case "rejected": return <XCircle className="w-4 h-4" />;
+      default: return <Clock className="w-4 h-4" />;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-primary">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary pb-20 md:pb-8">
-      <div className="container mx-auto px-4 py-4 md:py-6">
+    <div className="min-h-screen bg-primary pb-20 md:pb-8">
+      <div className="container mx-auto px-4 py-6">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-6 text-white">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-accent to-highlight flex items-center justify-center">
-              <Calendar className="w-5 h-5 md:w-6 md:h-6 text-accent-foreground" />
+            <div className="w-12 h-12 rounded-full bg-accent flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-primary" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold">Events</h1>
+            <h1 className="text-3xl font-bold">Events</h1>
           </div>
-          <p className="text-sm md:text-base text-muted-foreground">
-            View upcoming events and make contributions
-          </p>
+          <p className="text-white/80">View events and submit payments</p>
         </div>
 
         {/* Upcoming Events */}
-        {events.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader className="p-4 md:p-6">
-              <CardTitle className="text-lg md:text-xl">Upcoming Events</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 md:p-6 pt-0">
-              <div className="space-y-3">
+        <Card className="mb-6 border-accent/20 bg-white/95 backdrop-blur shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-accent" />
+              Upcoming Events
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {events.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No events available</p>
+            ) : (
+              <div className="space-y-4">
                 {events.map((event) => (
-                  <div key={event.id} className="p-3 md:p-4 border rounded-lg hover:border-primary transition-colors">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-sm md:text-base">{event.title}</h3>
-                        <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
+                  <div key={event.id} className="p-4 rounded-lg bg-gradient-to-br from-primary/5 to-accent/5 border border-accent/20">
+                    <h3 className="text-lg font-bold text-primary mb-2">{event.title}</h3>
+                    {event.description && (
+                      <p className="text-sm text-muted-foreground mb-3">{event.description}</p>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Calendar className="w-4 h-4" />
+                          {new Date(event.event_date).toLocaleDateString()}
+                        </span>
+                        <span className="text-lg font-bold text-accent">
+                          ₦{Number(event.amount).toLocaleString()}
+                        </span>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Calendar className="w-4 h-4" />
-                        <span>{new Date(event.event_date).toLocaleDateString()}</span>
-                      </div>
-                      <span className="font-semibold text-primary">₦{Number(event.amount).toLocaleString()}</span>
                     </div>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
         {/* Payment Accounts */}
-        {paymentAccounts.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader className="p-4 md:p-6">
-              <CardTitle className="text-lg md:text-xl">Payment Accounts</CardTitle>
-              <p className="text-sm text-muted-foreground">Transfer to any of these accounts</p>
+        {accounts.length > 0 && (
+          <Card className="mb-6 border-accent/20 bg-white/95 backdrop-blur shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-accent" />
+                Payment Accounts
+              </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 md:p-6 pt-0">
-              <div className="space-y-3">
-                {paymentAccounts.map((account) => (
-                  <div key={account.id} className="p-3 md:p-4 bg-muted/50 rounded-lg">
-                    <p className="font-semibold text-sm md:text-base">{account.bank_name}</p>
-                    <p className="text-lg md:text-xl font-mono font-bold">{account.account_number}</p>
-                    <p className="text-sm text-muted-foreground">{account.account_name}</p>
-                  </div>
-                ))}
-              </div>
+            <CardContent className="space-y-3">
+              {accounts.map((account) => (
+                <div key={account.id} className="p-4 rounded-lg bg-secondary/50 border border-accent/10">
+                  <p className="font-semibold text-primary">{account.account_name}</p>
+                  <p className="text-sm text-muted-foreground">{account.bank_name}</p>
+                  <p className="text-lg font-mono font-bold text-accent mt-1">{account.account_number}</p>
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}
 
-        {/* Payment Form */}
-        {events.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader className="p-4 md:p-6">
-              <CardTitle className="text-lg md:text-xl">Submit Event Payment</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 md:p-6 pt-0">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="event">Select Event</Label>
-                  <select
-                    id="event"
-                    className="w-full mt-1.5 px-3 py-2 bg-background border border-input rounded-md"
-                    value={selectedEvent}
-                    onChange={(e) => setSelectedEvent(e.target.value)}
-                    required
-                  >
-                    <option value="">Choose an event...</option>
-                    {events.map((event) => (
-                      <option key={event.id} value={event.id}>
-                        {event.title} - ₦{Number(event.amount).toLocaleString()} ({new Date(event.event_date).toLocaleDateString()})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <Label htmlFor="proof">Payment Proof (Screenshot/Receipt)</Label>
-                  <div className="mt-1.5">
-                    <Input
-                      id="proof"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="cursor-pointer"
-                    />
-                  </div>
-                  {proofFile && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Selected: {proofFile.name}
-                    </p>
-                  )}
-                </div>
-
-                <Button type="submit" disabled={loading || !proofFile || !selectedEvent} className="w-full">
-                  {loading ? (
-                    "Submitting..."
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Submit Payment
-                    </>
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+        {/* Submit Payment Button */}
+        <Button
+          onClick={() => setIsDialogOpen(true)}
+          className="w-full mb-6 h-12 text-base bg-accent hover:bg-accent/90 text-primary font-semibold shadow-lg"
+          disabled={events.length === 0}
+        >
+          <Upload className="w-5 h-5 mr-2" />
+          Submit Event Payment
+        </Button>
 
         {/* Payment History */}
-        <Card>
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="text-lg md:text-xl">Payment History</CardTitle>
+        <Card className="border-accent/20 bg-white/95 backdrop-blur shadow-lg">
+          <CardHeader>
+            <CardTitle>Payment History</CardTitle>
           </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
-            {eventPayments.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No payment history yet
-              </p>
+          <CardContent>
+            {payments.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No payments yet</p>
             ) : (
               <div className="space-y-3">
-                {eventPayments.map((payment) => (
-                  <div key={payment.id} className="p-3 md:p-4 border rounded-lg">
+                {payments.map((payment) => (
+                  <div key={payment.id} className="p-4 rounded-lg border border-border bg-card">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <p className="font-semibold text-sm md:text-base">{payment.events.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(payment.events.event_date).toLocaleDateString()}
+                        <p className="font-semibold text-primary">{payment.events?.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(payment.created_at).toLocaleDateString()}
                         </p>
                       </div>
-                      {getStatusBadge(payment.status)}
+                      <Badge className={getStatusColor(payment.status)}>
+                        <span className="flex items-center gap-1">
+                          {getStatusIcon(payment.status)}
+                          {payment.status}
+                        </span>
+                      </Badge>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">₦{Number(payment.amount).toLocaleString()}</span>
-                      <span className="text-muted-foreground">
-                        {new Date(payment.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
+                    <p className="text-xl font-bold text-accent">₦{Number(payment.amount).toLocaleString()}</p>
                     {payment.admin_note && (
-                      <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
-                        <p className="font-semibold mb-1">Admin Note:</p>
-                        <p>{payment.admin_note}</p>
+                      <div className="mt-2 p-2 bg-muted rounded text-xs">
+                        <span className="font-semibold">Note: </span>
+                        {payment.admin_note}
                       </div>
                     )}
                   </div>
@@ -335,6 +260,64 @@ const Events = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Submit Payment Dialog */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Submit Event Payment</DialogTitle>
+              <DialogDescription>Select event and upload proof of payment</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Select Event</Label>
+                <Select
+                  value={formData.event_id}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, event_id: value });
+                    setSelectedEvent(events.find(e => e.id === value));
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose an event" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {events.map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
+                        {event.title} - ₦{Number(event.amount).toLocaleString()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedEvent && (
+                <div className="p-3 bg-accent/10 rounded-lg">
+                  <p className="text-sm text-muted-foreground mb-1">Event Amount</p>
+                  <p className="text-2xl font-bold text-primary">₦{Number(selectedEvent.amount).toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Date: {new Date(selectedEvent.event_date).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+              <div>
+                <Label>Payment Proof</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFormData({ ...formData, proof: e.target.files?.[0] || null })}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleSubmitPayment} disabled={uploading} className="flex-1">
+                  {uploading ? "Uploading..." : "Submit"}
+                </Button>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
       <BottomNav />
     </div>
