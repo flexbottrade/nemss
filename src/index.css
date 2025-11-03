@@ -8,79 +8,87 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 186 60% 16%;
+    /* Deep Teal Background (#0E3B43) */
+    --background: 191 65% 16%;
+    /* Light Gold Text (#F8E39C) */
+    --foreground: 46 88% 79%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 186 60% 16%;
+    /* Lighter Teal Cards (#144852) */
+    --card: 190 61% 20%;
+    --card-foreground: 46 88% 79%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 186 60% 16%;
+    --popover: 190 61% 20%;
+    --popover-foreground: 46 88% 79%;
 
-    /* Deep Teal Primary */
-    --primary: 186 60% 16%;
+    /* Warm Gold Buttons (#E7B343) */
+    --primary: 41 77% 58%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 186 50% 25%;
+    --primary-light: 41 77% 65%;
     
-    /* Warm Gold Accent */
-    --accent: 42 76% 59%;
-    --accent-foreground: 186 60% 16%;
+    /* Warm Gold Accent with lighter hover */
+    --accent: 41 77% 58%;
+    --accent-foreground: 0 0% 100%;
+    --accent-hover: 45 85% 66%;
     
     /* Light Gold Secondary */
-    --secondary: 47 86% 79%;
-    --secondary-foreground: 186 60% 16%;
+    --secondary: 46 88% 79%;
+    --secondary-foreground: 191 65% 16%;
 
-    --muted: 186 20% 92%;
-    --muted-foreground: 186 20% 45%;
+    --muted: 190 50% 25%;
+    --muted-foreground: 46 70% 70%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 186 20% 85%;
-    --input: 186 20% 85%;
-    --ring: 42 76% 59%;
+    --border: 190 50% 30%;
+    --input: 190 50% 25%;
+    --ring: 41 77% 58%;
 
     --radius: 0.75rem;
     
     /* Custom design tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(186 60% 16%), hsl(186 50% 25%));
-    --gradient-accent: linear-gradient(135deg, hsl(42 76% 59%), hsl(47 86% 79%));
-    --shadow-soft: 0 4px 20px -4px hsl(186 60% 16% / 0.1);
-    --shadow-md: 0 8px 30px -8px hsl(186 60% 16% / 0.15);
-    --shadow-lg: 0 12px 40px -12px hsl(186 60% 16% / 0.2);
-    --highlight: 47 86% 79%;
+    --gradient-primary: linear-gradient(135deg, hsl(191 65% 16%), hsl(190 61% 20%));
+    --gradient-accent: linear-gradient(135deg, hsl(41 77% 58%), hsl(45 85% 66%));
+    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.15);
+    --shadow-md: 0 8px 30px -8px hsl(0 0% 0% / 0.2);
+    --shadow-lg: 0 12px 40px -12px hsl(0 0% 0% / 0.25);
+    --highlight: 46 88% 79%;
   }
 
   .dark {
-    --background: 186 60% 8%;
-    --foreground: 0 0% 100%;
+    /* Deep Teal Background - slightly darker for dark mode */
+    --background: 191 65% 12%;
+    --foreground: 46 88% 79%;
 
-    --card: 186 60% 12%;
-    --card-foreground: 0 0% 100%;
+    /* Lighter Teal Cards - slightly darker for dark mode */
+    --card: 190 61% 16%;
+    --card-foreground: 46 88% 79%;
 
-    --popover: 186 60% 12%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 190 61% 16%;
+    --popover-foreground: 46 88% 79%;
 
-    --primary: 186 60% 16%;
+    /* Warm Gold Buttons */
+    --primary: 41 77% 58%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 186 50% 25%;
+    --primary-light: 41 77% 65%;
 
-    --accent: 42 76% 59%;
-    --accent-foreground: 186 60% 16%;
+    --accent: 41 77% 58%;
+    --accent-foreground: 0 0% 100%;
+    --accent-hover: 45 85% 66%;
 
-    --secondary: 186 40% 18%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 46 88% 79%;
+    --secondary-foreground: 191 65% 16%;
 
-    --muted: 186 30% 22%;
-    --muted-foreground: 186 20% 70%;
+    --muted: 190 50% 20%;
+    --muted-foreground: 46 70% 70%;
 
     --destructive: 0 63% 40%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 186 30% 25%;
-    --input: 186 30% 25%;
-    --ring: 42 76% 59%;
-    --highlight: 47 86% 79%;
+    --border: 190 50% 25%;
+    --input: 190 50% 20%;
+    --ring: 41 77% 58%;
+    --highlight: 46 88% 79%;
   }
 }
 
