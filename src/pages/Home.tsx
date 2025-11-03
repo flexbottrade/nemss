@@ -1,12 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, TrendingUp, Award, Calendar, Facebook, Twitter } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { User } from "@supabase/supabase-js";
 
 const Home = () => {
+  const navigate = useNavigate();
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     const loadUpcomingEvents = async () => {
@@ -20,6 +23,17 @@ const Home = () => {
       if (data) setUpcomingEvents(data);
     };
     loadUpcomingEvents();
+
+    // Check auth state
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
@@ -42,12 +56,20 @@ const Home = () => {
             <Link to="/contact" className="text-sm font-medium hover:text-primary transition-colors">Contact</Link>
           </nav>
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/login">Login</Link>
-            </Button>
-            <Button size="sm" className="bg-primary hover:bg-primary-light" asChild>
-              <Link to="/signup">Sign Up</Link>
-            </Button>
+            {user ? (
+              <Button size="sm" className="bg-primary hover:bg-primary-light" asChild>
+                <Link to="/dashboard">Member Dashboard</Link>
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/login">Login</Link>
+                </Button>
+                <Button size="sm" className="bg-primary hover:bg-primary-light" asChild>
+                  <Link to="/signup">Sign Up</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -67,12 +89,20 @@ const Home = () => {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Button size="lg" className="bg-primary hover:bg-primary-light text-base" asChild>
-              <Link to="/signup">Join Our Network</Link>
-            </Button>
-            <Button size="lg" variant="outline" className="text-base border-primary text-primary hover:bg-primary/10" asChild>
-              <Link to="/login">Member Login</Link>
-            </Button>
+            {user ? (
+              <Button size="lg" className="bg-primary hover:bg-primary-light text-base" asChild>
+                <Link to="/dashboard">Member Dashboard</Link>
+              </Button>
+            ) : (
+              <>
+                <Button size="lg" className="bg-primary hover:bg-primary-light text-base" asChild>
+                  <Link to="/signup">Join Our Network</Link>
+                </Button>
+                <Button size="lg" variant="outline" className="text-base border-primary text-primary hover:bg-primary/10" asChild>
+                  <Link to="/login">Member Login</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -157,9 +187,15 @@ const Home = () => {
             <p className="text-lg text-primary-foreground/90">
               Haven't joined yet? Stay connected with fellow alumni, get updates, and share opportunities.
             </p>
-            <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-base" asChild>
-              <Link to="/signup">Become a Member</Link>
-            </Button>
+            {user ? (
+              <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-base" asChild>
+                <Link to="/dashboard">Member Dashboard</Link>
+              </Button>
+            ) : (
+              <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-base" asChild>
+                <Link to="/signup">Become a Member</Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       </section>

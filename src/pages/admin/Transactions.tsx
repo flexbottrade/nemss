@@ -104,10 +104,10 @@ const Transactions = () => {
             <span
               className={`text-xs px-3 py-1 rounded-full text-center ${
                 payment.status === "approved"
-                  ? "bg-green-100 text-green-800"
+                  ? "bg-green-500 text-white"
                   : payment.status === "rejected"
-                  ? "bg-red-100 text-red-800"
-                  : "bg-yellow-100 text-yellow-800"
+                  ? "bg-red-500 text-white"
+                  : "bg-yellow-500 text-black"
               }`}
             >
               {payment.status}

@@ -153,9 +153,9 @@ const Payments = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "approved": return "bg-green-500";
-      case "rejected": return "bg-red-500";
-      default: return "bg-yellow-500";
+      case "approved": return "bg-green-500 text-white";
+      case "rejected": return "bg-red-500 text-white";
+      default: return "bg-yellow-500 text-black";
     }
   };
 

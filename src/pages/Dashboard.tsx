@@ -266,9 +266,9 @@ const Dashboard = () => {
                       <div className="text-right">
                         <p className="font-bold text-foreground">₦{Number(payment.amount).toLocaleString()}</p>
                         <p className={`text-xs ${
-                          payment.status === 'approved' ? 'text-success' : 
-                          payment.status === 'pending' ? 'text-warning' : 
-                          'text-destructive'
+                          payment.status === 'approved' ? 'text-green-500' : 
+                          payment.status === 'pending' ? 'text-yellow-500' : 
+                          'text-red-500'
                         }`}>
                           {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                         </p>
