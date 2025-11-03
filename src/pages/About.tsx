@@ -1,26 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, TrendingUp, Award, Calendar, Facebook, Twitter } from "lucide-react";
+import { Award, TrendingUp, Users, Facebook, Twitter } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
-const Home = () => {
-  const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
-
-  useEffect(() => {
-    const loadUpcomingEvents = async () => {
-      const { data } = await supabase
-        .from("events")
-        .select("*")
-        .gte("event_date", new Date().toISOString())
-        .order("event_date", { ascending: true })
-        .limit(3);
-      
-      if (data) setUpcomingEvents(data);
-    };
-    loadUpcomingEvents();
-  }, []);
+const About = () => {
+  const leaders = [
+    { name: "John Doe", role: "President", image: "/placeholder.svg" },
+    { name: "Jane Smith", role: "Vice President", image: "/placeholder.svg" },
+    { name: "Mike Johnson", role: "Secretary", image: "/placeholder.svg" },
+    { name: "Sarah Williams", role: "Treasurer", image: "/placeholder.svg" },
+    { name: "David Brown", role: "Financial Secretary", image: "/placeholder.svg" },
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -38,7 +28,7 @@ const Home = () => {
           </div>
           <nav className="hidden md:flex items-center gap-6">
             <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">Home</Link>
-            <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">About</Link>
+            <Link to="/about" className="text-sm font-medium text-primary">About</Link>
             <Link to="/contact" className="text-sm font-medium hover:text-primary transition-colors">Contact</Link>
           </nav>
           <div className="flex gap-2">
@@ -52,49 +42,58 @@ const Home = () => {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 md:py-32 text-center">
-        <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-          <h2 className="text-4xl md:text-6xl font-bold text-foreground leading-tight">
-            Celebrating Our Journey — <span className="text-primary">NEMSS 09 Set</span>
-          </h2>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-            Reuniting the bright minds and lifelong friends of New Era Model Secondary School's 2009 graduation set.
+      {/* Page Title */}
+      <section className="bg-primary text-primary-foreground py-16 md:py-24">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">About NEMSS 09 Set</h2>
+          <p className="text-lg text-primary-foreground/90 max-w-2xl mx-auto">
+            Discover our story, purpose, and the dedicated team keeping us connected
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-            <Button size="lg" className="bg-primary hover:bg-primary-light text-base" asChild>
-              <Link to="/signup">Join Our Network</Link>
-            </Button>
-            <Button size="lg" variant="outline" className="text-base border-primary text-primary hover:bg-primary/10" asChild>
-              <Link to="/login">Member Login</Link>
-            </Button>
-          </div>
         </div>
       </section>
 
-      {/* Who We Are */}
-      <section className="bg-secondary py-16 md:py-24">
+      {/* Intro */}
+      <section className="container mx-auto px-4 py-16 md:py-20">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <Card className="border-2 border-primary/10 shadow-lg">
+            <CardContent className="pt-8 space-y-6">
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                New Era Model Secondary School, established with a vision to shape future leaders, produced many remarkable students over the years. The 2009 graduation set represents a milestone in that journey — a family of passionate individuals bound by shared memories and a drive to make a difference.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Our Purpose */}
+      <section className="bg-secondary py-16 md:py-20">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center space-y-6">
-            <h3 className="text-3xl md:text-4xl font-bold text-foreground">Who We Are</h3>
+            <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
+              <Users className="w-8 h-8 text-accent" />
+            </div>
+            <h3 className="text-3xl md:text-4xl font-bold text-foreground">Our Purpose</h3>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              We are proud alumni of New Era Model Secondary School, Class of 2009 — a family bound by memories, friendship, and a shared commitment to growth and impact. This platform connects us, keeps us informed, and helps us stay united as one family.
+              The NEMSS 09 Set Association was founded to reconnect classmates, promote mutual growth, and contribute meaningfully to the development of our alma mater.
             </p>
           </div>
         </div>
       </section>
 
       {/* Mission & Vision */}
-      <section className="container mx-auto px-4 py-16 md:py-24">
+      <section className="container mx-auto px-4 py-16 md:py-20">
+        <div className="text-center mb-12">
+          <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Our Mission & Vision</h3>
+        </div>
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           <Card className="border-2 border-primary/20 shadow-lg hover:shadow-xl transition-shadow">
             <CardContent className="pt-8 space-y-4 text-center">
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                 <Award className="w-8 h-8 text-primary" />
               </div>
-              <h4 className="text-2xl font-bold text-foreground">Our Mission</h4>
-              <p className="text-muted-foreground">
-                To foster unity, communication, and collaboration among all members of the 2009 graduating class.
+              <h4 className="text-2xl font-bold text-foreground">Mission</h4>
+              <p className="text-muted-foreground leading-relaxed">
+                To unite members of the 2009 graduating class through collaboration, friendship, and community support.
               </p>
             </CardContent>
           </Card>
@@ -104,56 +103,52 @@ const Home = () => {
               <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto">
                 <TrendingUp className="w-8 h-8 text-accent" />
               </div>
-              <h4 className="text-2xl font-bold text-foreground">Our Vision</h4>
-              <p className="text-muted-foreground">
-                To build a lasting legacy that empowers members and contributes to the progress of New Era Model Secondary School.
+              <h4 className="text-2xl font-bold text-foreground">Vision</h4>
+              <p className="text-muted-foreground leading-relaxed">
+                To remain an active network that celebrates achievements, encourages growth, and supports initiatives that benefit both members and the school.
               </p>
             </CardContent>
           </Card>
         </div>
       </section>
 
-      {/* Upcoming Events */}
-      {upcomingEvents.length > 0 && (
-        <section className="bg-secondary py-16 md:py-24">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Upcoming Events</h3>
-              <p className="text-muted-foreground">Stay connected and join us at our upcoming gatherings</p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {upcomingEvents.map((event) => (
-                <Card key={event.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="pt-6 space-y-3">
-                    <div className="flex items-center gap-2 text-primary">
-                      <Calendar className="w-5 h-5" />
-                      <span className="text-sm font-medium">
-                        {new Date(event.event_date).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <h4 className="text-xl font-semibold text-foreground">{event.title}</h4>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+      {/* Leadership Section */}
+      <section className="bg-secondary py-16 md:py-20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h3 className="text-3xl md:text-4xl font-bold text-foreground mb-4">Our Coordinating Team</h3>
+            <p className="text-lg text-muted-foreground">
+              Meet the dedicated team working behind the scenes to keep the NEMSS 09 Set connected and thriving.
+            </p>
           </div>
-        </section>
-      )}
+          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6 max-w-6xl mx-auto">
+            {leaders.map((leader, index) => (
+              <Card key={index} className="hover:shadow-lg transition-shadow">
+                <CardContent className="pt-6 text-center space-y-3">
+                  <div className="w-24 h-24 rounded-full bg-primary/10 mx-auto overflow-hidden">
+                    <img src={leader.image} alt={leader.name} className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground">{leader.name}</h4>
+                    <p className="text-sm text-muted-foreground">{leader.role}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
 
-      {/* Join Network CTA */}
-      <section className="container mx-auto px-4 py-16 md:py-24">
+      {/* CTA Section */}
+      <section className="container mx-auto px-4 py-16 md:py-20">
         <Card className="max-w-3xl mx-auto bg-primary text-primary-foreground shadow-xl">
           <CardContent className="pt-12 pb-12 text-center space-y-6">
-            <div className="w-20 h-20 rounded-full bg-primary-foreground/10 flex items-center justify-center mx-auto">
-              <Users className="w-10 h-10 text-primary-foreground" />
-            </div>
-            <h3 className="text-3xl md:text-4xl font-bold">Join Our Network</h3>
+            <h3 className="text-3xl md:text-4xl font-bold">Ready to Join Us?</h3>
             <p className="text-lg text-primary-foreground/90">
-              Haven't joined yet? Stay connected with fellow alumni, get updates, and share opportunities.
+              Become part of our thriving alumni community and stay connected with your classmates.
             </p>
             <Button size="lg" className="bg-accent hover:bg-accent/90 text-accent-foreground text-base" asChild>
-              <Link to="/signup">Become a Member</Link>
+              <Link to="/signup">Sign Up Now</Link>
             </Button>
           </CardContent>
         </Card>
@@ -208,4 +203,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default About;
