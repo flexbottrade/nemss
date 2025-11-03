@@ -142,8 +142,8 @@ const Vote = () => {
       return;
     }
 
-    // Check deadline
-    if (election && new Date(election.deadline) < new Date()) {
+    // Check if election is closed or past deadline
+    if (election?.status === "closed" || (election && new Date(election.deadline) < new Date())) {
       toast.error("This election has ended");
       return;
     }
@@ -172,6 +172,7 @@ const Vote = () => {
       toast.success("Vote cast successfully!");
       loadElections();
     } catch (error: any) {
+      console.error("Vote error:", error);
       toast.error(error.message || "Failed to cast vote");
     }
   };
@@ -189,15 +190,15 @@ const Vote = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       <div className="container mx-auto px-4 py-4 md:py-6">
         {/* Header */}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-br from-accent to-highlight flex items-center justify-center">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-accent flex items-center justify-center">
               <VoteIcon className="w-5 h-5 md:w-6 md:h-6 text-accent-foreground" />
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold">Elections</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Elections</h1>
           </div>
           <p className="text-sm md:text-base text-muted-foreground">
             Cast your vote for leadership positions
@@ -222,11 +223,11 @@ const Vote = () => {
               , election.nominees[0]);
 
               return (
-                <Card key={election.id} className="overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10 p-4 md:p-6">
+                <Card key={election.id} className="overflow-hidden bg-card border-border">
+                  <CardHeader className="bg-card p-4 md:p-6 border-b border-border">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <CardTitle className="text-lg md:text-xl mb-2">
+                        <CardTitle className="text-lg md:text-xl mb-2 text-foreground">
                           {election.position}
                         </CardTitle>
                         <div className="flex flex-wrap gap-2 text-xs md:text-sm text-muted-foreground">
@@ -243,10 +244,10 @@ const Vote = () => {
                       </div>
                       <div className="flex flex-col gap-2">
                         {active && !election.userVoted && (
-                          <Badge className="bg-green-500">Active</Badge>
+                          <Badge className="bg-success text-success-foreground">Active</Badge>
                         )}
                         {election.userVoted && (
-                          <Badge className="bg-blue-500">
+                          <Badge className="bg-primary text-primary-foreground">
                             <CheckCircle2 className="w-3 h-3 mr-1" />
                             Voted
                           </Badge>
@@ -258,14 +259,14 @@ const Vote = () => {
                     </div>
                   </CardHeader>
 
-                  <CardContent className="p-4 md:p-6">
+                  <CardContent className="p-4 md:p-6 bg-card">
                     {closed && winner && (
                       <div className="mb-4 p-3 bg-accent/10 rounded-lg border-2 border-accent">
                         <div className="flex items-center gap-2 mb-1">
                           <Trophy className="w-5 h-5 text-accent" />
                           <span className="font-semibold text-accent">Winner</span>
                         </div>
-                        <p className="font-bold">
+                        <p className="font-bold text-foreground">
                           {winner.profiles.first_name} {winner.profiles.last_name}
                         </p>
                         <p className="text-sm text-muted-foreground">
@@ -275,7 +276,7 @@ const Vote = () => {
                     )}
 
                     <div className="space-y-3">
-                      <h3 className="font-semibold text-sm md:text-base">
+                      <h3 className="font-semibold text-sm md:text-base text-foreground">
                         {closed ? "Final Results:" : "Candidates:"}
                       </h3>
                       {election.nominees
@@ -286,37 +287,38 @@ const Vote = () => {
                             : 0;
                           const isWinner = closed && nominee.id === winner.id;
 
-                          return (
-                            <div
-                              key={nominee.id}
-                              className={`p-3 rounded-lg border ${
-                                isWinner ? "border-accent bg-accent/5" : "border-border"
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <p className="font-medium text-sm md:text-base">
-                                      {nominee.profiles.first_name} {nominee.profiles.last_name}
+                           return (
+                             <div
+                               key={nominee.id}
+                               className={`p-3 rounded-lg border ${
+                                 isWinner ? "border-accent bg-accent/5" : "border-border bg-card"
+                               }`}
+                             >
+                               <div className="flex items-start justify-between gap-2 mb-2">
+                                 <div className="flex-1">
+                                   <div className="flex items-center gap-2">
+                                     <p className="font-medium text-sm md:text-base text-foreground">
+                                       {nominee.profiles.first_name} {nominee.profiles.last_name}
+                                     </p>
+                                     {isWinner && <Trophy className="w-4 h-4 text-accent" />}
+                                   </div>
+                                   <p className="text-xs text-muted-foreground">
+                                     ID: {nominee.profiles.member_id}
                                     </p>
-                                    {isWinner && <Trophy className="w-4 h-4 text-accent" />}
                                   </div>
-                                  <p className="text-xs text-muted-foreground">
-                                    ID: {nominee.profiles.member_id}
-                                  </p>
+                                  {/* Only show vote button if election is active and user hasn't voted */}
+                                  {active && !closed && !election.userVoted && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleVote(election.id, nominee.id)}
+                                      className="shrink-0"
+                                    >
+                                      Vote
+                                    </Button>
+                                  )}
                                 </div>
-                                {active && !election.userVoted && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleVote(election.id, nominee.id)}
-                                    className="shrink-0"
-                                  >
-                                    Vote
-                                  </Button>
-                                )}
-                              </div>
 
-                              {(closed || election.userVoted) && (
+                               {(closed || election.userVoted) && (
                                 <div className="space-y-1">
                                   <div className="flex items-center justify-between text-xs">
                                     <span className="text-muted-foreground">

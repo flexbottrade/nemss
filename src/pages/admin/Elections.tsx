@@ -3,19 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Users } from "lucide-react";
+import { Plus, Trash2, Users, Trophy } from "lucide-react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -23,28 +17,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Spinner } from "@/components/ui/spinner";
 
 const Elections = () => {
   const navigate = useNavigate();
   const { isAdmin, loading } = useRole();
   const [elections, setElections] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedNominees, setSelectedNominees] = useState<string[]>([]);
-  const [formData, setFormData] = useState({
-    position: "",
-    deadline: "",
-  });
+  const [isElectionActive, setIsElectionActive] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
 
   const positions = [
     "President",
     "Vice President",
+    "Secretary",
     "Treasurer",
     "Financial Secretary",
-    "Provost",
-    "General Secretary",
-    "Social Director",
+    "PRO",
+    "Organizing Secretary",
   ];
 
   useEffect(() => {
@@ -57,151 +47,171 @@ const Elections = () => {
   useEffect(() => {
     if (isAdmin) {
       loadData();
-      
-      // Set up real-time subscription for vote updates
-      const channel = supabase
-        .channel('election-votes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'votes'
-          },
-          () => {
-            loadData();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     }
   }, [isAdmin]);
 
   const loadData = async () => {
-    const { data: electionsData } = await supabase
-      .from("elections")
-      .select("*, election_nominees(*, profiles(first_name, last_name, member_id))")
-      .order("created_at", { ascending: false });
+    try {
+      // Load election global settings
+      const { data: settings } = await supabase
+        .from("election_settings")
+        .select("is_active")
+        .single();
+      
+      setIsElectionActive(settings?.is_active || false);
 
-    const { data: membersData } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("first_name");
+      // Load all positions as separate "elections"
+      const electionsData = await Promise.all(
+        positions.map(async (position) => {
+          const { data: election } = await supabase
+            .from("elections")
+            .select("*, election_nominees(*, profiles(first_name, last_name, member_id))")
+            .eq("position", position)
+            .eq("status", "active")
+            .single();
 
-    // Check for elections past deadline and auto-end them
-    if (electionsData) {
-      const now = new Date();
-      for (const election of electionsData) {
-        if (election.status === "active" && new Date(election.deadline) < now) {
-          await handleEndElection(election.id, true);
-        }
-      }
+          return election || { position, nominees: [], status: "none" };
+        })
+      );
+
+      setElections(electionsData);
+
+      const { data: membersData } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("first_name");
+
+      setMembers(membersData || []);
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setLoadingData(false);
     }
-
-    // Reload data after auto-ending elections
-    const { data: updatedElections } = await supabase
-      .from("elections")
-      .select("*, election_nominees(*, profiles(first_name, last_name, member_id))")
-      .order("created_at", { ascending: false });
-
-    setElections(updatedElections || []);
-    setMembers(membersData || []);
   };
 
-  const handleSave = async () => {
-    if (!formData.position || !formData.deadline || selectedNominees.length === 0) {
-      toast.error("Please fill all fields and select at least one nominee");
+  const toggleElectionStatus = async (active: boolean) => {
+    const { error } = await supabase
+      .from("election_settings")
+      .update({ is_active: active, updated_at: new Date().toISOString() })
+      .eq("id", (await supabase.from("election_settings").select("id").single()).data?.id);
+
+    if (error) {
+      toast.error("Failed to update election status");
       return;
     }
 
-    // Clear position from any previous holders of this position
-    await supabase
-      .from("profiles")
-      .update({ position: null })
-      .eq("position", formData.position);
+    setIsElectionActive(active);
+    toast.success(`Elections ${active ? "activated" : "closed"}`);
+  };
 
-    const { data: election, error: electionError } = await supabase
-      .from("elections")
+  const handleAddNominee = async (position: string, nomineeId: string) => {
+    const election = elections.find(e => e.position === position);
+    
+    // Create election if it doesn't exist
+    let electionId = election?.id;
+    if (!electionId) {
+      const { data: newElection, error: electionError } = await supabase
+        .from("elections")
+        .insert({
+          position,
+          deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days default
+          status: "active",
+        })
+        .select()
+        .single();
+
+      if (electionError || !newElection) {
+        toast.error("Failed to create election");
+        return;
+      }
+      electionId = newElection.id;
+    }
+
+    // Add nominee
+    const { error } = await supabase
+      .from("election_nominees")
       .insert({
-        position: formData.position,
-        deadline: formData.deadline,
-        status: "active",
-      })
-      .select()
-      .single();
+        election_id: electionId,
+        nominee_id: nomineeId,
+      });
 
-    if (electionError || !election) {
-      console.error("Election creation error:", electionError);
-      toast.error("Failed to create election: " + electionError.message);
+    if (error) {
+      toast.error("Failed to add nominee");
       return;
     }
 
-    const nominees = selectedNominees.map((nomineeId) => ({
-      election_id: election.id,
-      nominee_id: nomineeId,
-    }));
-
-    const { error: nomineesError } = await supabase.from("election_nominees").insert(nominees);
-
-    if (nomineesError) {
-      console.error("Nominees error:", nomineesError);
-      toast.error("Failed to add nominees: " + nomineesError.message);
-      return;
-    }
-
-    toast.success("Election created");
-    setIsDialogOpen(false);
-    setFormData({ position: "", deadline: "" });
-    setSelectedNominees([]);
+    toast.success("Nominee added");
     loadData();
   };
 
-  const handleEndElection = async (electionId: string, auto = false) => {
-    if (!auto && !confirm("End this election and declare winner?")) return;
-
-    const { data: nominees } = await supabase
+  const handleRemoveNominee = async (nomineeRecordId: string) => {
+    const { error } = await supabase
       .from("election_nominees")
-      .select("*, profiles(id, first_name, last_name)")
-      .eq("election_id", electionId)
-      .order("votes_count", { ascending: false });
+      .delete()
+      .eq("id", nomineeRecordId);
 
-    if (!nominees || nominees.length === 0) return;
+    if (error) {
+      toast.error("Failed to remove nominee");
+      return;
+    }
 
-    const winner = nominees[0];
-    const { data: election } = await supabase
+    toast.success("Nominee removed");
+    loadData();
+  };
+
+  const handleUpdateDeadline = async (position: string, deadline: string) => {
+    const election = elections.find(e => e.position === position);
+    if (!election?.id) return;
+
+    const { error } = await supabase
       .from("elections")
-      .select("position")
-      .eq("id", electionId)
-      .single();
+      .update({ deadline })
+      .eq("id", election.id);
 
-    await supabase.from("elections").update({ status: "closed" }).eq("id", electionId);
+    if (error) {
+      toast.error("Failed to update deadline");
+      return;
+    }
 
-    if (election && winner.profiles && winner.votes_count > 0) {
-      // Clear position from any previous holder
+    toast.success("Deadline updated");
+    loadData();
+  };
+
+  const handleEndElection = async (position: string) => {
+    if (!confirm(`End election for ${position} and declare winner?`)) return;
+
+    const election = elections.find(e => e.position === position);
+    if (!election?.id) return;
+
+    const nominees = election.election_nominees || [];
+    const sortedNominees = [...nominees].sort((a, b) => (b.votes_count || 0) - (a.votes_count || 0));
+    const winner = sortedNominees[0];
+
+    await supabase
+      .from("elections")
+      .update({ status: "closed" })
+      .eq("id", election.id);
+
+    if (winner && winner.votes_count > 0) {
+      // Clear position from previous holders
       await supabase
         .from("profiles")
         .update({ position: null })
-        .eq("position", election.position)
-        .neq("id", winner.profiles.id);
+        .eq("position", position);
 
-      // Assign position to winner
+      // Assign to winner
       await supabase
         .from("profiles")
-        .update({ position: election.position })
-        .eq("id", winner.profiles.id);
+        .update({ position })
+        .eq("id", winner.nominee_id);
     }
 
-    if (!auto) {
-      toast.success("Election ended and winner declared");
-      loadData();
-    }
+    toast.success(`Election ended. Winner: ${winner?.profiles?.first_name} ${winner?.profiles?.last_name}`);
+    loadData();
   };
 
-  if (loading || !isAdmin) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  if (loading || !isAdmin || loadingData) {
+    return <Spinner />;
   }
 
   return (
@@ -211,191 +221,142 @@ const Elections = () => {
       <main className="flex-1 p-3 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-4 md:mb-6 pl-12 md:pl-0">
-            <h1 className="text-xl md:text-3xl font-bold">Elections</h1>
-            <Button onClick={() => setIsDialogOpen(true)} size="sm" className="text-xs md:text-sm h-8 md:h-10">
-              <Plus className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-              Create Election
-            </Button>
+            <div>
+              <h1 className="text-xl md:text-3xl font-bold text-foreground">Elections Management</h1>
+              <p className="text-sm text-muted-foreground">Manage nominees and election status per position</p>
+            </div>
+            <div className="flex items-center gap-3 bg-card p-3 rounded-lg border border-border">
+              <Label className="text-sm text-foreground">Election Active</Label>
+              <Switch
+                checked={isElectionActive}
+                onCheckedChange={toggleElectionStatus}
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-            {elections.map((election) => {
-              const isPastDeadline = new Date(election.deadline) < new Date();
-              const sortedNominees = [...(election.election_nominees || [])].sort(
-                (a, b) => (b.votes_count || 0) - (a.votes_count || 0)
-              );
-              const winner = election.status === "closed" && sortedNominees[0];
-              const totalVotes = sortedNominees.reduce((sum, n) => sum + (n.votes_count || 0), 0);
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {positions.map((position) => {
+              const election = elections.find(e => e.position === position);
+              const nominees = election?.election_nominees || [];
+              const totalVotes = nominees.reduce((sum: number, n: any) => sum + (n.votes_count || 0), 0);
+              const sortedNominees = [...nominees].sort((a: any, b: any) => (b.votes_count || 0) - (a.votes_count || 0));
+              const hasElection = election?.id;
+              const isClosed = election?.status === "closed";
 
               return (
-                <Card key={election.id}>
-                  <CardHeader className="p-3 md:p-6">
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-sm md:text-lg">{election.position}</CardTitle>
-                      <span
-                        className={`text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded ${
-                          election.status === "active"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {election.status}
-                      </span>
-                    </div>
-                    <p className="text-xs md:text-sm text-muted-foreground">
-                      Deadline: {new Date(election.deadline).toLocaleString()}
-                      {isPastDeadline && election.status === "active" && (
-                        <span className="text-red-600 ml-2">(Expired)</span>
-                      )}
-                    </p>
+                <Card key={position} className="bg-card border-border">
+                  <CardHeader className="p-4 bg-accent/10">
+                    <CardTitle className="flex items-center justify-between text-foreground">
+                      <span className="text-base md:text-lg">{position}</span>
+                      {isClosed && <span className="text-xs bg-muted px-2 py-1 rounded">Closed</span>}
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-3 md:p-6 pt-0">
-                    <div className="space-y-2 md:space-y-3">
-                      {election.status === "closed" && winner && (
-                        <div className="bg-primary/10 border border-primary p-2 md:p-3 rounded-lg mb-3">
-                          <p className="text-xs md:text-sm font-semibold text-primary mb-1">🏆 Winner</p>
-                          <p className="text-sm md:text-base font-bold">
-                            {winner.profiles?.first_name} {winner.profiles?.last_name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {winner.votes_count || 0} votes ({totalVotes > 0 ? Math.round(((winner.votes_count || 0) / totalVotes) * 100) : 0}%)
-                          </p>
-                        </div>
-                      )}
-                      
-                      <div className="flex items-center gap-2 mb-2">
-                        <Users className="w-3 h-3 md:w-4 md:h-4" />
-                        <span className="text-xs md:text-sm font-medium">
-                          {election.status === "closed" ? "Final Results:" : "Live Vote Count:"}
-                        </span>
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          Total: {totalVotes} votes
-                        </span>
+                  <CardContent className="p-4 space-y-3">
+                    {/* Deadline */}
+                    {hasElection && !isClosed && (
+                      <div>
+                        <Label className="text-xs text-foreground">End Date</Label>
+                        <Input
+                          type="datetime-local"
+                          defaultValue={election.deadline ? new Date(election.deadline).toISOString().slice(0, 16) : ""}
+                          onChange={(e) => handleUpdateDeadline(position, new Date(e.target.value).toISOString())}
+                          className="h-8 text-xs bg-input border-border text-foreground"
+                        />
                       </div>
-                      {sortedNominees?.map((nominee: any, index: number) => {
-                        const voteCount = nominee.votes_count || 0;
-                        const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
-                        const isWinner = election.status === "closed" && index === 0;
-                        
-                        return (
-                          <div
-                            key={nominee.id}
-                            className={`flex flex-col p-1.5 md:p-2 rounded ${
-                              isWinner ? "bg-primary/5 border border-primary" : "bg-muted"
-                            }`}
-                          >
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs md:text-sm">
-                                {isWinner && "👑 "}
-                                {nominee.profiles?.first_name} {nominee.profiles?.last_name}
-                              </span>
-                              <span className="font-bold text-xs md:text-base">
-                                {voteCount} votes
-                              </span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                    )}
+
+                    {/* Add Nominee */}
+                    {!isClosed && (
+                      <div>
+                        <Label className="text-xs text-foreground">Add Nominee</Label>
+                        <div className="flex gap-2">
+                          <Select onValueChange={(value) => handleAddNominee(position, value)}>
+                            <SelectTrigger className="h-8 text-xs bg-input border-border text-foreground">
+                              <SelectValue placeholder="Select member" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {members
+                                .filter(m => !nominees.find((n: any) => n.nominee_id === m.id))
+                                .map((member) => (
+                                  <SelectItem key={member.id} value={member.id} className="text-xs">
+                                    {member.first_name} {member.last_name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Nominees List */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-xs text-foreground flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          Nominees ({nominees.length})
+                        </Label>
+                        {totalVotes > 0 && (
+                          <span className="text-xs text-muted-foreground">{totalVotes} votes</span>
+                        )}
+                      </div>
+                      <div className="space-y-2 max-h-60 overflow-y-auto">
+                        {sortedNominees.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-4">No nominees yet</p>
+                        ) : (
+                          sortedNominees.map((nominee: any, index: number) => {
+                            const voteCount = nominee.votes_count || 0;
+                            const percentage = totalVotes > 0 ? Math.round((voteCount / totalVotes) * 100) : 0;
+                            const isWinner = isClosed && index === 0;
+
+                            return (
                               <div
-                                className={`h-1.5 rounded-full ${
-                                  isWinner ? "bg-primary" : "bg-gray-400"
+                                key={nominee.id}
+                                className={`flex items-center justify-between p-2 rounded border ${
+                                  isWinner ? "border-accent bg-accent/10" : "border-border bg-background"
                                 }`}
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                            <span className="text-xs text-muted-foreground mt-0.5">
-                              {percentage}%
-                            </span>
-                          </div>
-                        );
-                      })}
-                      {election.status === "active" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full mt-3 md:mt-4 text-xs h-7 md:h-9"
-                          onClick={() => handleEndElection(election.id, false)}
-                        >
-                          End Election Now
-                        </Button>
-                      )}
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    {isWinner && <Trophy className="w-3 h-3 text-accent" />}
+                                    <p className="text-xs font-medium text-foreground">
+                                      {nominee.profiles?.first_name} {nominee.profiles?.last_name}
+                                    </p>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">{voteCount} votes ({percentage}%)</p>
+                                </div>
+                                {!isClosed && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleRemoveNominee(nominee.id)}
+                                    className="h-6 w-6 p-0"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
+
+                    {/* End Election Button */}
+                    {hasElection && !isClosed && nominees.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEndElection(position)}
+                        className="w-full text-xs h-8"
+                      >
+                        End Election & Declare Winner
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               );
             })}
           </div>
-
-          {elections.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-xs md:text-sm text-muted-foreground">No elections yet</p>
-            </div>
-          )}
-
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="max-w-xs md:max-w-2xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="text-base md:text-lg">Create Election</DialogTitle>
-                <DialogDescription className="text-xs md:text-sm">Set up a new election for a position</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3 md:space-y-4">
-              <div>
-                <Label className="text-xs md:text-sm">Position</Label>
-                <Select
-                  value={formData.position}
-                  onValueChange={(value) => setFormData({ ...formData, position: value })}
-                >
-                  <SelectTrigger className="text-xs md:text-sm h-8 md:h-10">
-                    <SelectValue placeholder="Select position" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {positions.map((pos) => (
-                      <SelectItem key={pos} value={pos} className="text-xs md:text-sm">
-                        {pos}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs md:text-sm">Voting Deadline</Label>
-                <Input
-                  type="datetime-local"
-                  value={formData.deadline}
-                  onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
-                  className="text-xs md:text-sm h-8 md:h-10"
-                />
-              </div>
-              <div>
-                <Label className="text-xs md:text-sm">Select Nominees</Label>
-                <div className="border rounded-lg p-2 md:p-4 max-h-60 overflow-y-auto space-y-2">
-                  {members.map((member) => (
-                    <div key={member.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={member.id}
-                        checked={selectedNominees.includes(member.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedNominees([...selectedNominees, member.id]);
-                          } else {
-                            setSelectedNominees(selectedNominees.filter((id) => id !== member.id));
-                          }
-                        }}
-                      />
-                      <label htmlFor={member.id} className="text-xs md:text-sm cursor-pointer">
-                        {member.first_name} {member.last_name} ({member.member_id})
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleSave} className="text-xs md:text-sm h-8 md:h-10">Create Election</Button>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="text-xs md:text-sm h-8 md:h-10">
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
         </div>
       </main>
     </div>

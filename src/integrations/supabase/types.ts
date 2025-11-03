@@ -124,6 +124,24 @@ export type Database = {
           },
         ]
       }
+      election_settings: {
+        Row: {
+          id: string
+          is_active: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          is_active?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          is_active?: boolean
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       elections: {
         Row: {
           created_at: string | null

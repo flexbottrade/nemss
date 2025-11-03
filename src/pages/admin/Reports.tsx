@@ -236,8 +236,8 @@ const Reports = () => {
       .select("*, event_payments(amount, status, profiles(first_name, last_name))")
       .order("event_date", { ascending: false });
     
-    // Only filter by specific event if selectedEventId is not empty string
-    if (selectedEventId && selectedEventId !== "") {
+    // Only filter by specific event if selectedEventId is provided and not empty
+    if (selectedEventId && selectedEventId.trim() !== "") {
       query = query.eq("id", selectedEventId);
     }
     if (startDate) query = query.gte("event_date", startDate);

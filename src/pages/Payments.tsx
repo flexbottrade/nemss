@@ -200,27 +200,6 @@ const Payments = () => {
           </CardContent>
         </Card>
 
-        {/* Payment Accounts */}
-        {accounts.length > 0 && (
-          <Card className="mb-4 md:mb-6 bg-card border-border">
-            <CardHeader className="p-4 md:p-6">
-              <CardTitle className="flex items-center gap-2 text-card-foreground text-base md:text-lg">
-                <FileText className="w-4 h-4 md:w-5 md:h-5 text-accent" />
-                Payment Accounts
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 md:space-y-3 p-4 md:p-6 pt-0">
-              {accounts.map((account) => (
-                <div key={account.id} className="p-3 md:p-4 rounded-lg bg-background border border-border">
-                  <p className="font-semibold text-card-foreground text-sm md:text-base">{account.account_name}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">{account.bank_name}</p>
-                  <p className="text-base md:text-lg font-mono font-bold text-accent mt-1">{account.account_number}</p>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
         {/* Submit Payment Button */}
         <Button
           onClick={() => setIsDialogOpen(true)}
@@ -284,17 +263,18 @@ const Payments = () => {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Submit Payment</DialogTitle>
-              <DialogDescription>Select year and months, then upload proof of payment</DialogDescription>
+              <DialogTitle className="text-foreground">Submit Payment</DialogTitle>
+              <DialogDescription>Select months to pay, then choose payment account and upload proof</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Step 1: Year and Month Selection */}
               <div>
-                <Label>Select Year</Label>
+                <Label className="text-foreground">Select Year</Label>
                 <Select
                   value={formData.year.toString()}
                   onValueChange={(value) => setFormData({ ...formData, year: parseInt(value), selectedMonths: [] })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-input border-border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -308,7 +288,7 @@ const Payments = () => {
               </div>
 
               <div>
-                <Label className="mb-3 block">Select Months to Pay</Label>
+                <Label className="mb-3 block text-foreground">Select Months to Pay</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {monthNames.map((month, index) => {
                     const monthNum = index + 1;
@@ -336,7 +316,7 @@ const Payments = () => {
                         />
                         <label
                           htmlFor={`month-${monthNum}`}
-                          className="text-sm cursor-pointer flex-1"
+                          className="text-sm cursor-pointer flex-1 text-foreground"
                         >
                           {month}
                           {isPaid && " (Paid)"}
@@ -347,26 +327,49 @@ const Payments = () => {
                 </div>
               </div>
 
+              {/* Total Amount Display */}
               {formData.selectedMonths.length > 0 && (
-                <div className="p-3 bg-card rounded-lg border border-border">
-                  <p className="text-sm text-muted-foreground mb-1">
+                <div className="p-3 bg-accent/10 rounded-lg border border-accent">
+                  <p className="text-sm text-foreground mb-1">
                     {formData.selectedMonths.length} month{formData.selectedMonths.length > 1 ? "s" : ""} selected
                   </p>
                   <p className="text-2xl font-bold text-accent">
-                    ₦{(monthlyDues * formData.selectedMonths.length).toLocaleString()}
+                    Total: ₦{(monthlyDues * formData.selectedMonths.length).toLocaleString()}
                   </p>
                 </div>
               )}
 
-              <div>
-                <Label>Payment Proof (Image)</Label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setFormData({ ...formData, proof: e.target.files?.[0] || null })}
-                  className="w-full px-3 py-2 border border-border rounded-md bg-input text-card-foreground text-sm"
-                />
-              </div>
+              {/* Step 2: Payment Accounts */}
+              {formData.selectedMonths.length > 0 && accounts.length > 0 && (
+                <div className="pt-3 border-t border-border">
+                  <Label className="mb-2 block text-foreground flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-accent" />
+                    Payment Account Details
+                  </Label>
+                  <div className="space-y-2">
+                    {accounts.map((account) => (
+                      <div key={account.id} className="p-3 rounded-lg bg-card border border-border">
+                        <p className="font-semibold text-foreground text-sm">{account.account_name}</p>
+                        <p className="text-xs text-muted-foreground">{account.bank_name}</p>
+                        <p className="text-base font-mono font-bold text-accent mt-1">{account.account_number}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Upload Proof */}
+              {formData.selectedMonths.length > 0 && (
+                <div>
+                  <Label className="text-foreground">Upload Payment Proof (Image)</Label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFormData({ ...formData, proof: e.target.files?.[0] || null })}
+                    className="w-full px-3 py-2 border border-border rounded-md bg-input text-foreground text-sm"
+                  />
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <Button 
