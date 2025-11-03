@@ -8,87 +8,99 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Deep Teal Background (#0E3B43) */
+    /* Cconey Palette - Deep Teal Background (#0E3B43) */
     --background: 191 65% 16%;
-    /* Light Gold Text (#F8E39C) */
+    
+    /* Cconey Palette - Light Gold Text (#F8E39C) */
     --foreground: 46 88% 79%;
 
-    /* Lighter Teal Cards (#144852) */
+    /* Lighter Teal for Cards (#144852) */
     --card: 190 61% 20%;
     --card-foreground: 46 88% 79%;
 
     --popover: 190 61% 20%;
     --popover-foreground: 46 88% 79%;
 
-    /* Warm Gold Buttons (#E7B343) */
+    /* Cconey Palette - Warm Gold Buttons (#E7B343) */
     --primary: 41 77% 58%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 41 77% 65%;
     
-    /* Warm Gold Accent with lighter hover */
+    /* Warm Gold Accent for hover states */
     --accent: 41 77% 58%;
     --accent-foreground: 0 0% 100%;
-    --accent-hover: 45 85% 66%;
     
-    /* Light Gold Secondary */
+    /* Light Gold for secondary elements */
     --secondary: 46 88% 79%;
     --secondary-foreground: 191 65% 16%;
 
-    --muted: 190 50% 25%;
-    --muted-foreground: 46 70% 70%;
+    /* Slightly lighter teal for muted elements */
+    --muted: 190 61% 24%;
+    --muted-foreground: 46 88% 79%;
 
+    /* Status colors only - destructive (red for errors/rejections) */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 190 50% 30%;
-    --input: 190 50% 25%;
+    /* Borders and inputs use semi-transparent gold */
+    --border: 46 88% 79% / 0.2;
+    --input: 190 61% 20%;
     --ring: 41 77% 58%;
 
     --radius: 0.75rem;
     
-    /* Custom design tokens */
+    /* Custom design tokens - strictly Cconey palette */
     --gradient-primary: linear-gradient(135deg, hsl(191 65% 16%), hsl(190 61% 20%));
-    --gradient-accent: linear-gradient(135deg, hsl(41 77% 58%), hsl(45 85% 66%));
-    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.15);
-    --shadow-md: 0 8px 30px -8px hsl(0 0% 0% / 0.2);
-    --shadow-lg: 0 12px 40px -12px hsl(0 0% 0% / 0.25);
+    --gradient-accent: linear-gradient(135deg, hsl(41 77% 58%), hsl(41 82% 65%));
+    --shadow-soft: 0 4px 20px -4px hsl(0 0% 0% / 0.2);
+    --shadow-md: 0 8px 30px -8px hsl(0 0% 0% / 0.25);
+    --shadow-lg: 0 12px 40px -12px hsl(0 0% 0% / 0.3);
     --highlight: 46 88% 79%;
+    
+    /* Success color for approved status */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    
+    /* Warning color for pending status */
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 100%;
   }
 
   .dark {
-    /* Deep Teal Background - slightly darker for dark mode */
+    /* Dark mode - slightly darker teal */
     --background: 191 65% 12%;
     --foreground: 46 88% 79%;
 
-    /* Lighter Teal Cards - slightly darker for dark mode */
     --card: 190 61% 16%;
     --card-foreground: 46 88% 79%;
 
     --popover: 190 61% 16%;
     --popover-foreground: 46 88% 79%;
 
-    /* Warm Gold Buttons */
     --primary: 41 77% 58%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 41 77% 65%;
 
     --accent: 41 77% 58%;
     --accent-foreground: 0 0% 100%;
-    --accent-hover: 45 85% 66%;
 
     --secondary: 46 88% 79%;
-    --secondary-foreground: 191 65% 16%;
+    --secondary-foreground: 191 65% 12%;
 
-    --muted: 190 50% 20%;
-    --muted-foreground: 46 70% 70%;
+    --muted: 190 61% 18%;
+    --muted-foreground: 46 88% 79%;
 
-    --destructive: 0 63% 40%;
+    --destructive: 0 63% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 190 50% 25%;
-    --input: 190 50% 20%;
+    --border: 46 88% 79% / 0.2;
+    --input: 190 61% 16%;
     --ring: 41 77% 58%;
     --highlight: 46 88% 79%;
+    
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 100%;
   }
 }
 
