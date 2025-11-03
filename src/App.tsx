@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Payments from "./pages/Payments";
 import Events from "./pages/Events";
+import Vote from "./pages/Vote";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import Members from "./pages/admin/Members";
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/events" element={<Events />} />
+          <Route path="/vote" element={<Vote />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/members" element={<Members />} />

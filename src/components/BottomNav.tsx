@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, CreditCard, Calendar, User } from "lucide-react";
+import { Home, CreditCard, Calendar, Vote, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const BottomNav = () => {
@@ -9,6 +9,7 @@ const BottomNav = () => {
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: CreditCard, label: "Payments", path: "/payments" },
     { icon: Calendar, label: "Events", path: "/events" },
+    { icon: Vote, label: "Vote", path: "/vote" },
     { icon: User, label: "Profile", path: "/profile" },
   ];
 
