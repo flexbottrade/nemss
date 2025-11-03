@@ -79,7 +79,7 @@ const AdminSettings = () => {
       
       <main className="flex-1 p-3 md:p-6 lg:p-8">
         <div className="max-w-2xl mx-auto">
-          <div className="mb-4 md:mb-6">
+          <div className="mb-4 md:mb-6 pl-12 md:pl-0">
             <h1 className="text-xl md:text-3xl font-bold">Settings</h1>
           </div>
 

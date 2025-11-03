@@ -63,7 +63,7 @@ const AdminDashboard = () => {
       
       <main className="flex-1 p-3 md:p-6 lg:p-8 ml-0 md:ml-0">
         <div className="max-w-7xl mx-auto">
-          <header className="mb-4 md:mb-8">
+          <header className="mb-4 md:mb-8 pl-12 md:pl-0">
             <h1 className="text-xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Dashboard
             </h1>

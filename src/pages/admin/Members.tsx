@@ -58,7 +58,7 @@ const Members = () => {
       
       <main className="flex-1 p-3 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="mb-4 md:mb-6">
+          <div className="mb-4 md:mb-6 pl-12 md:pl-0">
             <h1 className="text-xl md:text-3xl font-bold">All Members</h1>
             <p className="text-xs md:text-sm text-muted-foreground">{members.length} total members</p>
           </div>
