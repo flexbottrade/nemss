@@ -55,12 +55,17 @@ const Home = () => {
       {/* Hero Section */}
       <section className="container mx-auto px-4 py-20 md:py-32 text-center">
         <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-          <h2 className="text-4xl md:text-6xl font-bold text-foreground leading-tight">
-            Celebrating Our Journey — <span className="text-primary">NEMSS 09 Set</span>
-          </h2>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-            Reuniting the bright minds and lifelong friends of New Era Model Secondary School's 2009 graduation set.
-          </p>
+          <div className="text-center">
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 md:mb-6 text-foreground">
+              Together We Stand
+            </h1>
+            <p className="text-base md:text-xl lg:text-2xl mb-2 md:mb-4 text-foreground/90">
+              NEMSS 2009 Set Alumni Association
+            </p>
+            <p className="text-sm md:text-lg text-foreground/80 mb-6 md:mb-8">
+              Connecting the past, empowering the present, building the future.
+            </p>
+          </div>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
             <Button size="lg" className="bg-primary hover:bg-primary-light text-base" asChild>
               <Link to="/signup">Join Our Network</Link>

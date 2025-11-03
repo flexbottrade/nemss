@@ -236,8 +236,8 @@ const Reports = () => {
       .select("*, event_payments(amount, status, profiles(first_name, last_name))")
       .order("event_date", { ascending: false });
     
-    // Only filter by specific event if selectedEventId is provided and not empty
-    if (selectedEventId && selectedEventId.trim() !== "") {
+    // Only filter by specific event if selectedEventId is provided and not empty/default
+    if (selectedEventId && selectedEventId !== "" && selectedEventId !== "all") {
       query = query.eq("id", selectedEventId);
     }
     if (startDate) query = query.gte("event_date", startDate);
@@ -405,7 +405,7 @@ const Reports = () => {
                       <SelectValue placeholder="All events" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Events</SelectItem>
+                      <SelectItem value="all">All Events</SelectItem>
                       {events.map((event) => (
                         <SelectItem key={event.id} value={event.id}>
                           {event.title}

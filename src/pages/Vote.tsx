@@ -133,7 +133,7 @@ const Vote = () => {
     setLoading(false);
   };
 
-  const handleVote = async (electionId: string, nomineeId: string) => {
+  const handleVote = async (electionId: string, nomineeRecordId: string) => {
     if (!userId) return;
 
     const election = elections.find(e => e.id === electionId);
@@ -149,24 +149,35 @@ const Vote = () => {
     }
 
     try {
-      // Cast vote - nomineeId is the election_nominees.id
+      // Find the nominee record to ensure it exists
+      const nomineeRecord = election?.nominees.find((n: any) => n.id === nomineeRecordId);
+      if (!nomineeRecord) {
+        toast.error("Invalid nominee selection");
+        return;
+      }
+
+      // Cast vote - use the election_nominees.id
       const { error: voteError } = await supabase
         .from("votes")
         .insert({
           election_id: electionId,
-          nominee_id: nomineeId,
+          nominee_id: nomineeRecordId,
           voter_id: userId,
         });
 
-      if (voteError) throw voteError;
+      if (voteError) {
+        console.error("Vote insert error:", voteError);
+        throw voteError;
+      }
 
       // Increment vote count
-      const nominee = election?.nominees.find((n: any) => n.id === nomineeId);
-      if (nominee) {
-        await supabase
-          .from("election_nominees")
-          .update({ votes_count: (nominee.votes_count || 0) + 1 })
-          .eq("id", nomineeId);
+      const { error: updateError } = await supabase
+        .from("election_nominees")
+        .update({ votes_count: (nomineeRecord.votes_count || 0) + 1 })
+        .eq("id", nomineeRecordId);
+
+      if (updateError) {
+        console.error("Vote count update error:", updateError);
       }
 
       toast.success("Vote cast successfully!");

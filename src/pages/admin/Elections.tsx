@@ -26,6 +26,7 @@ const Elections = () => {
   const [members, setMembers] = useState<any[]>([]);
   const [isElectionActive, setIsElectionActive] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [globalDeadline, setGlobalDeadline] = useState<string>("");
 
   const positions = [
     "President",
@@ -76,6 +77,14 @@ const Elections = () => {
 
       setElections(electionsData);
 
+      // Set global deadline from first active election with proper type checking
+      const firstElectionWithDeadline = electionsData.find((e) => 
+        'id' in e && 'deadline' in e && Boolean(e.id) && Boolean(e.deadline)
+      );
+      if (firstElectionWithDeadline && 'deadline' in firstElectionWithDeadline) {
+        setGlobalDeadline(firstElectionWithDeadline.deadline);
+      }
+
       const { data: membersData } = await supabase
         .from("profiles")
         .select("*")
@@ -105,6 +114,8 @@ const Elections = () => {
   };
 
   const handleAddNominee = async (position: string, nomineeId: string) => {
+    if (!nomineeId) return;
+    
     const election = elections.find(e => e.position === position);
     
     // Create election if it doesn't exist
@@ -121,10 +132,18 @@ const Elections = () => {
         .single();
 
       if (electionError || !newElection) {
+        console.error("Election creation error:", electionError);
         toast.error("Failed to create election");
         return;
       }
       electionId = newElection.id;
+    }
+
+    // Check if nominee already exists
+    const existingNominee = election?.election_nominees?.find((n: any) => n.nominee_id === nomineeId);
+    if (existingNominee) {
+      toast.error("Nominee already added");
+      return;
     }
 
     // Add nominee
@@ -136,12 +155,13 @@ const Elections = () => {
       });
 
     if (error) {
+      console.error("Nominee insertion error:", error);
       toast.error("Failed to add nominee");
       return;
     }
 
-    toast.success("Nominee added");
-    loadData();
+    toast.success("Nominee added successfully");
+    await loadData();
   };
 
   const handleRemoveNominee = async (nomineeRecordId: string) => {
@@ -159,22 +179,28 @@ const Elections = () => {
     loadData();
   };
 
-  const handleUpdateDeadline = async (position: string, deadline: string) => {
-    const election = elections.find(e => e.position === position);
-    if (!election?.id) return;
+  const handleUpdateGlobalDeadline = async (deadline: string) => {
+    if (!deadline) return;
 
-    const { error } = await supabase
-      .from("elections")
-      .update({ deadline })
-      .eq("id", election.id);
+    setGlobalDeadline(deadline);
 
-    if (error) {
+    // Update all active elections
+    const activeElections = elections.filter(e => e.id);
+    const updates = activeElections.map(election =>
+      supabase
+        .from("elections")
+        .update({ deadline })
+        .eq("id", election.id)
+    );
+
+    try {
+      await Promise.all(updates);
+      toast.success("Global deadline updated for all positions");
+      await loadData();
+    } catch (error) {
+      console.error("Deadline update error:", error);
       toast.error("Failed to update deadline");
-      return;
     }
-
-    toast.success("Deadline updated");
-    loadData();
   };
 
   const handleEndElection = async (position: string) => {
@@ -220,18 +246,47 @@ const Elections = () => {
       
       <main className="flex-1 p-3 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-4 md:mb-6 pl-12 md:pl-0">
-            <div>
-              <h1 className="text-xl md:text-3xl font-bold text-foreground">Elections Management</h1>
-              <p className="text-sm text-muted-foreground">Manage nominees and election status per position</p>
+          <div className="mb-4 md:mb-6 pl-12 md:pl-0 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl md:text-3xl font-bold text-foreground">Elections Management</h1>
+                <p className="text-sm text-muted-foreground">Manage nominees and election status per position</p>
+              </div>
+              <div className="flex items-center gap-3 bg-card p-3 rounded-lg border border-border">
+                <Label className="text-sm text-foreground">Election Active</Label>
+                <Switch
+                  checked={isElectionActive}
+                  onCheckedChange={toggleElectionStatus}
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-3 bg-card p-3 rounded-lg border border-border">
-              <Label className="text-sm text-foreground">Election Active</Label>
-              <Switch
-                checked={isElectionActive}
-                onCheckedChange={toggleElectionStatus}
-              />
-            </div>
+
+            {/* Global Deadline Card */}
+            <Card className="bg-card border-accent">
+              <CardHeader className="p-4">
+                <CardTitle className="text-base md:text-lg text-foreground">Global Election Deadline</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <Label className="text-xs text-foreground">Set deadline for all positions</Label>
+                    <Input
+                      type="datetime-local"
+                      value={globalDeadline ? new Date(globalDeadline).toISOString().slice(0, 16) : ""}
+                      onChange={(e) => setGlobalDeadline(e.target.value)}
+                      className="h-9 text-sm bg-input border-border text-foreground"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => handleUpdateGlobalDeadline(new Date(globalDeadline).toISOString())}
+                    disabled={!globalDeadline}
+                    className="h-9 text-sm"
+                  >
+                    Update All
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -252,19 +307,6 @@ const Elections = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 space-y-3">
-                    {/* Deadline */}
-                    {hasElection && !isClosed && (
-                      <div>
-                        <Label className="text-xs text-foreground">End Date</Label>
-                        <Input
-                          type="datetime-local"
-                          defaultValue={election.deadline ? new Date(election.deadline).toISOString().slice(0, 16) : ""}
-                          onChange={(e) => handleUpdateDeadline(position, new Date(e.target.value).toISOString())}
-                          className="h-8 text-xs bg-input border-border text-foreground"
-                        />
-                      </div>
-                    )}
-
                     {/* Add Nominee */}
                     {!isClosed && (
                       <div>

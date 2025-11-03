@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Upload, CheckCircle, XCircle, Clock, DollarSign, Calendar, FileText } from "lucide-react";
+import { Upload, CheckCircle2, XCircle, Clock, Calendar, CreditCard, DollarSign, FileText, Copy } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -161,7 +161,7 @@ const Payments = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "approved": return <CheckCircle className="w-4 h-4" />;
+      case "approved": return <CheckCircle2 className="w-4 h-4" />;
       case "rejected": return <XCircle className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
@@ -351,7 +351,21 @@ const Payments = () => {
                       <div key={account.id} className="p-3 rounded-lg bg-card border border-border">
                         <p className="font-semibold text-foreground text-sm">{account.account_name}</p>
                         <p className="text-xs text-muted-foreground">{account.bank_name}</p>
-                        <p className="text-base font-mono font-bold text-accent mt-1">{account.account_number}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-base font-mono font-bold text-accent">{account.account_number}</p>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => {
+                              navigator.clipboard.writeText(account.account_number);
+                              toast.success("Account number copied!");
+                            }}
+                          >
+                            <Copy className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -377,7 +391,7 @@ const Payments = () => {
                   disabled={uploading || formData.selectedMonths.length === 0} 
                   className="flex-1"
                 >
-                  {uploading ? "Uploading..." : "Submit Payment"}
+                  {uploading ? "Uploading..." : "Pay Dues"}
                 </Button>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel

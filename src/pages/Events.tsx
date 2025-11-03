@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Upload, CheckCircle, XCircle, Clock, MapPin, FileText } from "lucide-react";
+import { Calendar, Upload, CheckCircle2, XCircle, Clock, MapPin, FileText, Copy } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -125,7 +125,7 @@ const Events = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "approved": return <CheckCircle className="w-4 h-4" />;
+      case "approved": return <CheckCircle2 className="w-4 h-4" />;
       case "rejected": return <XCircle className="w-4 h-4" />;
       default: return <Clock className="w-4 h-4" />;
     }
@@ -209,7 +209,23 @@ const Events = () => {
                 <div key={account.id} className="p-3 md:p-4 rounded-lg bg-accent border border-accent">
                   <p className="font-semibold text-sm md:text-base text-accent-foreground">{account.account_name}</p>
                   <p className="text-xs md:text-sm text-accent-foreground/70">{account.bank_name}</p>
-                  <p className="text-base md:text-lg font-mono font-bold text-accent-foreground mt-1">{account.account_number}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-base md:text-lg font-mono font-bold text-accent-foreground">
+                      {account.account_number}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 text-accent-foreground hover:bg-accent-foreground/10"
+                      onClick={() => {
+                        navigator.clipboard.writeText(account.account_number);
+                        toast.success("Account number copied!");
+                      }}
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </CardContent>
