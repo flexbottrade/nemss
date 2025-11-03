@@ -120,9 +120,9 @@ const Dashboard = () => {
   const totalPages = Math.ceil(paymentHistory.length / itemsPerPage);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary pb-20 md:pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
       {/* Header */}
-      <header className="bg-gradient-to-r from-primary to-primary-dark text-primary-foreground p-4 md:p-6 rounded-b-3xl shadow-lg">
+      <header className="bg-accent text-accent-foreground p-4 md:p-6 rounded-b-3xl shadow-lg">
         <div className="container mx-auto">
           <div className="flex items-center justify-between mb-2 md:mb-4">
             <div>
@@ -131,7 +131,7 @@ const Dashboard = () => {
               </h1>
               <p className="text-xs md:text-sm text-primary-foreground/80">ID: {profile.member_id}</p>
               {profile.position && (
-                <p className="text-xs md:text-sm bg-accent text-accent-foreground px-2 py-1 rounded-full inline-block mt-1">
+                <p className="text-xs md:text-sm bg-primary text-primary-foreground px-2 py-1 rounded-full inline-block mt-1">
                   {profile.position}
                 </p>
               )}
@@ -207,7 +207,7 @@ const Dashboard = () => {
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mt-6 md:mt-8">
           <Button
-            className="h-16 md:h-24 bg-gradient-to-r from-primary to-primary-dark hover:opacity-90"
+            className="h-16 md:h-24 bg-primary hover:bg-primary/90"
             onClick={() => navigate("/payments")}
           >
             <div className="flex flex-col items-center gap-1 md:gap-2">
@@ -217,7 +217,7 @@ const Dashboard = () => {
           </Button>
 
           <Button
-            className="h-16 md:h-24 bg-gradient-to-r from-accent to-highlight hover:opacity-90"
+            className="h-16 md:h-24 bg-primary hover:bg-primary/90"
             onClick={() => navigate("/events")}
           >
             <div className="flex flex-col items-center gap-1 md:gap-2">
@@ -227,8 +227,7 @@ const Dashboard = () => {
           </Button>
 
           <Button
-            variant="outline"
-            className="h-16 md:h-24 border-border/50"
+            className="h-16 md:h-24 bg-primary hover:bg-primary/90"
             onClick={() => navigate("/profile")}
           >
             <div className="flex flex-col items-center gap-1 md:gap-2">

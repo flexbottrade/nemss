@@ -83,8 +83,8 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary flex items-center justify-center p-4">
-      <Card className="w-full max-w-md border-border/50 shadow-xl">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <Card className="w-full max-w-md border-border bg-accent shadow-xl">
         <CardHeader className="space-y-1 p-4 md:p-6">
           <Button
             variant="ghost"
@@ -97,8 +97,8 @@ const Signup = () => {
               Back
             </Link>
           </Button>
-          <CardTitle className="text-xl md:text-2xl font-bold">Create Account</CardTitle>
-          <CardDescription className="text-xs md:text-sm">Join NEMSS09 Set Association</CardDescription>
+          <CardTitle className="text-xl md:text-2xl font-bold text-accent-foreground">Create Account</CardTitle>
+          <CardDescription className="text-xs md:text-sm text-accent-foreground/80">Join NEMSS09 Set Association</CardDescription>
         </CardHeader>
         <CardContent className="p-4 md:p-6 pt-0">
           <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
@@ -190,13 +190,13 @@ const Signup = () => {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-primary to-primary-dark hover:opacity-90 h-9 md:h-10 text-sm md:text-base"
+              className="w-full bg-primary hover:bg-primary/90 h-9 md:h-10 text-sm md:text-base"
               disabled={loading}
             >
               {loading ? "Creating Account..." : "Sign Up"}
             </Button>
 
-            <p className="text-center text-xs md:text-sm text-muted-foreground">
+            <p className="text-center text-xs md:text-sm text-accent-foreground/70">
               Already have an account?{" "}
               <Link to="/login" className="text-primary hover:underline">
                 Login

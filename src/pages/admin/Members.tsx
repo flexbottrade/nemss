@@ -162,8 +162,8 @@ const Members = () => {
                     </p>
                     {member.position && (
                       <p>
-                        <span className="font-medium">Position:</span>{" "}
-                        <span className="bg-accent text-accent-foreground px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-xs">
+                        <span className="font-medium text-card-foreground">Position:</span>{" "}
+                        <span className="bg-primary text-primary-foreground px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-xs">
                           {member.position}
                         </span>
                       </p>

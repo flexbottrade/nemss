@@ -158,7 +158,7 @@ const Events = () => {
         </div>
 
         {/* Upcoming Events */}
-        <Card className="mb-6 border-accent/20 bg-white/95 backdrop-blur shadow-lg">
+        <Card className="mb-6 border-border bg-card shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-accent" />
@@ -171,18 +171,18 @@ const Events = () => {
             ) : (
               <div className="space-y-4">
                 {events.map((event) => (
-                  <div key={event.id} className="p-4 rounded-lg bg-gradient-to-br from-primary/5 to-accent/5 border border-accent/20">
-                    <h3 className="text-lg font-bold text-primary mb-2">{event.title}</h3>
+                  <div key={event.id} className="p-4 rounded-lg bg-accent border border-accent">
+                    <h3 className="text-lg font-bold text-accent-foreground mb-2">{event.title}</h3>
                     {event.description && (
-                      <p className="text-sm text-muted-foreground mb-3">{event.description}</p>
+                      <p className="text-sm text-accent-foreground/70 mb-3">{event.description}</p>
                     )}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4 text-sm">
-                        <span className="flex items-center gap-1 text-muted-foreground">
+                        <span className="flex items-center gap-1 text-accent-foreground/70">
                           <Calendar className="w-4 h-4" />
                           {new Date(event.event_date).toLocaleDateString()}
                         </span>
-                        <span className="text-lg font-bold text-accent">
+                        <span className="text-lg font-bold text-accent-foreground">
                           ₦{Number(event.amount).toLocaleString()}
                         </span>
                       </div>
@@ -196,7 +196,7 @@ const Events = () => {
 
         {/* Payment Accounts */}
         {accounts.length > 0 && (
-          <Card className="mb-6 border-accent/20 bg-white/95 backdrop-blur shadow-lg">
+          <Card className="mb-6 border-border bg-card shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-accent" />
@@ -205,10 +205,10 @@ const Events = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               {accounts.map((account) => (
-                <div key={account.id} className="p-4 rounded-lg bg-secondary/50 border border-accent/10">
-                  <p className="font-semibold text-primary">{account.account_name}</p>
-                  <p className="text-sm text-muted-foreground">{account.bank_name}</p>
-                  <p className="text-lg font-mono font-bold text-accent mt-1">{account.account_number}</p>
+                <div key={account.id} className="p-4 rounded-lg bg-accent border border-accent">
+                  <p className="font-semibold text-accent-foreground">{account.account_name}</p>
+                  <p className="text-sm text-accent-foreground/70">{account.bank_name}</p>
+                  <p className="text-lg font-mono font-bold text-accent-foreground mt-1">{account.account_number}</p>
                 </div>
               ))}
             </CardContent>
@@ -218,7 +218,7 @@ const Events = () => {
         {/* Submit Payment Button */}
         <Button
           onClick={() => setIsDialogOpen(true)}
-          className="w-full mb-6 h-12 text-base bg-accent hover:bg-accent/90 text-primary font-semibold shadow-lg"
+          className="w-full mb-6 h-12 text-base bg-primary hover:bg-primary/90 font-semibold shadow-lg"
           disabled={events.length === 0}
         >
           <Upload className="w-5 h-5 mr-2" />
@@ -226,7 +226,7 @@ const Events = () => {
         </Button>
 
         {/* Payment History */}
-        <Card className="border-accent/20 bg-white/95 backdrop-blur shadow-lg">
+        <Card className="border-border bg-card shadow-lg">
           <CardHeader>
             <CardTitle>Payment History</CardTitle>
           </CardHeader>
@@ -236,11 +236,11 @@ const Events = () => {
             ) : (
               <div className="space-y-3">
                 {payments.map((payment) => (
-                  <div key={payment.id} className="p-4 rounded-lg border border-border bg-card">
+                  <div key={payment.id} className="p-4 rounded-lg border border-border bg-background">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
-                        <p className="font-semibold text-primary">{payment.events?.title}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="font-semibold text-foreground">{payment.events?.title}</p>
+                        <p className="text-xs text-foreground/70">
                           {new Date(payment.created_at).toLocaleDateString()}
                         </p>
                       </div>
@@ -251,9 +251,9 @@ const Events = () => {
                         </span>
                       </Badge>
                     </div>
-                    <p className="text-xl font-bold text-accent">₦{Number(payment.amount).toLocaleString()}</p>
+                    <p className="text-xl font-bold text-foreground">₦{Number(payment.amount).toLocaleString()}</p>
                     {payment.admin_note && (
-                      <div className="mt-2 p-2 bg-muted rounded text-xs">
+                      <div className="mt-2 p-2 bg-accent/20 rounded text-xs text-foreground">
                         <span className="font-semibold">Note: </span>
                         {payment.admin_note}
                       </div>
@@ -300,10 +300,10 @@ const Events = () => {
                 </Select>
               </div>
               {selectedEvent && (
-                <div className="p-3 bg-accent/10 rounded-lg">
-                  <p className="text-sm text-muted-foreground mb-1">Event Amount</p>
-                  <p className="text-2xl font-bold text-primary">₦{Number(selectedEvent.amount).toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                <div className="p-3 bg-accent rounded-lg">
+                  <p className="text-sm text-accent-foreground/70 mb-1">Event Amount</p>
+                  <p className="text-2xl font-bold text-accent-foreground">₦{Number(selectedEvent.amount).toLocaleString()}</p>
+                  <p className="text-xs text-accent-foreground/70 mt-1">
                     Date: {new Date(selectedEvent.event_date).toLocaleDateString()}
                   </p>
                 </div>
