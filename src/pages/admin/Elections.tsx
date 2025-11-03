@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Users } from "lucide-react";
+import { Plus, Users } from "lucide-react";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import {

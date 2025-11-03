@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Check, X, ExternalLink } from "lucide-react";
+import { Check, X, ExternalLink } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -75,11 +76,11 @@ const Transactions = () => {
   }
 
   const renderPayment = (payment: any, type: "dues" | "event") => (
-    <Card key={payment.id} className="mb-4">
-      <CardContent className="pt-6">
+    <Card key={payment.id} className="mb-3 md:mb-4">
+      <CardContent className="pt-3 md:pt-6 p-3 md:p-6">
         <div className="flex flex-col md:flex-row justify-between gap-4">
           <div className="flex-1">
-            <p className="font-semibold text-lg">
+            <p className="font-semibold text-sm md:text-lg">
               {payment.profiles?.first_name} {payment.profiles?.last_name}
             </p>
             <p className="text-sm text-muted-foreground">ID: {payment.profiles?.member_id}</p>
@@ -148,20 +149,20 @@ const Transactions = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary p-4 md:p-8">
-      <div className="container mx-auto">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-2xl md:text-3xl font-bold">Transactions</h1>
-        </div>
+    <div className="flex min-h-screen bg-background">
+      <AdminSidebar />
+      
+      <main className="flex-1 p-3 md:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-4 md:mb-6">
+            <h1 className="text-xl md:text-3xl font-bold">Transactions</h1>
+          </div>
 
-        <Tabs defaultValue="dues">
-          <TabsList className="mb-4">
-            <TabsTrigger value="dues">Dues Payments</TabsTrigger>
-            <TabsTrigger value="events">Event Payments</TabsTrigger>
-          </TabsList>
+          <Tabs defaultValue="dues">
+            <TabsList className="mb-3 md:mb-4">
+              <TabsTrigger value="dues" className="text-xs md:text-sm">Dues Payments</TabsTrigger>
+              <TabsTrigger value="events" className="text-xs md:text-sm">Event Payments</TabsTrigger>
+            </TabsList>
 
           <TabsContent value="dues">
             {duesPayments.length === 0 ? (
@@ -178,9 +179,9 @@ const Transactions = () => {
               eventPayments.map((payment) => renderPayment(payment, "event"))
             )}
           </TabsContent>
-        </Tabs>
+          </Tabs>
 
-        <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
+          <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Approve Payment</DialogTitle>
@@ -205,8 +206,9 @@ const Transactions = () => {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
-      </div>
+          </Dialog>
+        </div>
+      </main>
     </div>
   );
 };

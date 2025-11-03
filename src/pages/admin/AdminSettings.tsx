@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save } from "lucide-react";
+import { Save } from "lucide-react";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -73,43 +74,44 @@ const AdminSettings = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary p-4 md:p-8">
-      <div className="container mx-auto max-w-2xl">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-2xl md:text-3xl font-bold">Settings</h1>
-        </div>
+    <div className="flex min-h-screen bg-background">
+      <AdminSidebar />
+      
+      <main className="flex-1 p-3 md:p-6 lg:p-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="mb-4 md:mb-6">
+            <h1 className="text-xl md:text-3xl font-bold">Settings</h1>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Monthly Dues Configuration</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="dues">Monthly Dues Amount (₦)</Label>
-                <Input
-                  id="dues"
-                  type="number"
-                  value={monthlyDues}
-                  onChange={(e) => setMonthlyDues(e.target.value)}
-                  placeholder="3000"
-                  className="mt-2"
-                />
-                <p className="text-sm text-muted-foreground mt-2">
-                  This is the standard monthly dues amount that members are expected to pay.
-                </p>
+          <Card>
+            <CardHeader className="p-3 md:p-6">
+              <CardTitle className="text-base md:text-lg">Monthly Dues Configuration</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 md:p-6 pt-0">
+              <div className="space-y-3 md:space-y-4">
+                <div>
+                  <Label htmlFor="dues" className="text-xs md:text-sm">Monthly Dues Amount (₦)</Label>
+                  <Input
+                    id="dues"
+                    type="number"
+                    value={monthlyDues}
+                    onChange={(e) => setMonthlyDues(e.target.value)}
+                    placeholder="3000"
+                    className="mt-2 text-xs md:text-sm h-8 md:h-10"
+                  />
+                  <p className="text-xs md:text-sm text-muted-foreground mt-2">
+                    This is the standard monthly dues amount that members are expected to pay.
+                  </p>
+                </div>
+                <Button onClick={handleSave} className="text-xs md:text-sm h-8 md:h-10">
+                  <Save className="w-3 h-3 md:w-4 md:h-4 mr-2" />
+                  Save Settings
+                </Button>
               </div>
-              <Button onClick={handleSave}>
-                <Save className="w-4 h-4 mr-2" />
-                Save Settings
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
     </div>
   );
 };

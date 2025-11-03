@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import {
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 
 const PaymentAccounts = () => {
   const navigate = useNavigate();
@@ -117,102 +118,105 @@ const PaymentAccounts = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary p-4 md:p-8">
-      <div className="container mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
-              <ArrowLeft className="w-5 h-5" />
+    <div className="flex min-h-screen bg-background">
+      <AdminSidebar />
+      
+      <main className="flex-1 p-3 md:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h1 className="text-xl md:text-3xl font-bold">Payment Accounts</h1>
+            <Button onClick={() => openDialog()} size="sm" className="text-xs md:text-sm h-8 md:h-10">
+              <Plus className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              Add Account
             </Button>
-            <h1 className="text-2xl md:text-3xl font-bold">Payment Accounts</h1>
           </div>
-          <Button onClick={() => openDialog()}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Account
-          </Button>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {accounts.map((account) => (
-            <Card key={account.id}>
-              <CardHeader>
-                <CardTitle className="text-lg">{account.bank_name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p className="text-sm">
-                    <span className="font-medium">Account Name:</span> {account.account_name}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">Account Number:</span> {account.account_number}
-                  </p>
-                </div>
-                <div className="flex gap-2 mt-4">
-                  <Button size="sm" variant="outline" onClick={() => openDialog(account)}>
-                    <Edit className="w-4 h-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleDelete(account.id)}
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    Delete
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {accounts.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No payment accounts yet</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            {accounts.map((account) => (
+              <Card key={account.id}>
+                <CardHeader className="p-3 md:p-6">
+                  <CardTitle className="text-sm md:text-lg">{account.bank_name}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 md:p-6 pt-0">
+                  <div className="space-y-1 md:space-y-2">
+                    <p className="text-xs md:text-sm">
+                      <span className="font-medium">Account Name:</span> {account.account_name}
+                    </p>
+                    <p className="text-xs md:text-sm">
+                      <span className="font-medium">Account Number:</span> {account.account_number}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 mt-3 md:mt-4">
+                    <Button size="sm" variant="outline" onClick={() => openDialog(account)} className="text-xs h-7 md:h-9">
+                      <Edit className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDelete(account.id)}
+                      className="text-xs h-7 md:h-9"
+                    >
+                      <Trash2 className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        )}
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingAccount ? "Edit" : "Add"} Payment Account</DialogTitle>
-              <DialogDescription>Enter the bank account details</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Bank Name</Label>
-                <Input
-                  value={formData.bank_name}
-                  onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-                  placeholder="e.g., First Bank"
-                />
-              </div>
-              <div>
-                <Label>Account Name</Label>
-                <Input
-                  value={formData.account_name}
-                  onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
-                  placeholder="Account holder name"
-                />
-              </div>
-              <div>
-                <Label>Account Number</Label>
-                <Input
-                  value={formData.account_number}
-                  onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
-                  placeholder="0000000000"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleSave}>Save</Button>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-              </div>
+          {accounts.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-xs md:text-sm text-muted-foreground">No payment accounts yet</p>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          )}
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent className="max-w-sm md:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-base md:text-lg">{editingAccount ? "Edit" : "Add"} Payment Account</DialogTitle>
+                <DialogDescription className="text-xs md:text-sm">Enter the bank account details</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 md:space-y-4">
+                <div>
+                  <Label className="text-xs md:text-sm">Bank Name</Label>
+                  <Input
+                    value={formData.bank_name}
+                    onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                    placeholder="e.g., First Bank"
+                    className="text-xs md:text-sm h-8 md:h-10"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs md:text-sm">Account Name</Label>
+                  <Input
+                    value={formData.account_name}
+                    onChange={(e) => setFormData({ ...formData, account_name: e.target.value })}
+                    placeholder="Account holder name"
+                    className="text-xs md:text-sm h-8 md:h-10"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs md:text-sm">Account Number</Label>
+                  <Input
+                    value={formData.account_number}
+                    onChange={(e) => setFormData({ ...formData, account_number: e.target.value })}
+                    placeholder="0000000000"
+                    className="text-xs md:text-sm h-8 md:h-10"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleSave} className="text-xs md:text-sm h-8 md:h-10">Save</Button>
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="text-xs md:text-sm h-8 md:h-10">
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </main>
     </div>
   );
 };

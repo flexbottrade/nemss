@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Edit } from "lucide-react";
+import { Plus, Edit } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import {
@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 
 const AdminEvents = () => {
   const navigate = useNavigate();
@@ -121,115 +122,118 @@ const AdminEvents = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary p-4 md:p-8">
-      <div className="container mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
-              <ArrowLeft className="w-5 h-5" />
+    <div className="flex min-h-screen bg-background">
+      <AdminSidebar />
+      
+      <main className="flex-1 p-3 md:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h1 className="text-xl md:text-3xl font-bold">Events Management</h1>
+            <Button onClick={() => openDialog()} size="sm" className="text-xs md:text-sm h-8 md:h-10">
+              <Plus className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              Create Event
             </Button>
-            <h1 className="text-2xl md:text-3xl font-bold">Events Management</h1>
           </div>
-          <Button onClick={() => openDialog()}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Event
-          </Button>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {events.map((event) => {
-            const status = getEventStatus(event.event_date);
-            return (
-              <Card key={event.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg">{event.title}</CardTitle>
-                    <span className={`text-xs font-medium ${status.color}`}>{status.label}</span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {event.description && (
-                      <p className="text-sm text-muted-foreground">{event.description}</p>
-                    )}
-                    <p className="text-xl font-bold">₦{Number(event.amount).toLocaleString()}</p>
-                    <p className="text-sm">
-                      Date: {new Date(event.event_date).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="mt-4 w-full"
-                    onClick={() => openDialog(event)}
-                  >
-                    <Edit className="w-4 h-4 mr-1" />
-                    Edit
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        {events.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No events yet</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            {events.map((event) => {
+              const status = getEventStatus(event.event_date);
+              return (
+                <Card key={event.id}>
+                  <CardHeader className="p-3 md:p-6">
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-sm md:text-lg">{event.title}</CardTitle>
+                      <span className={`text-xs font-medium ${status.color}`}>{status.label}</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-3 md:p-6 pt-0">
+                    <div className="space-y-1 md:space-y-2">
+                      {event.description && (
+                        <p className="text-xs md:text-sm text-muted-foreground">{event.description}</p>
+                      )}
+                      <p className="text-lg md:text-xl font-bold">₦{Number(event.amount).toLocaleString()}</p>
+                      <p className="text-xs md:text-sm">
+                        Date: {new Date(event.event_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="mt-3 md:mt-4 w-full text-xs h-7 md:h-9"
+                      onClick={() => openDialog(event)}
+                    >
+                      <Edit className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                      Edit
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
-        )}
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingEvent ? "Edit" : "Create"} Event</DialogTitle>
-              <DialogDescription>
-                {editingEvent ? "Update event details" : "Add a new event contribution"}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Title</Label>
-                <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Event name"
-                />
-              </div>
-              <div>
-                <Label>Description (Optional)</Label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Brief description"
-                />
-              </div>
-              <div>
-                <Label>Amount (₦)</Label>
-                <Input
-                  type="number"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <Label>Event Date</Label>
-                <Input
-                  type="date"
-                  value={formData.event_date}
-                  onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button onClick={handleSave}>Save</Button>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-              </div>
+          {events.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-xs md:text-sm text-muted-foreground">No events yet</p>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+          )}
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent className="max-w-sm md:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-base md:text-lg">{editingEvent ? "Edit" : "Create"} Event</DialogTitle>
+                <DialogDescription className="text-xs md:text-sm">
+                  {editingEvent ? "Update event details" : "Add a new event contribution"}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 md:space-y-4">
+                <div>
+                  <Label className="text-xs md:text-sm">Title</Label>
+                  <Input
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Event name"
+                    className="text-xs md:text-sm h-8 md:h-10"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs md:text-sm">Description (Optional)</Label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Brief description"
+                    className="text-xs md:text-sm"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs md:text-sm">Amount (₦)</Label>
+                  <Input
+                    type="number"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    placeholder="0"
+                    className="text-xs md:text-sm h-8 md:h-10"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs md:text-sm">Event Date</Label>
+                  <Input
+                    type="date"
+                    value={formData.event_date}
+                    onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+                    className="text-xs md:text-sm h-8 md:h-10"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleSave} className="text-xs md:text-sm h-8 md:h-10">Save</Button>
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="text-xs md:text-sm h-8 md:h-10">
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </main>
     </div>
   );
 };
