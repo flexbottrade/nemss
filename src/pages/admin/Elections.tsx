@@ -151,63 +151,61 @@ const Elections = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary p-4 md:p-8">
-      <div className="container mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
-              <ArrowLeft className="w-5 h-5" />
+    <div className="flex min-h-screen bg-background">
+      <AdminSidebar />
+      
+      <main className="flex-1 p-3 md:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h1 className="text-xl md:text-3xl font-bold">Elections</h1>
+            <Button onClick={() => setIsDialogOpen(true)} size="sm" className="text-xs md:text-sm h-8 md:h-10">
+              <Plus className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              Create Election
             </Button>
-            <h1 className="text-2xl md:text-3xl font-bold">Elections</h1>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Create Election
-          </Button>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {elections.map((election) => (
-            <Card key={election.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle>{election.position}</CardTitle>
-                  <span
-                    className={`text-xs px-2 py-1 rounded ${
-                      election.status === "active"
-                        ? "bg-green-100 text-green-800"
-                        : "bg-gray-100 text-gray-800"
-                    }`}
-                  >
-                    {election.status}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+            {elections.map((election) => (
+              <Card key={election.id}>
+                <CardHeader className="p-3 md:p-6">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-sm md:text-lg">{election.position}</CardTitle>
+                    <span
+                      className={`text-xs px-1.5 md:px-2 py-0.5 md:py-1 rounded ${
+                        election.status === "active"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {election.status}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs md:text-sm text-muted-foreground">
                   Deadline: {new Date(election.deadline).toLocaleString()}
                 </p>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="p-3 md:p-6 pt-0">
+                <div className="space-y-2 md:space-y-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <Users className="w-4 h-4" />
-                    <span className="text-sm font-medium">Nominees:</span>
+                    <Users className="w-3 h-3 md:w-4 md:h-4" />
+                    <span className="text-xs md:text-sm font-medium">Nominees:</span>
                   </div>
                   {election.election_nominees?.map((nominee: any) => (
                     <div
                       key={nominee.id}
-                      className="flex justify-between items-center p-2 bg-muted rounded"
+                      className="flex justify-between items-center p-1.5 md:p-2 bg-muted rounded"
                     >
-                      <span className="text-sm">
+                      <span className="text-xs md:text-sm">
                         {nominee.profiles?.first_name} {nominee.profiles?.last_name}
                       </span>
-                      <span className="font-bold">{nominee.votes_count || 0} votes</span>
+                      <span className="font-bold text-xs md:text-base">{nominee.votes_count || 0} votes</span>
                     </div>
                   ))}
                   {election.status === "active" && (
                     <Button
                       size="sm"
                       variant="outline"
-                      className="w-full mt-4"
+                      className="w-full mt-3 md:mt-4 text-xs h-7 md:h-9"
                       onClick={() => handleEndElection(election.id)}
                     >
                       End Election
@@ -217,33 +215,33 @@ const Elections = () => {
               </CardContent>
             </Card>
           ))}
-        </div>
-
-        {elections.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No elections yet</p>
           </div>
-        )}
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create Election</DialogTitle>
-              <DialogDescription>Set up a new election for a position</DialogDescription>
+          {elections.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-xs md:text-sm text-muted-foreground">No elections yet</p>
+            </div>
+          )}
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent className="max-w-xs md:max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-base md:text-lg">Create Election</DialogTitle>
+                <DialogDescription className="text-xs md:text-sm">Set up a new election for a position</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               <div>
-                <Label>Position</Label>
+                <Label className="text-xs md:text-sm">Position</Label>
                 <Select
                   value={formData.position}
                   onValueChange={(value) => setFormData({ ...formData, position: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="text-xs md:text-sm h-8 md:h-10">
                     <SelectValue placeholder="Select position" />
                   </SelectTrigger>
                   <SelectContent>
                     {positions.map((pos) => (
-                      <SelectItem key={pos} value={pos}>
+                      <SelectItem key={pos} value={pos} className="text-xs md:text-sm">
                         {pos}
                       </SelectItem>
                     ))}
@@ -251,16 +249,17 @@ const Elections = () => {
                 </Select>
               </div>
               <div>
-                <Label>Voting Deadline</Label>
+                <Label className="text-xs md:text-sm">Voting Deadline</Label>
                 <Input
                   type="datetime-local"
                   value={formData.deadline}
                   onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                  className="text-xs md:text-sm h-8 md:h-10"
                 />
               </div>
               <div>
-                <Label>Select Nominees</Label>
-                <div className="border rounded-lg p-4 max-h-60 overflow-y-auto space-y-2">
+                <Label className="text-xs md:text-sm">Select Nominees</Label>
+                <div className="border rounded-lg p-2 md:p-4 max-h-60 overflow-y-auto space-y-2">
                   {members.map((member) => (
                     <div key={member.id} className="flex items-center space-x-2">
                       <Checkbox
@@ -274,7 +273,7 @@ const Elections = () => {
                           }
                         }}
                       />
-                      <label htmlFor={member.id} className="text-sm cursor-pointer">
+                      <label htmlFor={member.id} className="text-xs md:text-sm cursor-pointer">
                         {member.first_name} {member.last_name} ({member.member_id})
                       </label>
                     </div>
@@ -282,15 +281,16 @@ const Elections = () => {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleSave}>Create Election</Button>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button onClick={handleSave} className="text-xs md:text-sm h-8 md:h-10">Create Election</Button>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="text-xs md:text-sm h-8 md:h-10">
                   Cancel
                 </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };

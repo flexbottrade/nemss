@@ -128,60 +128,58 @@ const Finance = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary p-4 md:p-8">
-      <div className="container mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/admin")}>
-              <ArrowLeft className="w-5 h-5" />
+    <div className="flex min-h-screen bg-background">
+      <AdminSidebar />
+      
+      <main className="flex-1 p-3 md:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h1 className="text-xl md:text-3xl font-bold">Finance Tracker</h1>
+            <Button onClick={() => setIsDialogOpen(true)} size="sm" className="text-xs md:text-sm h-8 md:h-10">
+              <Plus className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              Add Adjustment
             </Button>
-            <h1 className="text-2xl md:text-3xl font-bold">Finance Tracker</h1>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Adjustment
-          </Button>
-        </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Inflow
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                ₦{totals.inflow.toLocaleString()}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
+            <Card>
+              <CardHeader className="p-3 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                  Total Inflow
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 md:p-6 pt-0">
+                <div className="text-lg md:text-2xl font-bold text-green-600">
+                  ₦{totals.inflow.toLocaleString()}
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Outflow
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                ₦{totals.outflow.toLocaleString()}
-              </div>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="p-3 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                  Total Outflow
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 md:p-6 pt-0">
+                <div className="text-lg md:text-2xl font-bold text-red-600">
+                  ₦{totals.outflow.toLocaleString()}
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Current Balance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₦{totals.balance.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-        </div>
+            <Card>
+              <CardHeader className="p-3 md:p-6">
+                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+                  Current Balance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 md:p-6 pt-0">
+                <div className="text-lg md:text-2xl font-bold">₦{totals.balance.toLocaleString()}</div>
+              </CardContent>
+            </Card>
+          </div>
 
         {/* Adjustments List */}
         <Card>
@@ -273,7 +271,8 @@ const Finance = () => {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };
