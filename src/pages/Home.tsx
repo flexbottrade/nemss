@@ -63,10 +63,10 @@ const Home = () => {
             ) : (
               <>
                 <Button variant="ghost" size="sm" asChild>
-                  <Link to="/login">Login</Link>
+                  <Link to="/auth">Login</Link>
                 </Button>
                 <Button size="sm" className="bg-primary hover:bg-primary-light" asChild>
-                  <Link to="/signup">Sign Up</Link>
+                  <Link to="/auth">Sign Up</Link>
                 </Button>
               </>
             )}
@@ -96,10 +96,10 @@ const Home = () => {
             ) : (
               <>
                 <Button size="lg" className="bg-primary hover:bg-primary-light text-base" asChild>
-                  <Link to="/signup">Join Our Network</Link>
+                  <Link to="/auth">Join Our Network</Link>
                 </Button>
                 <Button size="lg" variant="outline" className="text-base border-primary text-primary hover:bg-primary/10" asChild>
-                  <Link to="/login">Member Login</Link>
+                  <Link to="/auth">Member Login</Link>
                 </Button>
               </>
             )}

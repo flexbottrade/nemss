@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, Facebook, Twitter } from "lucide-react";
+import { Mail, Phone, Facebook, Twitter, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,10 +58,10 @@ const Contact = () => {
           </nav>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" asChild>
-              <Link to="/login">Login</Link>
+              <Link to="/auth">Login</Link>
             </Button>
             <Button size="sm" className="bg-primary hover:bg-primary-light" asChild>
-              <Link to="/signup">Sign Up</Link>
+              <Link to="/auth">Sign Up</Link>
             </Button>
           </div>
         </div>
@@ -69,11 +69,24 @@ const Contact = () => {
 
       {/* Page Title */}
       <section className="bg-primary text-primary-foreground py-16 md:py-24">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">Get in Touch</h2>
-          <p className="text-lg text-primary-foreground/90 max-w-2xl mx-auto">
-            We'd love to hear from you! Whether you're a fellow classmate or a partner, reach out to the NEMSS 09 Set team anytime.
-          </p>
+        <div className="container mx-auto px-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mb-4 h-8 text-xs md:text-sm text-primary-foreground hover:text-primary-foreground/80 hover:bg-primary-foreground/10"
+            asChild
+          >
+            <Link to="/">
+              <ArrowLeft className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              Back to Home
+            </Link>
+          </Button>
+          <div className="text-center">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">Contact Us</h2>
+            <p className="text-lg text-primary-foreground/90 max-w-2xl mx-auto">
+              Get in touch with NEMSS09 Set Alumni Association
+            </p>
+          </div>
         </div>
       </section>
 

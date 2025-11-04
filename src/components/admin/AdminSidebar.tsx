@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Users, DollarSign, Calendar, Vote, Settings, FileText, CreditCard, BarChart3, Menu, LogOut, LayoutDashboard } from "lucide-react";
+import { Users, DollarSign, Calendar, Settings, FileText, CreditCard, BarChart3, Menu, LogOut, LayoutDashboard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -13,7 +13,6 @@ const menuItems = [
   { title: "Payment Accounts", url: "/admin/accounts", icon: CreditCard },
   { title: "Finance", url: "/admin/finance", icon: BarChart3 },
   { title: "Events", url: "/admin/events", icon: Calendar },
-  { title: "Elections", url: "/admin/elections", icon: Vote },
   { title: "Settings", url: "/admin/settings", icon: Settings },
   { title: "Reports", url: "/admin/reports", icon: FileText },
 ];

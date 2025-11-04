@@ -17,13 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 const Finance = () => {
   const navigate = useNavigate();
@@ -31,7 +25,7 @@ const Finance = () => {
   const [adjustments, setAdjustments] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    adjustment_type: "income",
+    adjustment_type: "inflow",
     amount: "",
     reason: "",
   });
@@ -79,12 +73,12 @@ const Finance = () => {
 
     const adjustmentsIncome =
       adjustmentsData
-        ?.filter((a) => a.adjustment_type === "income")
+        ?.filter((a) => a.adjustment_type === "inflow" || a.adjustment_type === "income")
         .reduce((sum, a) => sum + Number(a.amount), 0) || 0;
 
     const adjustmentsExpense =
       adjustmentsData
-        ?.filter((a) => a.adjustment_type === "expense")
+        ?.filter((a) => a.adjustment_type === "outflow" || a.adjustment_type === "expense")
         .reduce((sum, a) => sum + Number(a.amount), 0) || 0;
 
     const inflow = duesTotal + eventsTotal + adjustmentsIncome;
@@ -124,7 +118,7 @@ const Finance = () => {
 
     toast.success("Adjustment added");
     setIsDialogOpen(false);
-    setFormData({ adjustment_type: "income", amount: "", reason: "" });
+    setFormData({ adjustment_type: "inflow", amount: "", reason: "" });
     loadData();
   };
 
@@ -201,10 +195,10 @@ const Finance = () => {
                     key={adj.id}
                     className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg"
                   >
-                    <div className="flex-1">
-                      <p className="font-semibold">
-                        {adj.adjustment_type === "income" ? "Income" : "Expense"}
-                      </p>
+                  <div className="flex-1">
+                    <p className="font-semibold">
+                      {(adj.adjustment_type === "inflow" || adj.adjustment_type === "income") ? "Inflow" : "Outflow"}
+                    </p>
                       <p className="text-sm text-muted-foreground mt-1">{adj.reason}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         By: {adj.profiles?.first_name} {adj.profiles?.last_name} •{" "}
@@ -213,10 +207,10 @@ const Finance = () => {
                     </div>
                     <div
                       className={`text-xl font-bold mt-2 md:mt-0 ${
-                        adj.adjustment_type === "income" ? "text-green-600" : "text-red-600"
+                        (adj.adjustment_type === "inflow" || adj.adjustment_type === "income") ? "text-green-600" : "text-red-600"
                       }`}
                     >
-                      {adj.adjustment_type === "income" ? "+" : "-"}₦
+                      {(adj.adjustment_type === "inflow" || adj.adjustment_type === "income") ? "+" : "-"}₦
                       {Number(adj.amount).toLocaleString()}
                     </div>
                   </div>
@@ -231,24 +225,34 @@ const Finance = () => {
             <DialogHeader>
               <DialogTitle>Add Finance Adjustment</DialogTitle>
               <DialogDescription>
-                Add income or expense adjustments to track finances
+                Record financial inflows (money coming in) or outflows (money going out)
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <Label>Type</Label>
-                <Select
-                  value={formData.adjustment_type}
-                  onValueChange={(value) => setFormData({ ...formData, adjustment_type: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="income">Income</SelectItem>
-                    <SelectItem value="expense">Expense</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Transaction Type</Label>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-sm ${formData.adjustment_type === "outflow" ? "font-semibold" : "text-muted-foreground"}`}>
+                      Outflow
+                    </span>
+                    <Switch
+                      checked={formData.adjustment_type === "inflow"}
+                      onCheckedChange={(checked) => 
+                        setFormData({ ...formData, adjustment_type: checked ? "inflow" : "outflow" })
+                      }
+                    />
+                    <span className={`text-sm ${formData.adjustment_type === "inflow" ? "font-semibold" : "text-muted-foreground"}`}>
+                      Inflow
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {formData.adjustment_type === "inflow" 
+                    ? "Money received by the association (donations, sponsorships, etc.)"
+                    : "Money spent by the association (expenses, purchases, etc.)"
+                  }
+                </p>
               </div>
               <div>
                 <Label>Amount (₦)</Label>

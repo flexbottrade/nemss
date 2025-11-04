@@ -77,7 +77,7 @@ const Reports = () => {
     const totalDues = duesPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
     const totalEvents = eventPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
     const totalAdjustments = adjustments?.reduce((sum, a) => {
-      return sum + (a.adjustment_type === "income" ? Number(a.amount) : -Number(a.amount));
+      return sum + ((a.adjustment_type === "inflow" || a.adjustment_type === "income") ? Number(a.amount) : -Number(a.amount));
     }, 0) || 0;
     const balance = totalDues + totalEvents + totalAdjustments;
 
@@ -115,6 +115,7 @@ const Reports = () => {
     const { data: members } = await supabase
       .from("profiles")
       .select("*")
+      .neq("role", "admin")
       .order("first_name");
 
     const { data: duesPayments } = await supabase

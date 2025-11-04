@@ -1,58 +1,16 @@
 import { Link, useLocation } from "react-router-dom";
-import { Home, CreditCard, Calendar, Vote, User } from "lucide-react";
+import { Home, CreditCard, Calendar, User } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 const BottomNav = () => {
   const location = useLocation();
-  const [showVoteIcon, setShowVoteIcon] = useState(false);
 
-  useEffect(() => {
-    const checkElectionStatus = async () => {
-      const { data } = await supabase
-        .from("election_settings")
-        .select("is_active")
-        .single();
-      
-      setShowVoteIcon(data?.is_active || false);
-    };
-
-    checkElectionStatus();
-
-    // Subscribe to changes
-    const channel = supabase
-      .channel('election-settings-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'election_settings'
-        },
-        () => {
-          checkElectionStatus();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const baseNavItems = [
+  const navItems = [
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: CreditCard, label: "Dues", path: "/payments" },
     { icon: Calendar, label: "Events", path: "/events" },
+    { icon: User, label: "Profile", path: "/profile" },
   ];
-
-  const voteItem = { icon: Vote, label: "Vote", path: "/vote" };
-  const profileItem = { icon: User, label: "Profile", path: "/profile" };
-
-  const navItems = showVoteIcon
-    ? [...baseNavItems, voteItem, profileItem]
-    : [...baseNavItems, profileItem];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border/50 backdrop-blur-sm md:hidden z-50">
