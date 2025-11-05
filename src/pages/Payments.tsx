@@ -200,13 +200,12 @@ const Payments = () => {
           </CardContent>
         </Card>
 
-        {/* Submit Payment Button */}
+        {/* Pay Dues Button */}
         <Button
           onClick={() => setIsDialogOpen(true)}
           className="w-full mb-4 md:mb-6 h-10 md:h-12 text-sm md:text-base"
         >
-          <Upload className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-          Submit Payment
+          Pay Dues
         </Button>
 
         {/* Payment History */}

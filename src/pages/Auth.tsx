@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,8 +12,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [activeTab, setActiveTab] = useState("login");
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
@@ -26,6 +28,17 @@ const Auth = () => {
     password: "",
     confirmPassword: "",
   });
+
+  // Redirect if already logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/dashboard");
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,7 +149,7 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-4 md:p-6 pt-0">
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -161,17 +174,17 @@ const Auth = () => {
                   <div className="relative">
                     <Input
                       id="login-password"
-                      type={showPassword ? "text" : "password"}
+                      type={showLoginPassword ? "text" : "password"}
                       value={loginData.password}
                       onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                       required
                     />
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0E3B43]/70 hover:text-[#0E3B43]"
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
@@ -183,6 +196,20 @@ const Auth = () => {
                 >
                   {loading ? "Logging in..." : "Login"}
                 </Button>
+
+                <div className="text-center mt-3 md:mt-4">
+                  <p className="text-xs md:text-sm text-[#0E3B43]/70">
+                    Don't have an account?{" "}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="text-xs md:text-sm text-[#0E3B43] font-semibold p-0 h-auto"
+                    onClick={() => setActiveTab("signup")}
+                  >
+                    Sign Up
+                  </Button>
+                </div>
               </form>
             </TabsContent>
 
@@ -239,17 +266,17 @@ const Auth = () => {
                   <div className="relative">
                     <Input
                       id="signup-password"
-                      type={showPassword ? "text" : "password"}
+                      type={showSignupPassword ? "text" : "password"}
                       value={signupData.password}
                       onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                       required
                     />
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0E3B43]/70 hover:text-[#0E3B43]"
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
@@ -281,6 +308,20 @@ const Auth = () => {
                 >
                   {loading ? "Creating Account..." : "Sign Up"}
                 </Button>
+
+                <div className="text-center mt-3 md:mt-4">
+                  <p className="text-xs md:text-sm text-[#0E3B43]/70">
+                    Already have an account?{" "}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="text-xs md:text-sm text-[#0E3B43] font-semibold p-0 h-auto"
+                    onClick={() => setActiveTab("login")}
+                  >
+                    Login
+                  </Button>
+                </div>
               </form>
             </TabsContent>
           </Tabs>

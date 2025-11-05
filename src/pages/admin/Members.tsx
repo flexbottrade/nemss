@@ -2,18 +2,31 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, UserCog, ShieldOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 
 const Members = () => {
   const navigate = useNavigate();
-  const { isAdmin, loading } = useRole();
+  const { isAdmin, isSuperAdmin, loading } = useRole();
   const [members, setMembers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [membersWithOwing, setMembersWithOwing] = useState<any[]>([]);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    onConfirm: () => void;
+  }>({
+    open: false,
+    title: "",
+    description: "",
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     if (!loading && !isAdmin) {
@@ -39,7 +52,23 @@ const Members = () => {
       return;
     }
 
-    setMembers(data || []);
+    // Check admin status for each member
+    const membersWithRoles = await Promise.all(
+      (data || []).map(async (member) => {
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", member.id)
+          .single();
+        
+        return {
+          ...member,
+          isAdmin: roleData?.role === "admin" || roleData?.role === "super_admin",
+        };
+      })
+    );
+
+    setMembers(membersWithRoles);
 
     // Calculate owing status
     const { data: settings } = await supabase.from("settings").select("monthly_dues_amount").single();
@@ -79,6 +108,50 @@ const Members = () => {
     }) || [];
 
     setMembersWithOwing(membersData);
+  };
+
+  const handleMakeAdmin = async (userId: string, userName: string) => {
+    setConfirmDialog({
+      open: true,
+      title: "Make Member Admin",
+      description: `Are you sure you want to grant admin privileges to ${userName}? This action will give them full administrative access.`,
+      onConfirm: async () => {
+        const { error } = await supabase
+          .from("user_roles")
+          .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id,role" });
+
+        if (error) {
+          toast.error("Failed to make member admin");
+        } else {
+          toast.success(`${userName} is now an admin`);
+          loadMembers();
+        }
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
+  };
+
+  const handleRemoveAdmin = async (userId: string, userName: string) => {
+    setConfirmDialog({
+      open: true,
+      title: "Remove Admin Access",
+      description: `Are you sure you want to remove admin privileges from ${userName}? They will lose all administrative access.`,
+      onConfirm: async () => {
+        const { error } = await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", userId)
+          .eq("role", "admin");
+
+        if (error) {
+          toast.error("Failed to remove admin access");
+        } else {
+          toast.success(`${userName} is no longer an admin`);
+          loadMembers();
+        }
+        setConfirmDialog({ ...confirmDialog, open: false });
+      },
+    });
   };
 
   // Sort members: positions first (in hierarchy order), then alphabetically by first name
@@ -197,6 +270,33 @@ const Members = () => {
                       )}
                     </div>
                   </div>
+                  
+                  {/* Super Admin Controls */}
+                  {isSuperAdmin && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      {member.isAdmin ? (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={() => handleRemoveAdmin(member.id, `${member.first_name} ${member.last_name}`)}
+                        >
+                          <ShieldOff className="w-3 h-3 mr-1" />
+                          Remove Admin Access
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="w-full text-xs"
+                          onClick={() => handleMakeAdmin(member.id, `${member.first_name} ${member.last_name}`)}
+                        >
+                          <UserCog className="w-3 h-3 mr-1" />
+                          Make Admin
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -209,6 +309,14 @@ const Members = () => {
           )}
         </div>
       </main>
+
+      <ConfirmationDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}
+        onConfirm={confirmDialog.onConfirm}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+      />
     </div>
   );
 };

@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Finance = () => {
   const navigate = useNavigate();
@@ -230,27 +230,21 @@ const Finance = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Transaction Type</Label>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-sm ${formData.adjustment_type === "outflow" ? "font-semibold" : "text-muted-foreground"}`}>
-                      Outflow
-                    </span>
-                    <Switch
-                      checked={formData.adjustment_type === "inflow"}
-                      onCheckedChange={(checked) => 
-                        setFormData({ ...formData, adjustment_type: checked ? "inflow" : "outflow" })
-                      }
-                    />
-                    <span className={`text-sm ${formData.adjustment_type === "inflow" ? "font-semibold" : "text-muted-foreground"}`}>
-                      Inflow
-                    </span>
-                  </div>
-                </div>
+                <Label>Transaction Type</Label>
+                <Tabs 
+                  value={formData.adjustment_type} 
+                  onValueChange={(value) => setFormData({ ...formData, adjustment_type: value })}
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="inflow">Inflow</TabsTrigger>
+                    <TabsTrigger value="outflow">Outflow</TabsTrigger>
+                  </TabsList>
+                </Tabs>
                 <p className="text-xs text-muted-foreground">
                   {formData.adjustment_type === "inflow" 
-                    ? "Money received by the association (donations, sponsorships, etc.)"
-                    : "Money spent by the association (expenses, purchases, etc.)"
+                    ? "💰 Inflow: Money received by the association (donations, sponsorships, fundraising, etc.)"
+                    : "💸 Outflow: Money spent by the association (expenses, purchases, payments, etc.)"
                   }
                 </p>
               </div>
