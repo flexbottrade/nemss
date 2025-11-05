@@ -191,22 +191,11 @@ const Auth = () => {
 
                 <Button
                   type="submit"
-                  className="w-full h-9 md:h-10 text-sm md:text-base"
+                  className="w-full h-9 md:h-10 text-sm md:text-base bg-[#0E3B43] text-[#F8E39C] hover:bg-[#0E3B43]/90"
                   disabled={loading}
                 >
                   {loading ? "Logging in..." : "Login"}
                 </Button>
-
-                <div className="text-center mt-3 md:mt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-9 md:h-10 text-sm md:text-base border-[#0E3B43] text-[#0E3B43] hover:bg-[#0E3B43] hover:text-accent"
-                    onClick={() => setActiveTab("signup")}
-                  >
-                    Sign Up
-                  </Button>
-                </div>
               </form>
             </TabsContent>
 
@@ -300,22 +289,11 @@ const Auth = () => {
 
                 <Button
                   type="submit"
-                  className="w-full h-9 md:h-10 text-sm md:text-base"
+                  className="w-full h-9 md:h-10 text-sm md:text-base bg-[#0E3B43] text-[#F8E39C] hover:bg-[#0E3B43]/90"
                   disabled={loading}
                 >
                   {loading ? "Creating Account..." : "Sign Up"}
                 </Button>
-
-                <div className="text-center mt-3 md:mt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-9 md:h-10 text-sm md:text-base border-[#0E3B43] text-[#0E3B43] hover:bg-[#0E3B43] hover:text-accent"
-                    onClick={() => setActiveTab("login")}
-                  >
-                    Login
-                  </Button>
-                </div>
               </form>
             </TabsContent>
           </Tabs>
