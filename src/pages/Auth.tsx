@@ -198,13 +198,10 @@ const Auth = () => {
                 </Button>
 
                 <div className="text-center mt-3 md:mt-4">
-                  <p className="text-xs md:text-sm text-[#0E3B43]/70">
-                    Don't have an account?{" "}
-                  </p>
                   <Button
                     type="button"
-                    variant="link"
-                    className="text-xs md:text-sm text-[#0E3B43] font-semibold p-0 h-auto"
+                    variant="outline"
+                    className="w-full h-9 md:h-10 text-sm md:text-base border-[#0E3B43] text-[#0E3B43] hover:bg-[#0E3B43] hover:text-accent"
                     onClick={() => setActiveTab("signup")}
                   >
                     Sign Up
@@ -310,13 +307,10 @@ const Auth = () => {
                 </Button>
 
                 <div className="text-center mt-3 md:mt-4">
-                  <p className="text-xs md:text-sm text-[#0E3B43]/70">
-                    Already have an account?{" "}
-                  </p>
                   <Button
                     type="button"
-                    variant="link"
-                    className="text-xs md:text-sm text-[#0E3B43] font-semibold p-0 h-auto"
+                    variant="outline"
+                    className="w-full h-9 md:h-10 text-sm md:text-base border-[#0E3B43] text-[#0E3B43] hover:bg-[#0E3B43] hover:text-accent"
                     onClick={() => setActiveTab("login")}
                   >
                     Login
