@@ -25,7 +25,7 @@ const Finance = () => {
   const [adjustments, setAdjustments] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    adjustment_type: "inflow",
+    adjustment_type: "income",
     amount: "",
     reason: "",
   });
@@ -118,7 +118,7 @@ const Finance = () => {
 
     toast.success("Adjustment added");
     setIsDialogOpen(false);
-    setFormData({ adjustment_type: "inflow", amount: "", reason: "" });
+    setFormData({ adjustment_type: "income", amount: "", reason: "" });
     loadData();
   };
 
@@ -133,80 +133,80 @@ const Finance = () => {
       <main className="flex-1 p-3 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-4 md:mb-6 pl-12 md:pl-0">
-            <h1 className="text-xl md:text-3xl font-bold">Finance Tracker</h1>
-            <Button onClick={() => setIsDialogOpen(true)} size="sm" className="text-xs md:text-sm h-8 md:h-10">
-              <Plus className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+            <h1 className="text-lg md:text-2xl font-bold">Finance Tracker</h1>
+            <Button onClick={() => setIsDialogOpen(true)} size="sm" className="text-xs h-7 md:h-8 px-2 md:px-3">
+              <Plus className="w-3 h-3 mr-1" />
               Add Adjustment
             </Button>
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3 mb-4 md:mb-6">
             <Card>
-              <CardHeader className="p-3 md:p-6">
-                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+              <CardHeader className="p-2 md:p-4">
+                <CardTitle className="text-xs font-medium text-muted-foreground">
                   Total Inflow
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-3 md:p-6 pt-0">
-                <div className="text-lg md:text-2xl font-bold text-green-600">
+              <CardContent className="p-2 md:p-4 pt-0">
+                <div className="text-base md:text-xl font-bold text-green-600">
                   ₦{totals.inflow.toLocaleString()}
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="p-3 md:p-6">
-                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+              <CardHeader className="p-2 md:p-4">
+                <CardTitle className="text-xs font-medium text-muted-foreground">
                   Total Outflow
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-3 md:p-6 pt-0">
-                <div className="text-lg md:text-2xl font-bold text-red-600">
+              <CardContent className="p-2 md:p-4 pt-0">
+                <div className="text-base md:text-xl font-bold text-red-600">
                   ₦{totals.outflow.toLocaleString()}
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="p-3 md:p-6">
-                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+              <CardHeader className="p-2 md:p-4">
+                <CardTitle className="text-xs font-medium text-muted-foreground">
                   Current Balance
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-3 md:p-6 pt-0">
-                <div className="text-lg md:text-2xl font-bold">₦{totals.balance.toLocaleString()}</div>
+              <CardContent className="p-2 md:p-4 pt-0">
+                <div className="text-base md:text-xl font-bold">₦{totals.balance.toLocaleString()}</div>
               </CardContent>
             </Card>
           </div>
 
         {/* Adjustments List */}
         <Card>
-          <CardHeader>
-            <CardTitle>Manual Adjustments</CardTitle>
+          <CardHeader className="p-3 md:p-4">
+            <CardTitle className="text-sm md:text-base">Manual Adjustments</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 md:p-4">
             {adjustments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No adjustments yet</p>
+              <p className="text-center text-xs text-muted-foreground py-6">No adjustments yet</p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2 md:space-y-3">
                 {adjustments.map((adj) => (
                   <div
                     key={adj.id}
-                    className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border rounded-lg"
+                    className="flex flex-col md:flex-row justify-between items-start md:items-center p-2 md:p-3 border rounded-lg"
                   >
                   <div className="flex-1">
-                    <p className="font-semibold">
+                    <p className="text-sm font-semibold">
                       {(adj.adjustment_type === "inflow" || adj.adjustment_type === "income") ? "Inflow" : "Outflow"}
                     </p>
-                      <p className="text-sm text-muted-foreground mt-1">{adj.reason}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">{adj.reason}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         By: {adj.profiles?.first_name} {adj.profiles?.last_name} •{" "}
                         {new Date(adj.created_at).toLocaleDateString()}
                       </p>
                     </div>
                     <div
-                      className={`text-xl font-bold mt-2 md:mt-0 ${
+                      className={`text-base md:text-lg font-bold mt-2 md:mt-0 ${
                         (adj.adjustment_type === "inflow" || adj.adjustment_type === "income") ? "text-green-600" : "text-red-600"
                       }`}
                     >
@@ -237,12 +237,12 @@ const Finance = () => {
                   className="w-full"
                 >
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="inflow">Inflow</TabsTrigger>
-                    <TabsTrigger value="outflow">Outflow</TabsTrigger>
+                    <TabsTrigger value="income">Inflow</TabsTrigger>
+                    <TabsTrigger value="expense">Outflow</TabsTrigger>
                   </TabsList>
                 </Tabs>
                 <p className="text-xs text-muted-foreground">
-                  {formData.adjustment_type === "inflow" 
+                  {formData.adjustment_type === "income" 
                     ? "💰 Inflow: Money received by the association (donations, sponsorships, fundraising, etc.)"
                     : "💸 Outflow: Money spent by the association (expenses, purchases, payments, etc.)"
                   }

@@ -76,33 +76,33 @@ const Transactions = () => {
   }
 
   const renderPayment = (payment: any, type: "dues" | "event") => (
-    <Card key={payment.id} className="mb-3 md:mb-4">
-      <CardContent className="pt-3 md:pt-6 p-3 md:p-6">
-        <div className="flex flex-col md:flex-row justify-between gap-4">
+    <Card key={payment.id} className="mb-2 md:mb-3">
+      <CardContent className="pt-2 md:pt-3 p-2 md:p-3">
+        <div className="flex flex-col md:flex-row justify-between gap-3">
           <div className="flex-1">
-            <p className="font-semibold text-sm md:text-lg">
+            <p className="font-semibold text-xs md:text-sm">
               {payment.profiles?.first_name} {payment.profiles?.last_name}
             </p>
-            <p className="text-sm text-muted-foreground">ID: {payment.profiles?.member_id}</p>
+            <p className="text-xs text-muted-foreground">ID: {payment.profiles?.member_id}</p>
             {type === "event" && payment.events && (
-              <p className="text-sm mt-1">Event: {payment.events.title}</p>
+              <p className="text-xs mt-0.5">Event: {payment.events.title}</p>
             )}
             {type === "dues" && (
-              <p className="text-sm mt-1">
+              <p className="text-xs mt-0.5">
                 Period: {payment.start_month}/{payment.start_year} ({payment.months_paid} months)
               </p>
             )}
-            <p className="text-xl font-bold mt-2">₦{Number(payment.amount).toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-base md:text-lg font-bold mt-1">₦{Number(payment.amount).toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
               {new Date(payment.created_at).toLocaleDateString()}
             </p>
             {payment.admin_note && (
-              <p className="text-sm mt-2 p-2 bg-muted rounded">Note: {payment.admin_note}</p>
+              <p className="text-xs mt-1 p-1.5 bg-muted rounded">Note: {payment.admin_note}</p>
             )}
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <span
-              className={`text-xs px-3 py-1 rounded-full text-center ${
+              className={`text-xs px-2 py-0.5 rounded-full text-center ${
                 payment.status === "approved"
                   ? "bg-green-500 text-white"
                   : payment.status === "rejected"
@@ -116,26 +116,29 @@ const Transactions = () => {
               <Button
                 size="sm"
                 variant="outline"
+                className="h-7 text-xs"
                 onClick={() => window.open(payment.payment_proof_url, "_blank")}
               >
-                <ExternalLink className="w-4 h-4 mr-1" />
+                <ExternalLink className="w-3 h-3 mr-1" />
                 View Proof
               </Button>
             )}
             <Button
               size="sm"
+              className="h-7 text-xs"
               variant={payment.status === "approved" ? "secondary" : "default"}
               onClick={() => setSelectedPayment({ ...payment, type, action: "approved" })}
             >
-              <Check className="w-4 h-4 mr-1" />
+              <Check className="w-3 h-3 mr-1" />
               {payment.status === "approved" ? "Approved" : "Approve"}
             </Button>
             <Button
               size="sm"
+              className="h-7 text-xs"
               variant={payment.status === "rejected" ? "secondary" : "destructive"}
               onClick={() => setSelectedPayment({ ...payment, type, action: "rejected" })}
             >
-              <X className="w-4 h-4 mr-1" />
+              <X className="w-3 h-3 mr-1" />
               {payment.status === "rejected" ? "Rejected" : "Reject"}
             </Button>
           </div>
@@ -151,7 +154,7 @@ const Transactions = () => {
       <main className="flex-1 p-3 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-4 md:mb-6 pl-12 md:pl-0">
-            <h1 className="text-xl md:text-3xl font-bold">Transactions</h1>
+            <h1 className="text-lg md:text-2xl font-bold">Transactions</h1>
           </div>
 
           <Tabs defaultValue="dues">

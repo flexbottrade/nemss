@@ -270,33 +270,6 @@ const Members = () => {
                       )}
                     </div>
                   </div>
-                  
-                  {/* Super Admin Controls */}
-                  {isSuperAdmin && (
-                    <div className="mt-3 pt-3 border-t border-border">
-                      {member.isAdmin ? (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="w-full text-xs"
-                          onClick={() => handleRemoveAdmin(member.id, `${member.first_name} ${member.last_name}`)}
-                        >
-                          <ShieldOff className="w-3 h-3 mr-1" />
-                          Remove Admin Access
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="w-full text-xs"
-                          onClick={() => handleMakeAdmin(member.id, `${member.first_name} ${member.last_name}`)}
-                        >
-                          <UserCog className="w-3 h-3 mr-1" />
-                          Make Admin
-                        </Button>
-                      )}
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             ))}

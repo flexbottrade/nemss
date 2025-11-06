@@ -239,22 +239,22 @@ const Dashboard = () => {
 
         {/* Payment History */}
         <Card className="mt-6 md:mt-8">
-          <CardHeader className="p-4 md:p-6">
-            <CardTitle className="text-lg md:text-xl">Recent Payment History</CardTitle>
+          <CardHeader className="p-3 md:p-4">
+            <CardTitle className="text-base md:text-lg">Recent Payment History</CardTitle>
           </CardHeader>
-          <CardContent className="p-4 md:p-6 pt-0">
+          <CardContent className="p-3 md:p-4 pt-0">
             {paymentHistory.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No payment history yet</p>
+              <p className="text-center text-xs text-muted-foreground py-6">No payment history yet</p>
             ) : (
               <>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {paginatedHistory.map((payment, index) => (
                     <div
                       key={`${payment.type}-${payment.id}-${index}`}
-                      className="flex items-center justify-between p-3 rounded-lg bg-card border border-border"
+                      className="flex items-center justify-between p-2 rounded-lg bg-card border border-border"
                     >
                       <div className="flex-1">
-                        <p className="font-medium text-foreground">
+                        <p className="text-xs md:text-sm font-medium text-foreground">
                           {payment.type === 'dues' 
                             ? `Dues Payment (${payment.start_month}/${payment.start_year})`
                             : payment.events?.title || 'Event Payment'}
@@ -264,7 +264,7 @@ const Dashboard = () => {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-foreground">₦{Number(payment.amount).toLocaleString()}</p>
+                        <p className="text-sm md:text-base font-bold text-foreground">₦{Number(payment.amount).toLocaleString()}</p>
                         <p className={`text-xs ${
                           payment.status === 'approved' ? 'text-green-500' : 
                           payment.status === 'pending' ? 'text-yellow-500' : 
@@ -278,21 +278,23 @@ const Dashboard = () => {
                 </div>
                 
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
                       disabled={currentPage === 0}
                     >
                       Previous
                     </Button>
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       Page {currentPage + 1} of {totalPages}
                     </span>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-7 text-xs"
                       onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
                       disabled={currentPage === totalPages - 1}
                     >

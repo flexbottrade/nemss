@@ -182,7 +182,7 @@ const Auth = () => {
                     <button
                       type="button"
                       onClick={() => setShowLoginPassword(!showLoginPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0E3B43]/70 hover:text-[#0E3B43]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#F8E39C] hover:text-[#F8E39C]/80"
                     >
                       {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -260,7 +260,7 @@ const Auth = () => {
                     <button
                       type="button"
                       onClick={() => setShowSignupPassword(!showSignupPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0E3B43]/70 hover:text-[#0E3B43]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#F8E39C] hover:text-[#F8E39C]/80"
                     >
                       {showSignupPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -280,7 +280,7 @@ const Auth = () => {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#0E3B43]/70 hover:text-[#0E3B43]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#F8E39C] hover:text-[#F8E39C]/80"
                     >
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
