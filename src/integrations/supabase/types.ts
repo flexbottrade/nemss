@@ -38,12 +38,84 @@ export type Database = {
         }
         Relationships: []
       }
+      donation_payments: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          created_at: string
+          donation_id: string | null
+          id: string
+          payment_proof_url: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount: number
+          created_at?: string
+          donation_id?: string | null
+          id?: string
+          payment_proof_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          donation_id?: string | null
+          id?: string
+          payment_proof_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donation_payments_donation_id_fkey"
+            columns: ["donation_id"]
+            isOneToOne: false
+            referencedRelation: "donations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      donations: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          minimum_amount: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          minimum_amount: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          minimum_amount?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       dues_payments: {
         Row: {
           admin_note: string | null
           amount: number
           created_at: string | null
           id: string
+          is_manually_updated: boolean | null
           months_paid: number
           payment_proof_url: string | null
           start_month: number
@@ -57,6 +129,7 @@ export type Database = {
           amount: number
           created_at?: string | null
           id?: string
+          is_manually_updated?: boolean | null
           months_paid: number
           payment_proof_url?: string | null
           start_month: number
@@ -70,6 +143,7 @@ export type Database = {
           amount?: number
           created_at?: string | null
           id?: string
+          is_manually_updated?: boolean | null
           months_paid?: number
           payment_proof_url?: string | null
           start_month?: number
@@ -173,6 +247,7 @@ export type Database = {
           created_at: string | null
           event_id: string | null
           id: string
+          is_manually_updated: boolean | null
           payment_proof_url: string | null
           status: string | null
           updated_at: string | null
@@ -184,6 +259,7 @@ export type Database = {
           created_at?: string | null
           event_id?: string | null
           id?: string
+          is_manually_updated?: boolean | null
           payment_proof_url?: string | null
           status?: string | null
           updated_at?: string | null
@@ -195,6 +271,7 @@ export type Database = {
           created_at?: string | null
           event_id?: string | null
           id?: string
+          is_manually_updated?: boolean | null
           payment_proof_url?: string | null
           status?: string | null
           updated_at?: string | null
@@ -281,6 +358,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      manual_payment_records: {
+        Row: {
+          admin_id: string
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          payment_type: string
+          reference_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_id: string
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_type: string
+          reference_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_id?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          payment_type?: string
+          reference_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       payment_accounts: {
         Row: {
@@ -378,6 +491,33 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      variable_dues_settings: {
+        Row: {
+          created_at: string
+          id: string
+          is_waived: boolean
+          monthly_amount: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_waived?: boolean
+          monthly_amount: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_waived?: boolean
+          monthly_amount?: number
+          updated_at?: string
+          year?: number
         }
         Relationships: []
       }
