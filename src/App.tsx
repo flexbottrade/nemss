@@ -5,8 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import About from "./pages/About";
-import Contact from "./pages/Contact";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Payments from "./pages/Payments";
 import Events from "./pages/Events";
@@ -18,6 +19,7 @@ import PaymentAccounts from "./pages/admin/PaymentAccounts";
 import Finance from "./pages/admin/Finance";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminEvents from "./pages/admin/AdminEvents";
+import Donations from "./pages/admin/Donations";
 import Reports from "./pages/admin/Reports";
 import NotFound from "./pages/NotFound";
 
@@ -32,8 +34,9 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/events" element={<Events />} />
@@ -43,6 +46,7 @@ const App = () => (
           <Route path="/admin/transactions" element={<Transactions />} />
           <Route path="/admin/accounts" element={<PaymentAccounts />} />
           <Route path="/admin/finance" element={<Finance />} />
+          <Route path="/admin/donations" element={<Donations />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/events" element={<AdminEvents />} />
           <Route path="/admin/reports" element={<Reports />} />

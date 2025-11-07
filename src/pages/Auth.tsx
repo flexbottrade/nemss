@@ -8,6 +8,7 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmailVerificationDialog } from "@/components/EmailVerificationDialog";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -16,6 +17,8 @@ const Auth = () => {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
+  const [showVerificationDialog, setShowVerificationDialog] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
@@ -113,15 +116,23 @@ const Auth = () => {
             last_name: signupData.lastName,
             phone_number: signupData.phoneNumber,
             member_id: memberId,
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/dashboard`,
         }
       });
 
       if (authError) throw authError;
 
       if (authData.user) {
-        toast.success(`Account created successfully! Your Member ID is ${memberId}`);
-        navigate("/dashboard");
+        // Check if email confirmation is required
+        if (authData.user.identities && authData.user.identities.length === 0) {
+          setVerificationEmail(signupData.email);
+          setShowVerificationDialog(true);
+          toast.success(`Account created! Please check your email to verify your account. Your Member ID is ${memberId}`);
+        } else {
+          toast.success(`Account created successfully! Your Member ID is ${memberId}`);
+          navigate("/dashboard");
+        }
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to create account");
@@ -196,6 +207,15 @@ const Auth = () => {
                 >
                   {loading ? "Logging in..." : "Login"}
                 </Button>
+
+                <div className="text-center mt-3">
+                  <Link 
+                    to="/forgot-password" 
+                    className="text-xs md:text-sm text-[#0E3B43] hover:text-[#0E3B43]/80 underline"
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
               </form>
             </TabsContent>
 
@@ -299,6 +319,11 @@ const Auth = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      <EmailVerificationDialog 
+        open={showVerificationDialog} 
+        email={verificationEmail}
+      />
     </div>
   );
 };
