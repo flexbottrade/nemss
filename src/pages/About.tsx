@@ -27,9 +27,8 @@ const About = () => {
             </div>
           </div>
           <nav className="hidden md:flex items-center gap-6">
-            <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">Home</Link>
+            <Link to="/home" className="text-sm font-medium hover:text-primary transition-colors">Home</Link>
             <Link to="/about" className="text-sm font-medium text-primary">About</Link>
-            <Link to="/contact" className="text-sm font-medium hover:text-primary transition-colors">Contact</Link>
           </nav>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" asChild>
@@ -51,7 +50,7 @@ const About = () => {
             className="mb-4 h-8 text-xs md:text-sm text-primary-foreground hover:text-primary-foreground/80 hover:bg-primary-foreground/10"
             asChild
           >
-            <Link to="/">
+            <Link to="/home">
               <ArrowLeft className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
               Back to Home
             </Link>
@@ -125,33 +124,6 @@ const About = () => {
         </div>
       </section>
 
-      {/* Leadership Section */}
-      <section className="bg-card py-16 md:py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl md:text-4xl font-bold text-card-foreground mb-4">Our Coordinating Team</h3>
-            <p className="text-lg text-card-foreground/80">
-              Meet the dedicated team working behind the scenes to keep the NEMSS 09 Set connected and thriving.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6 max-w-6xl mx-auto">
-            {leaders.map((leader, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow bg-background">
-                <CardContent className="pt-6 text-center space-y-3">
-                  <div className="w-24 h-24 rounded-full bg-primary/10 mx-auto overflow-hidden">
-                    <img src={leader.image} alt={leader.name} className="w-full h-full object-cover" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-foreground">{leader.name}</h4>
-                    <p className="text-sm text-muted-foreground">{leader.role}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-16 md:py-20">
         <Card className="max-w-3xl mx-auto bg-primary text-primary-foreground shadow-xl">
@@ -186,7 +158,6 @@ const About = () => {
               <h4 className="font-semibold mb-4 text-card-foreground">Quick Links</h4>
               <div className="space-y-2">
                 <Link to="/about" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">About</Link>
-                <Link to="/contact" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">Contact</Link>
                 <a href="#" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">Privacy Policy</a>
               </div>
             </div>

@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Wallet, Calendar, TrendingUp, LogOut } from "lucide-react";
+import { Wallet, Calendar, TrendingUp, LogOut, Gift } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
+import { DonationSection } from "@/components/DonationSection";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -31,7 +32,7 @@ const Dashboard = () => {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      navigate("/login");
+      navigate("/auth");
       return;
     }
 
@@ -48,28 +49,65 @@ const Dashboard = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Get approved dues payments
+    // Get approved or manually updated dues payments
     const { data: duesPayments } = await supabase
       .from("dues_payments")
-      .select("amount")
+      .select("amount, status, is_manually_updated")
       .eq("user_id", user.id)
-      .eq("status", "approved");
+      .or("status.eq.approved,is_manually_updated.eq.true");
 
-    // Get approved event payments
+    // Get approved or manually updated event payments
     const { data: eventPayments } = await supabase
       .from("event_payments")
-      .select("amount")
+      .select("amount, status, is_manually_updated")
       .eq("user_id", user.id)
-      .eq("status", "approved");
+      .or("status.eq.approved,is_manually_updated.eq.true");
 
     const totalDues = duesPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
     const totalEvents = eventPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
+    // Calculate outstanding dues (from 2023 to current month)
+    const { data: variableDues } = await supabase
+      .from("variable_dues_settings")
+      .select("*");
+    
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+    
+    let totalDuesExpected = 0;
+    for (let year = 2023; year <= currentYear; year++) {
+      const dueSetting = variableDues?.find(d => d.year === year);
+      if (!dueSetting?.is_waived) {
+        const monthlyAmount = dueSetting?.monthly_amount || 3000;
+        const monthsInYear = year === currentYear ? currentMonth : 12;
+        totalDuesExpected += monthlyAmount * monthsInYear;
+      }
+    }
+
+    // Calculate outstanding events (unpaid upcoming or active events)
+    const { data: allEvents } = await supabase
+      .from("events")
+      .select("id, amount, event_date")
+      .gte("event_date", new Date().toISOString());
+
+    const { data: userEventPayments } = await supabase
+      .from("event_payments")
+      .select("event_id, status, is_manually_updated")
+      .eq("user_id", user.id);
+
+    const unpaidEvents = allEvents?.filter(event => {
+      const payment = userEventPayments?.find(p => p.event_id === event.id);
+      return !payment || (payment.status !== "approved" && !payment.is_manually_updated);
+    }) || [];
+
+    const totalEventsOwed = unpaidEvents.reduce((sum, e) => sum + Number(e.amount), 0);
+
     setStats({
       totalDuesPaid: totalDues,
       totalEventContributions: totalEvents,
-      outstandingDues: 0,
-      outstandingEvents: 0,
+      outstandingDues: Math.max(0, totalDuesExpected - totalDues),
+      outstandingEvents: totalEventsOwed,
     });
     setLoading(false);
   };
@@ -78,7 +116,6 @@ const Dashboard = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Get all payments (dues + events)
     const { data: duesPayments } = await supabase
       .from("dues_payments")
       .select("*, created_at, amount, status")
@@ -102,7 +139,7 @@ const Dashboard = () => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     toast.success("Logged out successfully");
-    navigate("/");
+    navigate("/home");
   };
 
   if (!profile || loading) {
@@ -121,17 +158,16 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
-      {/* Header */}
-      <header className="bg-accent text-accent-foreground p-4 md:p-6 rounded-b-3xl shadow-lg">
+      <header className="bg-accent text-accent-foreground p-3 md:p-4 rounded-b-3xl shadow-lg">
         <div className="container mx-auto">
-          <div className="flex items-center justify-between mb-2 md:mb-4">
+          <div className="flex items-center justify-between mb-1 md:mb-2">
             <div>
-              <h1 className="text-lg md:text-2xl font-bold">
+              <h1 className="text-base md:text-xl font-bold">
                 {profile.first_name} {profile.last_name}
               </h1>
               <p className="text-xs md:text-sm text-primary-foreground/80">ID: {profile.member_id}</p>
               {profile.position && (
-                <p className="text-xs md:text-sm bg-primary text-primary-foreground px-2 py-1 rounded-full inline-block mt-1">
+                <p className="text-xs bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full inline-block mt-1">
                   {profile.position}
                 </p>
               )}
@@ -140,121 +176,120 @@ const Dashboard = () => {
               variant="ghost"
               size="icon"
               onClick={handleLogout}
-              className="text-primary-foreground hover:bg-primary-foreground/10 h-8 w-8 md:h-10 md:w-10"
+              className="text-primary-foreground hover:bg-primary-foreground/10 h-7 w-7 md:h-9 md:w-9"
             >
-              <LogOut className="w-4 h-4 md:w-5 md:h-5" />
+              <LogOut className="w-3 h-3 md:w-4 md:h-4" />
             </Button>
           </div>
         </div>
       </header>
 
-      {/* Stats Cards */}
-      <div className="container mx-auto px-4 mt-4 md:-mt-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <div className="container mx-auto px-4 mt-3 md:-mt-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
           <Card className="border-border/50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-0.5 p-2 md:p-4 md:pb-1">
               <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Total Dues Paid
               </CardTitle>
               <Wallet className="w-3 h-3 md:w-4 md:h-4 text-primary" />
             </CardHeader>
-            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-              <div className="text-lg md:text-2xl font-bold">₦{stats.totalDuesPaid.toLocaleString()}</div>
+            <CardContent className="p-2 pt-0 md:p-4 md:pt-0">
+              <div className="text-base md:text-xl font-bold">₦{stats.totalDuesPaid.toLocaleString()}</div>
             </CardContent>
           </Card>
 
           <Card className="border-border/50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-0.5 p-2 md:p-4 md:pb-1">
               <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Event Contributions
               </CardTitle>
               <Calendar className="w-3 h-3 md:w-4 md:h-4 text-accent" />
             </CardHeader>
-            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-              <div className="text-lg md:text-2xl font-bold">₦{stats.totalEventContributions.toLocaleString()}</div>
+            <CardContent className="p-2 pt-0 md:p-4 md:pt-0">
+              <div className="text-base md:text-xl font-bold">₦{stats.totalEventContributions.toLocaleString()}</div>
             </CardContent>
           </Card>
 
           <Card className="border-border/50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-0.5 p-2 md:p-4 md:pb-1">
               <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Outstanding Dues
               </CardTitle>
               <TrendingUp className="w-3 h-3 md:w-4 md:h-4 text-destructive" />
             </CardHeader>
-            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-              <div className="text-lg md:text-2xl font-bold text-destructive">
+            <CardContent className="p-2 pt-0 md:p-4 md:pt-0">
+              <div className="text-base md:text-xl font-bold text-destructive">
                 ₦{stats.outstandingDues.toLocaleString()}
               </div>
             </CardContent>
           </Card>
 
           <Card className="border-border/50 shadow-md hover:shadow-lg transition-all">
-            <CardHeader className="flex flex-row items-center justify-between pb-1 p-3 md:p-6 md:pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-0.5 p-2 md:p-4 md:pb-1">
               <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Outstanding Events
               </CardTitle>
               <Calendar className="w-3 h-3 md:w-4 md:h-4 text-destructive" />
             </CardHeader>
-            <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
-              <div className="text-lg md:text-2xl font-bold text-destructive">
+            <CardContent className="p-2 pt-0 md:p-4 md:pt-0">
+              <div className="text-base md:text-xl font-bold text-destructive">
                 ₦{stats.outstandingEvents.toLocaleString()}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mt-6 md:mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3 mt-4 md:mt-6">
           <Button
-            className="h-16 md:h-24 bg-primary hover:bg-primary/90"
+            className="h-12 md:h-16 bg-primary hover:bg-primary/90 text-sm md:text-base"
             onClick={() => navigate("/payments")}
           >
-            <div className="flex flex-col items-center gap-1 md:gap-2">
-              <Wallet className="w-4 h-4 md:w-6 md:h-6" />
-              <span className="text-sm md:text-base">Pay Dues</span>
+            <div className="flex flex-col items-center gap-1">
+              <Wallet className="w-3 h-3 md:w-4 md:h-4" />
+              <span>Pay Dues</span>
             </div>
           </Button>
 
           <Button
-            className="h-16 md:h-24 bg-primary hover:bg-primary/90"
+            className="h-12 md:h-16 bg-primary hover:bg-primary/90 text-sm md:text-base"
             onClick={() => navigate("/events")}
           >
-            <div className="flex flex-col items-center gap-1 md:gap-2">
-              <Calendar className="w-4 h-4 md:w-6 md:h-6" />
-              <span className="text-sm md:text-base">View Events</span>
+            <div className="flex flex-col items-center gap-1">
+              <Calendar className="w-3 h-3 md:w-4 md:h-4" />
+              <span>View Events</span>
             </div>
           </Button>
 
           <Button
-            className="h-16 md:h-24 bg-primary hover:bg-primary/90"
+            className="h-12 md:h-16 bg-primary hover:bg-primary/90 text-sm md:text-base"
             onClick={() => navigate("/profile")}
           >
-            <div className="flex flex-col items-center gap-1 md:gap-2">
-              <TrendingUp className="w-4 h-4 md:w-6 md:h-6" />
-              <span className="text-sm md:text-base">Profile</span>
+            <div className="flex flex-col items-center gap-1">
+              <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
+              <span>Profile</span>
             </div>
           </Button>
         </div>
 
-        {/* Payment History */}
-        <Card className="mt-6 md:mt-8">
-          <CardHeader className="p-3 md:p-4">
-            <CardTitle className="text-base md:text-lg">Recent Payment History</CardTitle>
+        <DonationSection />
+
+        <Card className="mt-4 md:mt-6">
+          <CardHeader className="p-2 md:p-3">
+            <CardTitle className="text-sm md:text-base">Recent Payment History</CardTitle>
           </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
+          <CardContent className="p-2 md:p-3 pt-0">
             {paymentHistory.length === 0 ? (
-              <p className="text-center text-xs text-muted-foreground py-6">No payment history yet</p>
+              <p className="text-center text-xs text-muted-foreground py-4 md:py-6">No payment history yet</p>
             ) : (
               <>
-                <div className="space-y-2">
+                <div className="space-y-1.5 md:space-y-2">
                   {paginatedHistory.map((payment, index) => (
                     <div
                       key={`${payment.type}-${payment.id}-${index}`}
-                      className="flex items-center justify-between p-2 rounded-lg bg-card border border-border"
+                      className="flex items-center justify-between p-1.5 md:p-2 rounded-lg bg-card border border-border"
                     >
-                      <div className="flex-1">
-                        <p className="text-xs md:text-sm font-medium text-foreground">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs md:text-sm font-medium text-foreground truncate">
                           {payment.type === 'dues' 
                             ? `Dues Payment (${payment.start_month}/${payment.start_year})`
                             : payment.events?.title || 'Event Payment'}
@@ -264,7 +299,7 @@ const Dashboard = () => {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm md:text-base font-bold text-foreground">₦{Number(payment.amount).toLocaleString()}</p>
+                        <p className="text-xs md:text-sm font-bold text-foreground">₦{Number(payment.amount).toLocaleString()}</p>
                         <p className={`text-xs ${
                           payment.status === 'approved' ? 'text-green-500' : 
                           payment.status === 'pending' ? 'text-yellow-500' : 
@@ -278,11 +313,11 @@ const Dashboard = () => {
                 </div>
                 
                 {totalPages > 1 && (
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                  <div className="flex items-center justify-between mt-2 md:mt-3 pt-2 md:pt-3 border-t border-border">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-7 text-xs"
+                      className="h-6 md:h-7 text-xs"
                       onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
                       disabled={currentPage === 0}
                     >
@@ -294,7 +329,7 @@ const Dashboard = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-7 text-xs"
+                      className="h-6 md:h-7 text-xs"
                       onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
                       disabled={currentPage === totalPages - 1}
                     >

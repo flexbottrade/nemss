@@ -16,10 +16,11 @@ interface EventPaymentModalProps {
     title: string;
     amount: number;
   };
-  userId: string;
+  userId?: string;
+  onSuccess?: () => void;
 }
 
-export const EventPaymentModal = ({ open, onOpenChange, event, userId }: EventPaymentModalProps) => {
+export const EventPaymentModal = ({ open, onOpenChange, event, userId, onSuccess }: EventPaymentModalProps) => {
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const [paymentProof, setPaymentProof] = useState<File | null>(null);
@@ -38,9 +39,10 @@ export const EventPaymentModal = ({ open, onOpenChange, event, userId }: EventPa
 
   const createPaymentMutation = useMutation({
     mutationFn: async (proofUrl: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from("event_payments").insert([{
         event_id: event.id,
-        user_id: userId,
+        user_id: userId || user?.id,
         amount: event.amount,
         payment_proof_url: proofUrl,
         status: "pending",
@@ -52,6 +54,7 @@ export const EventPaymentModal = ({ open, onOpenChange, event, userId }: EventPa
       toast.success("Payment submitted successfully! Awaiting admin approval.");
       onOpenChange(false);
       setPaymentProof(null);
+      if (onSuccess) onSuccess();
     },
     onError: (error) => {
       toast.error("Failed to submit payment");
@@ -80,8 +83,9 @@ export const EventPaymentModal = ({ open, onOpenChange, event, userId }: EventPa
 
     setUploading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       const fileExt = paymentProof.name.split('.').pop();
-      const fileName = `${userId}-${Date.now()}.${fileExt}`;
+      const fileName = `${userId || user?.id}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage

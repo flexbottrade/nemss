@@ -50,9 +50,8 @@ const Home = () => {
             </div>
           </div>
           <nav className="hidden md:flex items-center gap-6">
-            <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">Home</Link>
+            <Link to="/home" className="text-sm font-medium hover:text-primary transition-colors">Home</Link>
             <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">About</Link>
-            <Link to="/contact" className="text-sm font-medium hover:text-primary transition-colors">Contact</Link>
           </nav>
           <div className="flex gap-2">
             {user ? (
@@ -216,7 +215,6 @@ const Home = () => {
               <h4 className="font-semibold mb-4 text-card-foreground">Quick Links</h4>
               <div className="space-y-2">
                 <Link to="/about" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">About</Link>
-                <Link to="/contact" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">Contact</Link>
                 <a href="#" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">Privacy Policy</a>
               </div>
             </div>

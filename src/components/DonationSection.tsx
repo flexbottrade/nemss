@@ -1,240 +1,201 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Heart, Copy, Upload } from "lucide-react";
+import { Gift, Copy } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-interface DonationSectionProps {
-  userId: string;
-}
-
-export const DonationSection = ({ userId }: DonationSectionProps) => {
-  const queryClient = useQueryClient();
-  const [showModal, setShowModal] = useState(false);
+export const DonationSection = () => {
   const [selectedDonation, setSelectedDonation] = useState<any>(null);
   const [amount, setAmount] = useState("");
-  const [paymentProof, setPaymentProof] = useState<File | null>(null);
+  const [proof, setProof] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  const { data: activeDonations = [] } = useQuery({
+  const { data: donations = [] } = useQuery({
     queryKey: ["active-donations"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("donations")
         .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
-  const { data: paymentAccounts = [] } = useQuery({
+  const { data: accounts = [] } = useQuery({
     queryKey: ["payment-accounts"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("payment_accounts")
         .select("*")
         .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
-  const createDonationMutation = useMutation({
-    mutationFn: async (data: { proofUrl: string; amount: number }) => {
-      const { error } = await supabase.from("donation_payments").insert([{
-        donation_id: selectedDonation.id,
-        user_id: userId,
-        amount: data.amount,
-        payment_proof_url: data.proofUrl,
-        status: "pending",
-      }]);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["donation-payments"] });
-      toast.success("Donation submitted successfully! Thank you for your generosity.");
-      setShowModal(false);
-      setAmount("");
-      setPaymentProof(null);
-      setSelectedDonation(null);
-    },
-    onError: (error) => {
-      toast.error("Failed to submit donation");
-      console.error(error);
-    },
-  });
-
-  const handleOpenModal = (donation: any) => {
-    setSelectedDonation(donation);
-    setAmount(donation.minimum_amount.toString());
-    setShowModal(true);
-  };
-
-  const handleCopyAccount = (accountNumber: string) => {
-    navigator.clipboard.writeText(accountNumber);
-    toast.success("Account number copied!");
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setPaymentProof(e.target.files[0]);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const donationAmount = parseFloat(amount);
-    if (isNaN(donationAmount) || donationAmount < selectedDonation.minimum_amount) {
+  const handleSubmit = async () => {
+    if (!amount || parseFloat(amount) < selectedDonation.minimum_amount) {
       toast.error(`Minimum donation amount is ₦${selectedDonation.minimum_amount.toLocaleString()}`);
       return;
     }
-
-    if (!paymentProof) {
+    if (!proof) {
       toast.error("Please upload payment proof");
       return;
     }
 
     setUploading(true);
-    try {
-      const fileExt = paymentProof.name.split('.').pop();
-      const fileName = `${userId}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
+    try {
+      const fileName = `${user.id}/${Date.now()}_${proof.name}`;
       const { error: uploadError } = await supabase.storage
-        .from('payment-proofs')
-        .upload(filePath, paymentProof);
+        .from("payment-proofs")
+        .upload(fileName, proof);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('payment-proofs')
-        .getPublicUrl(filePath);
+        .from("payment-proofs")
+        .getPublicUrl(fileName);
 
-      await createDonationMutation.mutateAsync({ proofUrl: publicUrl, amount: donationAmount });
-    } catch (error) {
-      toast.error("Failed to upload payment proof");
-      console.error(error);
+      const { error } = await supabase.from("donation_payments").insert({
+        user_id: user.id,
+        donation_id: selectedDonation.id,
+        amount: parseFloat(amount),
+        payment_proof_url: publicUrl,
+        status: "pending",
+      });
+
+      if (error) throw error;
+
+      toast.success("Donation submitted successfully!");
+      setSelectedDonation(null);
+      setAmount("");
+      setProof(null);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to submit donation");
     } finally {
       setUploading(false);
     }
   };
 
-  if (activeDonations.length === 0) return null;
+  if (donations.length === 0) return null;
 
   return (
     <>
-      <div className="space-y-3 md:space-y-4">
-        {activeDonations.map((donation) => (
-          <Card key={donation.id} className="border-primary/20">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <Heart className="h-4 w-4 md:h-5 md:w-5 text-primary" />
-                  <CardTitle className="text-base md:text-lg">{donation.title}</CardTitle>
+      <Card className="mt-4 md:mt-6 border-accent/20">
+        <CardHeader className="p-2 md:p-3">
+          <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+            <Gift className="w-3 h-3 md:w-4 md:h-4 text-accent" />
+            Active Donations
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-2 md:p-3 pt-0 space-y-2">
+          {donations.map((donation) => (
+            <div key={donation.id} className="p-2 md:p-3 rounded-lg bg-accent/5 border border-accent/20">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-xs md:text-sm text-foreground">{donation.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Min: ₦{Number(donation.minimum_amount).toLocaleString()}
+                  </p>
                 </div>
                 <Button
                   size="sm"
-                  className="bg-[#0E3B43] text-[#F8E39C] hover:bg-[#0E3B43]/90 h-7 md:h-8 text-xs md:text-sm"
-                  onClick={() => handleOpenModal(donation)}
+                  className="h-6 md:h-7 text-xs bg-accent hover:bg-accent/90"
+                  onClick={() => setSelectedDonation(donation)}
                 >
                   Donate
                 </Button>
               </div>
-              <CardDescription className="text-xs md:text-sm">
-                Minimum: ₦{donation.minimum_amount.toLocaleString()}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        ))}
-      </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
-      <Dialog open={showModal} onOpenChange={setShowModal}>
+      <Dialog open={!!selectedDonation} onOpenChange={(open) => !open && setSelectedDonation(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg md:text-xl">{selectedDonation?.title}</DialogTitle>
-            <DialogDescription className="text-sm">
-              Make your donation to support this cause
+            <DialogTitle className="text-sm md:text-base">{selectedDonation?.title}</DialogTitle>
+            <DialogDescription className="text-xs md:text-sm">
+              Make a donation (minimum ₦{selectedDonation?.minimum_amount.toLocaleString()})
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="amount" className="text-sm">
-                Donation Amount (₦)
-              </Label>
+          
+          <div className="space-y-3 md:space-y-4">
+            <div>
+              <Label className="text-xs md:text-sm">Donation Amount (₦)</Label>
               <Input
-                id="amount"
                 type="number"
-                step="0.01"
-                min={selectedDonation?.minimum_amount || 0}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="Enter amount"
-                required
-                className="text-sm md:text-base"
+                placeholder={`Min: ${selectedDonation?.minimum_amount}`}
+                className="mt-1 text-xs md:text-sm h-8 md:h-10"
               />
-              <p className="text-xs text-muted-foreground">
-                Minimum: ₦{selectedDonation?.minimum_amount.toLocaleString()}
-              </p>
             </div>
 
-            <div className="space-y-3">
-              <Label className="text-sm font-semibold">Payment Account Details</Label>
-              {paymentAccounts.map((account) => (
-                <div key={account.id} className="rounded-lg border p-3 space-y-2">
-                  <p className="text-xs md:text-sm font-medium">{account.bank_name}</p>
-                  <p className="text-xs md:text-sm text-muted-foreground">{account.account_name}</p>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm md:text-base font-mono font-semibold">{account.account_number}</p>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleCopyAccount(account.account_number)}
-                      className="h-7 md:h-8"
-                    >
-                      <Copy className="h-3 w-3 md:h-4 md:w-4" />
-                    </Button>
-                  </div>
+            {accounts.length > 0 && (
+              <div>
+                <Label className="text-xs md:text-sm mb-2 block">Payment Account Details</Label>
+                <div className="space-y-1.5 md:space-y-2">
+                  {accounts.map((account) => (
+                    <div key={account.id} className="p-2 rounded-lg bg-card border border-border">
+                      <p className="font-semibold text-xs text-foreground">{account.account_name}</p>
+                      <p className="text-xs text-muted-foreground">{account.bank_name}</p>
+                      <div className="flex items-center justify-between mt-0.5">
+                        <p className="text-xs md:text-sm font-mono font-bold text-accent">{account.account_number}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-5 w-5 p-0"
+                          onClick={() => {
+                            navigator.clipboard.writeText(account.account_number);
+                            toast.success("Account number copied!");
+                          }}
+                        >
+                          <Copy className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="donation-proof" className="text-sm">
-                Upload Payment Proof
-              </Label>
+            <div>
+              <Label className="text-xs md:text-sm">Upload Payment Proof</Label>
               <Input
-                id="donation-proof"
                 type="file"
                 accept="image/*"
-                onChange={handleFileChange}
-                className="text-xs md:text-sm"
-                required
+                onChange={(e) => setProof(e.target.files?.[0] || null)}
+                className="mt-1 text-xs h-8 md:h-10"
               />
-              {paymentProof && (
-                <p className="text-xs text-muted-foreground">
-                  Selected: {paymentProof.name}
-                </p>
-              )}
             </div>
 
-            <Button
-              type="submit"
-              disabled={uploading}
-              className="w-full bg-[#0E3B43] text-[#F8E39C] hover:bg-[#0E3B43]/90"
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              {uploading ? "Submitting..." : "Submit Donation"}
-            </Button>
-          </form>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleSubmit} 
+                disabled={uploading} 
+                className="flex-1 text-xs md:text-sm h-8 md:h-9"
+              >
+                {uploading ? "Submitting..." : "Submit Donation"}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedDonation(null)} 
+                className="text-xs md:text-sm h-8 md:h-9"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>
