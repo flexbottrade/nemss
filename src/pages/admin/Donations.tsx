@@ -146,13 +146,13 @@ const Donations = () => {
               <h1 className="text-2xl md:text-3xl font-bold">Donation Management</h1>
               <p className="text-sm md:text-base text-muted-foreground">Create and manage donation campaigns</p>
             </div>
-        <Dialog open={isCreateOpen} onOpenChange={closeDialog}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#0E3B43] text-[#F8E39C] hover:bg-[#0E3B43]/90">
-              <Plus className="mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">New Campaign</span>
-            </Button>
-          </DialogTrigger>
+            <Dialog open={isCreateOpen} onOpenChange={closeDialog}>
+              <DialogTrigger asChild>
+                <Button className="bg-primary hover:bg-primary/90">
+                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">New Campaign</span>
+                </Button>
+              </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{editingDonation ? "Edit" : "Create"} Donation Campaign</DialogTitle>
@@ -184,7 +184,7 @@ const Donations = () => {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full bg-[#0E3B43] text-[#F8E39C]">
+              <Button type="submit" className="w-full">
                 {editingDonation ? "Update" : "Create"} Campaign
               </Button>
             </form>

@@ -64,7 +64,13 @@ const Transactions = () => {
     try {
       const table = type === "dues" ? "dues_payments" : type === "event" ? "event_payments" : "donation_payments";
       
-      const updateData: any = { status };
+      console.log("Updating payment:", { id, status, type, table, adminNote });
+      
+      const updateData: any = { 
+        status,
+        updated_at: new Date().toISOString()
+      };
+      
       if (adminNote.trim()) {
         updateData.admin_note = adminNote;
       }
@@ -75,6 +81,8 @@ const Transactions = () => {
         .eq("id", id)
         .select();
 
+      console.log("Update result:", { data, error });
+
       if (error) {
         console.error("Update error:", error);
         toast.error(`Failed to update payment: ${error.message}`);
@@ -82,7 +90,8 @@ const Transactions = () => {
       }
 
       if (!data || data.length === 0) {
-        toast.error("Payment not found or no changes made");
+        toast.error("Payment not found or insufficient permissions");
+        console.error("No data returned from update");
         return;
       }
 
