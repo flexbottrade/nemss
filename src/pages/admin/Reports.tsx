@@ -268,12 +268,12 @@ const Reports = () => {
         }
       });
 
-      // Calculate expected dues from join date to current date
-      const joinDate = new Date(member.created_at);
+      // Calculate expected dues from January 2023 to current date for ALL members
       const currentDate = new Date();
       let expectedDues = 0;
       
-      let date = new Date(joinDate.getFullYear(), joinDate.getMonth(), 1);
+      // Start from January 2023 for all members
+      let date = new Date(2023, 0, 1);
       while (date <= currentDate) {
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
