@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Award, TrendingUp, Users, Facebook, Twitter, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
+import logo from "@/assets/logo.png";
 
 const About = () => {
   const leaders = [
@@ -18,9 +19,7 @@ const About = () => {
       <header className="border-b border-border sticky top-0 z-50 bg-background/95 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">N</span>
-            </div>
+            <img src={logo} alt="NEMSS09 Set Logo" className="w-12 h-12 rounded-full object-cover" />
             <div>
               <h1 className="text-xl font-bold text-foreground">NEMSS09 Set</h1>
               <p className="text-xs text-muted-foreground">Alumni Association</p>
@@ -145,9 +144,7 @@ const About = () => {
           <div className="grid md:grid-cols-3 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold">N</span>
-                </div>
+                <img src={logo} alt="NEMSS09 Set Logo" className="w-10 h-10 rounded-full object-cover" />
                 <span className="font-bold text-lg text-card-foreground">NEMSS09 Set</span>
               </div>
               <p className="text-sm text-card-foreground/70">

@@ -74,12 +74,21 @@ export const ManualDuesPaymentDialog = ({
     // Fetch already paid months for this user and year
     const { data: payments } = await supabase
       .from("dues_payments")
-      .select("start_month")
+      .select("start_month, months_paid")
       .eq("user_id", memberId)
       .eq("start_year", parseInt(selectedYear))
       .eq("status", "approved");
     
-    const paid = payments?.map(p => p.start_month) || [];
+    // Calculate all paid months from payments (start_month through start_month + months_paid - 1)
+    const paid: number[] = [];
+    payments?.forEach(p => {
+      for (let i = 0; i < p.months_paid; i++) {
+        const month = p.start_month + i;
+        if (month <= 12 && !paid.includes(month)) {
+          paid.push(month);
+        }
+      }
+    });
     setPaidMonths(paid);
   };
 

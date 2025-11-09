@@ -94,7 +94,7 @@ const Home = () => {
             ) : (
               <>
                 <Button size="lg" className="bg-primary hover:bg-primary-light text-base" asChild>
-                  <Link to="/auth">Join Our Network</Link>
+                  <Link to="/auth">Become a Member</Link>
                 </Button>
                 <Button size="lg" variant="outline" className="text-base border-primary text-primary hover:bg-primary/10" asChild>
                   <Link to="/auth">Member Login</Link>
