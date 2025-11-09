@@ -27,7 +27,7 @@ serve(async (req) => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: "NEMSS09 Set <onboarding@resend.dev>",
+        from: "NEMSS09 Set <noreply@nemss09.com>",
         to: [email],
         subject: "Verify Your Email - NEMSS09 Set",
         html: `
