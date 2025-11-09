@@ -24,6 +24,28 @@ const Reports = () => {
   const [selectedEventId, setSelectedEventId] = useState("");
   const [events, setEvents] = useState<any[]>([]);
 
+  // Helper function to get month name
+  const getMonthName = (monthNum: number) => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[monthNum - 1];
+  };
+
+  // Helper function to format dues period
+  const formatDuesPeriod = (startMonth: number, startYear: number, monthsPaid: number) => {
+    const endMonthIndex = (startMonth + monthsPaid - 1) % 12;
+    const endMonth = endMonthIndex === 0 ? 12 : endMonthIndex;
+    const endYear = startYear + Math.floor((startMonth + monthsPaid - 1) / 12);
+    
+    const startMonthName = getMonthName(startMonth);
+    const endMonthName = getMonthName(endMonth);
+    
+    if (startYear === endYear) {
+      return `${startMonthName} - ${endMonthName} ${startYear}`;
+    } else {
+      return `${startMonthName} ${startYear} - ${endMonthName} ${endYear}`;
+    }
+  };
+
   useEffect(() => {
     const loadEvents = async () => {
       const { data } = await supabase.from("events").select("*").order("event_date", { ascending: false });
@@ -81,7 +103,7 @@ const Reports = () => {
       transactions.push({
         date: new Date(p.created_at),
         payer: `${p.profiles?.first_name} ${p.profiles?.last_name}`,
-        description: `Dues Payment (${p.start_month}/${p.start_year} - ${p.months_paid}m)`,
+        description: `Dues Payment (${formatDuesPeriod(p.start_month, p.start_year, p.months_paid)} - ${p.months_paid}m)`,
         amount: Number(p.amount),
         type: 'inflow'
       });
@@ -159,11 +181,11 @@ const Reports = () => {
     doc.text("Financial Summary", 14, 44);
     doc.setFontSize(10);
     doc.setTextColor(0, 150, 0); // Green for inflow
-    doc.text(`Total Inflow: ₦${totalInflow.toLocaleString()}`, 14, 52);
+    doc.text(`Total Inflow: NGN ${totalInflow.toLocaleString()}`, 14, 52);
     doc.setTextColor(200, 0, 0); // Red for outflow
-    doc.text(`Total Outflow: ₦${totalOutflow.toLocaleString()}`, 14, 58);
+    doc.text(`Total Outflow: NGN ${totalOutflow.toLocaleString()}`, 14, 58);
     doc.setTextColor(0, 0, 0); // Black for balance
-    doc.text(`Current Balance: ₦${currentBalance.toLocaleString()}`, 14, 64);
+    doc.text(`Current Balance: NGN ${currentBalance.toLocaleString()}`, 14, 64);
 
     // Transactions Table (Bank Statement Style)
     if (transactions.length > 0) {
@@ -174,7 +196,7 @@ const Reports = () => {
           t.date.toLocaleDateString(),
           t.payer,
           t.description,
-          `₦${t.amount.toLocaleString()}`
+          `NGN ${t.amount.toLocaleString()}`
         ]),
         theme: 'grid',
         styles: { fontSize: 8 },
@@ -258,9 +280,9 @@ const Reports = () => {
       body: filteredMembers.map(m => [
         `${m.first_name} ${m.last_name}`,
         m.member_id,
-        `₦${m.totalPaid.toLocaleString()}`,
+        `NGN ${m.totalPaid.toLocaleString()}`,
         m.monthsPaid,
-        `₦${m.outstanding.toLocaleString()}`,
+        `NGN ${m.outstanding.toLocaleString()}`,
         m.status
       ]),
       theme: 'grid',
@@ -309,7 +331,7 @@ const Reports = () => {
           p.profiles?.member_id,
           `${p.start_month}/${p.start_year}`,
           p.months_paid,
-          `₦${Number(p.amount).toLocaleString()}`,
+          `NGN ${Number(p.amount).toLocaleString()}`,
           p.status,
           new Date(p.created_at).toLocaleDateString()
         ]),
@@ -370,8 +392,8 @@ const Reports = () => {
       doc.text(`${event.title}`, 14, yPos);
       doc.setFontSize(10);
       doc.text(`Date: ${new Date(event.event_date).toLocaleDateString()}`, 14, yPos + 6);
-      doc.text(`Amount: ₦${Number(event.amount).toLocaleString()}`, 14, yPos + 12);
-      doc.text(`Total Collected: ₦${totalCollected.toLocaleString()}`, 14, yPos + 18);
+      doc.text(`Amount: NGN ${Number(event.amount).toLocaleString()}`, 14, yPos + 12);
+      doc.text(`Total Collected: NGN ${totalCollected.toLocaleString()}`, 14, yPos + 18);
       doc.text(`Contributors: ${payments.length}`, 14, yPos + 24);
 
       yPos += 32;
