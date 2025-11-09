@@ -284,7 +284,7 @@ export const ManualDuesPaymentDialog = ({
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || (!existingPayment && paidMonths.length === 12)}
+              disabled={loading || (!existingPayment && (selectedMonths.length === 0 || paidMonths.length === 12))}
             >
               {loading ? "Saving..." : existingPayment ? "Update Payment" : "Add Payment"}
             </Button>
