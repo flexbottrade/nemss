@@ -40,7 +40,7 @@ export const MemberPaymentsDialog = ({
   const [donationDialogOpen, setDonationDialogOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<any>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [paymentToDelete, setPaymentToDelete] = useState<{ id: string; type: 'dues' | 'event' | 'donation' } | null>(null);
+  const [paymentToDelete, setPaymentToDelete] = useState<{ ids: string[]; type: 'dues' | 'event' | 'donation' } | null>(null);
 
   useEffect(() => {
     if (member && open) {
@@ -99,8 +99,8 @@ export const MemberPaymentsDialog = ({
     onSuccess();
   };
 
-  const handleDeleteClick = (id: string, type: 'dues' | 'event' | 'donation') => {
-    setPaymentToDelete({ id, type });
+  const handleDeleteClick = (ids: string[], type: 'dues' | 'event' | 'donation') => {
+    setPaymentToDelete({ ids, type });
     setDeleteConfirmOpen(true);
   };
 
@@ -116,12 +116,12 @@ export const MemberPaymentsDialog = ({
     const { error } = await supabase
       .from(table)
       .delete()
-      .eq("id", paymentToDelete.id);
+      .in("id", paymentToDelete.ids);
 
     if (error) {
       toast.error("Failed to delete payment");
     } else {
-      toast.success("Payment deleted successfully");
+      toast.success(`Payment${paymentToDelete.ids.length > 1 ? 's' : ''} deleted successfully`);
       loadPayments();
       onSuccess();
     }
@@ -210,7 +210,7 @@ export const MemberPaymentsDialog = ({
                             <Button variant="ghost" size="sm" onClick={() => handleEditDues(firstPayment)}>
                               <Edit className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(firstPayment.id, 'dues')}>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(group.map(p => p.id), 'dues')}>
                               <Trash2 className="w-4 h-4 text-destructive" />
                             </Button>
                           </div>
@@ -241,7 +241,7 @@ export const MemberPaymentsDialog = ({
                       <Button variant="ghost" size="sm" onClick={() => handleEditEvent(payment)}>
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(payment.id, 'event')}>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick([payment.id], 'event')}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </div>
@@ -269,7 +269,7 @@ export const MemberPaymentsDialog = ({
                       <Button variant="ghost" size="sm" onClick={() => handleEditDonation(payment)}>
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(payment.id, 'donation')}>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick([payment.id], 'donation')}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </div>
