@@ -232,39 +232,48 @@ export const ManualDuesPaymentDialog = ({
                 )}
 
                 {monthlyAmount !== null && (
-                  <div className="space-y-2">
-                    <Label>Select Months</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {months.map((month, index) => {
-                        const monthNum = index + 1;
-                        const isPaid = paidMonths.includes(monthNum);
-                        const isSelected = selectedMonths.includes(monthNum);
-                        
-                        return (
-                          <div
-                            key={monthNum}
-                            className={`flex items-center space-x-2 p-2 rounded border ${
-                              isPaid ? 'bg-muted opacity-50' : ''
-                            }`}
-                          >
-                            <Checkbox
-                              id={`month-${monthNum}`}
-                              checked={isSelected}
-                              disabled={isPaid}
-                              onCheckedChange={() => toggleMonth(monthNum)}
-                            />
-                            <label
-                              htmlFor={`month-${monthNum}`}
-                              className="text-sm cursor-pointer flex-1"
+                  <>
+                    <div className="space-y-2">
+                      <Label>Select Months</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {months.map((month, index) => {
+                          const monthNum = index + 1;
+                          const isPaid = paidMonths.includes(monthNum);
+                          const isSelected = selectedMonths.includes(monthNum);
+                          
+                          return (
+                            <div
+                              key={monthNum}
+                              className={`flex items-center space-x-2 p-2 rounded border ${
+                                isPaid ? 'bg-muted opacity-50' : ''
+                              }`}
                             >
-                              {month.slice(0, 3)}
-                              {isPaid && <span className="text-xs ml-1">(Paid)</span>}
-                            </label>
-                          </div>
-                        );
-                      })}
+                              <Checkbox
+                                id={`month-${monthNum}`}
+                                checked={isSelected}
+                                disabled={isPaid}
+                                onCheckedChange={() => toggleMonth(monthNum)}
+                              />
+                              <label
+                                htmlFor={`month-${monthNum}`}
+                                className="text-sm cursor-pointer flex-1"
+                              >
+                                {month.slice(0, 3)}
+                                {isPaid && <span className="text-xs ml-1">(Paid)</span>}
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                    {paidMonths.length === 12 && (
+                      <div className="p-3 bg-muted rounded-lg">
+                        <p className="text-sm text-muted-foreground text-center">
+                          All months for {selectedYear} have been paid
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}
@@ -273,7 +282,10 @@ export const ManualDuesPaymentDialog = ({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button 
+              type="submit" 
+              disabled={loading || (!existingPayment && paidMonths.length === 12)}
+            >
               {loading ? "Saving..." : existingPayment ? "Update Payment" : "Add Payment"}
             </Button>
           </DialogFooter>

@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Edit, Plus } from "lucide-react";
+import { Edit, Plus, Trash2 } from "lucide-react";
 import { ManualDuesPaymentDialog } from "./ManualDuesPaymentDialog";
 import { ManualEventPaymentDialog } from "./ManualEventPaymentDialog";
 import { ManualDonationPaymentDialog } from "./ManualDonationPaymentDialog";
+import { ConfirmationDialog } from "../ConfirmationDialog";
 
 interface MemberPaymentsDialogProps {
   open: boolean;
@@ -38,6 +39,8 @@ export const MemberPaymentsDialog = ({
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [donationDialogOpen, setDonationDialogOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<any>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [paymentToDelete, setPaymentToDelete] = useState<{ id: string; type: 'dues' | 'event' | 'donation' } | null>(null);
 
   useEffect(() => {
     if (member && open) {
@@ -94,6 +97,37 @@ export const MemberPaymentsDialog = ({
     setEditingPayment(null);
     loadPayments();
     onSuccess();
+  };
+
+  const handleDeleteClick = (id: string, type: 'dues' | 'event' | 'donation') => {
+    setPaymentToDelete({ id, type });
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!paymentToDelete) return;
+
+    const table = paymentToDelete.type === 'dues' 
+      ? 'dues_payments' 
+      : paymentToDelete.type === 'event' 
+      ? 'event_payments' 
+      : 'donation_payments';
+
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .eq("id", paymentToDelete.id);
+
+    if (error) {
+      toast.error("Failed to delete payment");
+    } else {
+      toast.success("Payment deleted successfully");
+      loadPayments();
+      onSuccess();
+    }
+
+    setDeleteConfirmOpen(false);
+    setPaymentToDelete(null);
   };
 
   if (!member) return null;
@@ -172,9 +206,14 @@ export const MemberPaymentsDialog = ({
                               {year} - {monthRange}
                             </p>
                           </div>
-                          <Button variant="ghost" size="sm" onClick={() => handleEditDues(firstPayment)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleEditDues(firstPayment)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(firstPayment.id, 'dues')}>
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
                         </div>
                       );
                     });
@@ -198,9 +237,14 @@ export const MemberPaymentsDialog = ({
                       <p className="font-medium">₦{payment.amount.toLocaleString()}</p>
                       <p className="text-sm text-muted-foreground">{payment.events?.title}</p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => handleEditEvent(payment)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleEditEvent(payment)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(payment.id, 'event')}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {eventPayments.length === 0 && (
@@ -221,9 +265,14 @@ export const MemberPaymentsDialog = ({
                       <p className="font-medium">₦{payment.amount.toLocaleString()}</p>
                       <p className="text-sm text-muted-foreground">{payment.donations?.title}</p>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => handleEditDonation(payment)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => handleEditDonation(payment)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(payment.id, 'donation')}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {donationPayments.length === 0 && (
@@ -260,6 +309,16 @@ export const MemberPaymentsDialog = ({
         memberName={`${member.first_name} ${member.last_name}`}
         onSuccess={() => {}}
         existingPayment={editingPayment}
+      />
+
+      <ConfirmationDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Payment"
+        description="Are you sure you want to delete this manual payment? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
       />
     </>
   );
