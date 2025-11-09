@@ -40,20 +40,31 @@ const Transactions = () => {
   }, [isAdmin]);
 
   const loadPayments = async () => {
-    const { data: dues } = await supabase
+    const { data: dues, error: duesError } = await supabase
       .from("dues_payments")
       .select("*, profiles(first_name, last_name, member_id)")
       .order("created_at", { ascending: false });
 
-    const { data: events } = await supabase
+    if (duesError) console.error("Dues error:", duesError);
+
+    const { data: events, error: eventsError } = await supabase
       .from("event_payments")
       .select("*, profiles(first_name, last_name, member_id), events(title)")
       .order("created_at", { ascending: false });
 
-    const { data: donations } = await supabase
+    if (eventsError) console.error("Events error:", eventsError);
+
+    const { data: donations, error: donationsError } = await supabase
       .from("donation_payments")
       .select("*, profiles(first_name, last_name, member_id), donations(title)")
       .order("created_at", { ascending: false });
+
+    if (donationsError) {
+      console.error("Donations error:", donationsError);
+      toast.error(`Failed to load donations: ${donationsError.message}`);
+    }
+
+    console.log("Loaded donations:", donations);
 
     setDuesPayments(dues || []);
     setEventPayments(events || []);
