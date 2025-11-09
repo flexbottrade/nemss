@@ -55,6 +55,16 @@ const Auth = () => {
 
       if (error) throw error;
 
+      // Check if email is verified
+      if (data.user && !data.user.email_confirmed_at) {
+        setVerificationEmail(loginData.email);
+        setShowVerificationDialog(true);
+        toast.error("Please verify your email before logging in");
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
+
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
