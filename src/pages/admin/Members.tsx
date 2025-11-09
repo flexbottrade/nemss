@@ -71,8 +71,9 @@ const Members = () => {
     setMembers(membersWithRoles);
 
     // Calculate owing status
-    const { data: settings } = await supabase.from("settings").select("monthly_dues_amount").single();
-    const monthlyDues = settings?.monthly_dues_amount || 3000;
+    const { data: variableDues } = await supabase
+      .from("variable_dues_settings")
+      .select("*");
 
     const { data: duesPayments } = await supabase
       .from("dues_payments")
@@ -81,29 +82,45 @@ const Members = () => {
 
     const { data: eventPayments } = await supabase
       .from("event_payments")
-      .select("*, events(amount)")
+      .select("*, events(amount, event_date)")
       .eq("status", "approved");
 
+    const { data: allEvents } = await supabase
+      .from("events")
+      .select("*");
+
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+
     const membersData = data?.map(member => {
+      // Calculate dues owing from 2023 to current month
+      let totalDuesExpected = 0;
+      for (let year = 2023; year <= currentYear; year++) {
+        const dueSetting = variableDues?.find(d => d.year === year);
+        if (!dueSetting?.is_waived) {
+          const monthlyAmount = dueSetting?.monthly_amount || 3000;
+          const monthsInYear = year === currentYear ? currentMonth : 12;
+          totalDuesExpected += monthlyAmount * monthsInYear;
+        }
+      }
+
       const memberDues = duesPayments?.filter(p => p.user_id === member.id) || [];
       const totalDuesPaid = memberDues.reduce((sum, p) => sum + Number(p.amount), 0);
-      
-      const monthsSinceJoin = Math.floor(
-        (new Date().getTime() - new Date(member.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)
-      );
-      const expectedDues = monthsSinceJoin * monthlyDues;
-      const duesOwing = expectedDues - totalDuesPaid;
+      const duesOwing = totalDuesExpected - totalDuesPaid;
 
-      const memberEvents = eventPayments?.filter(p => p.user_id === member.id) || [];
-      const totalEventsPaid = memberEvents.reduce((sum, p) => sum + Number(p.amount), 0);
-      const totalEventsExpected = memberEvents.reduce((sum, p) => sum + Number(p.events?.amount || 0), 0);
-      const eventsOwing = totalEventsExpected - totalEventsPaid;
+      // Calculate events owing (all events, not just paid ones)
+      const memberEventPayments = eventPayments?.filter(p => p.user_id === member.id) || [];
+      const paidEventIds = memberEventPayments.map(p => p.event_id);
+      
+      const unpaidEvents = allEvents?.filter(event => !paidEventIds.includes(event.id)) || [];
+      const totalEventsOwed = unpaidEvents.reduce((sum, e) => sum + Number(e.amount), 0);
 
       return {
         ...member,
         duesOwing: duesOwing > 0 ? duesOwing : 0,
-        eventsOwing: eventsOwing > 0 ? eventsOwing : 0,
-        totalOwing: (duesOwing > 0 ? duesOwing : 0) + (eventsOwing > 0 ? eventsOwing : 0)
+        eventsOwing: totalEventsOwed > 0 ? totalEventsOwed : 0,
+        totalOwing: (duesOwing > 0 ? duesOwing : 0) + (totalEventsOwed > 0 ? totalEventsOwed : 0)
       };
     }) || [];
 

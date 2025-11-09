@@ -128,9 +128,16 @@ const Dashboard = () => {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
+    const { data: donationPayments } = await supabase
+      .from("donation_payments")
+      .select("*, created_at, amount, status, donations(title)")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
     const allPayments = [
       ...(duesPayments || []).map(p => ({ ...p, type: 'dues' as const })),
-      ...(eventPayments || []).map(p => ({ ...p, type: 'event' as const }))
+      ...(eventPayments || []).map(p => ({ ...p, type: 'event' as const })),
+      ...(donationPayments || []).map(p => ({ ...p, type: 'donation' as const }))
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     setPaymentHistory(allPayments);
@@ -292,7 +299,9 @@ const Dashboard = () => {
                         <p className="text-xs md:text-sm font-medium text-foreground truncate">
                           {payment.type === 'dues' 
                             ? `Dues Payment (${payment.start_month}/${payment.start_year})`
-                            : payment.events?.title || 'Event Payment'}
+                            : payment.type === 'event'
+                            ? payment.events?.title || 'Event Payment'
+                            : payment.donations?.title || 'Donation'}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(payment.created_at).toLocaleDateString()}
