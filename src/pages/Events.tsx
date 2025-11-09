@@ -59,8 +59,12 @@ const Events = () => {
     return "past";
   };
 
-  const hasPaidForEvent = (eventId: string) => {
-    return payments.some(p => p.event_id === eventId && (p.status === "approved" || p.is_manually_updated));
+  const getPaymentStatus = (eventId: string) => {
+    const payment = payments.find(p => p.event_id === eventId);
+    if (!payment) return null;
+    if (payment.status === "approved" || payment.is_manually_updated) return "approved";
+    if (payment.status === "rejected") return "rejected";
+    return "pending";
   };
 
   if (loading) {
@@ -87,7 +91,7 @@ const Events = () => {
         <div className="space-y-3 md:space-y-4">
           {events.map((event) => {
             const status = getEventStatus(event.event_date);
-            const isPaid = hasPaidForEvent(event.id);
+            const paymentStatus = getPaymentStatus(event.id);
             
             return (
               <Card key={event.id} className="border-border bg-card shadow-md">
@@ -118,11 +122,15 @@ const Events = () => {
                       </p>
                       <Button
                         size="sm"
-                        className="h-7 md:h-8 text-xs md:text-sm"
+                        className={`h-7 md:h-8 text-xs md:text-sm ${
+                          paymentStatus === "approved" ? "bg-green-600 hover:bg-green-700" :
+                          paymentStatus === "pending" ? "bg-yellow-600 hover:bg-yellow-700" :
+                          ""
+                        }`}
                         onClick={() => setSelectedEvent(event)}
-                        disabled={isPaid}
+                        disabled={paymentStatus === "approved" || paymentStatus === "pending"}
                       >
-                        {isPaid ? "Paid" : "Pay"}
+                        {paymentStatus === "approved" ? "Paid" : paymentStatus === "pending" ? "Pending" : "Pay"}
                       </Button>
                     </div>
                   </div>

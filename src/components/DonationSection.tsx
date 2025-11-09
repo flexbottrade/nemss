@@ -27,6 +27,20 @@ export const DonationSection = () => {
     },
   });
 
+  const { data: donationPayments = [], refetch: refetchPayments } = useQuery({
+    queryKey: ["user-donation-payments"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      
+      const { data } = await supabase
+        .from("donation_payments")
+        .select("*")
+        .eq("user_id", user.id);
+      return data || [];
+    },
+  });
+
   const { data: accounts = [] } = useQuery({
     queryKey: ["payment-accounts"],
     queryFn: async () => {
@@ -78,6 +92,7 @@ export const DonationSection = () => {
       setSelectedDonation(null);
       setAmount("");
       setProof(null);
+      refetchPayments();
     } catch (error: any) {
       toast.error(error.message || "Failed to submit donation");
     } finally {
@@ -97,25 +112,35 @@ export const DonationSection = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-2 md:p-3 pt-0 space-y-2">
-          {donations.map((donation) => (
-            <div key={donation.id} className="p-2 md:p-3 rounded-lg bg-accent/5 border border-accent/20">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-xs md:text-sm text-foreground">{donation.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Min: ₦{Number(donation.minimum_amount).toLocaleString()}
-                  </p>
+          {donations.map((donation) => {
+            const payment = donationPayments.find(p => p.donation_id === donation.id);
+            const paymentStatus = payment ? payment.status : null;
+            
+            return (
+              <div key={donation.id} className="p-2 md:p-3 rounded-lg bg-accent/5 border border-accent/20">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-xs md:text-sm text-foreground">{donation.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Min: ₦{Number(donation.minimum_amount).toLocaleString()}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className={`h-6 md:h-7 text-xs ${
+                      paymentStatus === "approved" ? "bg-green-600 hover:bg-green-700" :
+                      paymentStatus === "pending" ? "bg-yellow-600 hover:bg-yellow-700" :
+                      "bg-accent hover:bg-accent/90"
+                    }`}
+                    onClick={() => setSelectedDonation(donation)}
+                    disabled={paymentStatus === "approved" || paymentStatus === "pending"}
+                  >
+                    {paymentStatus === "approved" ? "Paid" : paymentStatus === "pending" ? "Pending" : "Donate"}
+                  </Button>
                 </div>
-                <Button
-                  size="sm"
-                  className="h-6 md:h-7 text-xs bg-accent hover:bg-accent/90"
-                  onClick={() => setSelectedDonation(donation)}
-                >
-                  Donate
-                </Button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 
