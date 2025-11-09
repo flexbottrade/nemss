@@ -80,6 +80,13 @@ export type Database = {
             referencedRelation: "donations"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "donation_payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       donations: {
