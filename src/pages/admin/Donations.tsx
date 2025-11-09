@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus, Edit2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
 
 const Donations = () => {
   const queryClient = useQueryClient();
@@ -135,12 +136,16 @@ const Donations = () => {
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Donation Management</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Create and manage donation campaigns</p>
-        </div>
+    <div className="flex min-h-screen bg-background">
+      <AdminSidebar />
+      
+      <main className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center mb-4 md:mb-6 pl-12 md:pl-0">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">Donation Management</h1>
+              <p className="text-sm md:text-base text-muted-foreground">Create and manage donation campaigns</p>
+            </div>
         <Dialog open={isCreateOpen} onOpenChange={closeDialog}>
           <DialogTrigger asChild>
             <Button className="bg-[#0E3B43] text-[#F8E39C] hover:bg-[#0E3B43]/90">
@@ -185,11 +190,11 @@ const Donations = () => {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+          </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {donations.map((donation) => (
-          <Card key={donation.id}>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {donations.map((donation) => (
+            <Card key={donation.id}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <CardTitle className="text-base md:text-lg">{donation.title}</CardTitle>
@@ -228,17 +233,17 @@ const Donations = () => {
                 />
               </div>
             </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {donations.length === 0 && (
+          <Card className="p-12 text-center">
+            <CardDescription>No donation campaigns yet. Create your first campaign to get started.</CardDescription>
           </Card>
-        ))}
-      </div>
+        )}
 
-      {donations.length === 0 && (
-        <Card className="p-12 text-center">
-          <CardDescription>No donation campaigns yet. Create your first campaign to get started.</CardDescription>
-        </Card>
-      )}
-
-      <ConfirmationDialog
+        <ConfirmationDialog
         open={deleteId !== null}
         onOpenChange={(open) => !open && setDeleteId(null)}
         onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
@@ -247,6 +252,8 @@ const Donations = () => {
         confirmText="Delete"
         cancelText="Cancel"
       />
+        </div>
+      </main>
     </div>
   );
 };

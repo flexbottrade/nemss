@@ -61,21 +61,39 @@ const Transactions = () => {
   };
 
   const handleUpdatePayment = async (id: string, status: string, type: "dues" | "event" | "donation") => {
-    const table = type === "dues" ? "dues_payments" : type === "event" ? "event_payments" : "donation_payments";
-    const { error } = await supabase
-      .from(table)
-      .update({ status, admin_note: adminNote })
-      .eq("id", id);
+    try {
+      const table = type === "dues" ? "dues_payments" : type === "event" ? "event_payments" : "donation_payments";
+      
+      const updateData: any = { status };
+      if (adminNote.trim()) {
+        updateData.admin_note = adminNote;
+      }
+      
+      const { data, error } = await supabase
+        .from(table)
+        .update(updateData)
+        .eq("id", id)
+        .select();
 
-    if (error) {
-      toast.error("Failed to update payment");
-      return;
+      if (error) {
+        console.error("Update error:", error);
+        toast.error(`Failed to update payment: ${error.message}`);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        toast.error("Payment not found or no changes made");
+        return;
+      }
+
+      toast.success(`Payment ${status} successfully`);
+      setSelectedPayment(null);
+      setAdminNote("");
+      await loadPayments();
+    } catch (error: any) {
+      console.error("Unexpected error:", error);
+      toast.error(`Error: ${error.message || "Unknown error occurred"}`);
     }
-
-    toast.success(`Payment ${status}`);
-    setSelectedPayment(null);
-    setAdminNote("");
-    loadPayments();
   };
 
   if (loading || !isAdmin) {
