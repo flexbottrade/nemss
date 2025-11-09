@@ -590,7 +590,7 @@ const Reports = () => {
                 </div>
               )}
 
-              {(reportType === "finance" || reportType === "events") && (
+              {reportType === "finance" && (
                 <>
                   <div>
                     <Label className="text-xs md:text-sm">Start Date (Optional)</Label>
