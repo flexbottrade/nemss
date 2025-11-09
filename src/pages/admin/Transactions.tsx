@@ -7,6 +7,8 @@ import { Check, X, ExternalLink } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +27,9 @@ const Transactions = () => {
   const [donationPayments, setDonationPayments] = useState<any[]>([]);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [adminNote, setAdminNote] = useState("");
+  const [duesFilter, setDuesFilter] = useState<string>("all");
+  const [eventFilter, setEventFilter] = useState<string>("all");
+  const [donationFilter, setDonationFilter] = useState<string>("all");
 
   useEffect(() => {
     if (!loading && !isAdmin) {
@@ -55,9 +60,16 @@ const Transactions = () => {
       .select("*, profiles(first_name, last_name, member_id), donations(title)")
       .order("created_at", { ascending: false });
 
-    setDuesPayments(dues || []);
-    setEventPayments(events || []);
-    setDonationPayments(donations || []);
+    // Sort to show pending first
+    const sortByStatus = (a: any, b: any) => {
+      if (a.status === "pending" && b.status !== "pending") return -1;
+      if (a.status !== "pending" && b.status === "pending") return 1;
+      return 0;
+    };
+
+    setDuesPayments((dues || []).sort(sortByStatus));
+    setEventPayments((events || []).sort(sortByStatus));
+    setDonationPayments((donations || []).sort(sortByStatus));
   };
 
   const handleUpdatePayment = async (id: string, status: string, type: "dues" | "event" | "donation") => {
@@ -202,26 +214,74 @@ const Transactions = () => {
             </TabsList>
 
           <TabsContent value="dues">
-            {duesPayments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-12">No dues payments yet</p>
+            <div className="mb-4">
+              <Label className="text-xs md:text-sm mb-2">Filter by Status</Label>
+              <Select value={duesFilter} onValueChange={setDuesFilter}>
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {duesPayments.filter(p => duesFilter === "all" || p.status === duesFilter).length === 0 ? (
+              <p className="text-center text-muted-foreground py-12">No dues payments found</p>
             ) : (
-              duesPayments.map((payment) => renderPayment(payment, "dues"))
+              duesPayments
+                .filter(p => duesFilter === "all" || p.status === duesFilter)
+                .map((payment) => renderPayment(payment, "dues"))
             )}
           </TabsContent>
 
           <TabsContent value="events">
-            {eventPayments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-12">No event payments yet</p>
+            <div className="mb-4">
+              <Label className="text-xs md:text-sm mb-2">Filter by Status</Label>
+              <Select value={eventFilter} onValueChange={setEventFilter}>
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {eventPayments.filter(p => eventFilter === "all" || p.status === eventFilter).length === 0 ? (
+              <p className="text-center text-muted-foreground py-12">No event payments found</p>
             ) : (
-              eventPayments.map((payment) => renderPayment(payment, "event"))
+              eventPayments
+                .filter(p => eventFilter === "all" || p.status === eventFilter)
+                .map((payment) => renderPayment(payment, "event"))
             )}
           </TabsContent>
 
           <TabsContent value="donations">
-            {donationPayments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-12">No donation payments yet</p>
+            <div className="mb-4">
+              <Label className="text-xs md:text-sm mb-2">Filter by Status</Label>
+              <Select value={donationFilter} onValueChange={setDonationFilter}>
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {donationPayments.filter(p => donationFilter === "all" || p.status === donationFilter).length === 0 ? (
+              <p className="text-center text-muted-foreground py-12">No donation payments found</p>
             ) : (
-              donationPayments.map((payment) => renderPayment(payment, "donation"))
+              donationPayments
+                .filter(p => donationFilter === "all" || p.status === donationFilter)
+                .map((payment) => renderPayment(payment, "donation"))
             )}
           </TabsContent>
           </Tabs>
