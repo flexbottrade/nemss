@@ -37,7 +37,8 @@ const AdminDashboard = () => {
   const loadStats = async () => {
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("*");
+      .select("*")
+      .eq("email_verified", true);
 
     const membersCount = profiles?.length || 0;
 

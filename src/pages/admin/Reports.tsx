@@ -229,6 +229,7 @@ const Reports = () => {
     const { data: members } = await supabase
       .from("profiles")
       .select("*")
+      .eq("email_verified", true)
       .neq("role", "admin")
       .order("first_name");
 
@@ -385,6 +386,7 @@ const Reports = () => {
     const { data: allMembers } = await supabase
       .from("profiles")
       .select("*")
+      .eq("email_verified", true)
       .neq("role", "admin")
       .order("first_name");
 
