@@ -223,7 +223,7 @@ const Reports = () => {
 
   const generateMemberReport = async () => {
     const { data: settings } = await supabase.from("settings").select("monthly_dues_amount").single();
-    const monthlyDues = settings?.monthly_dues_amount || 3000;
+    const defaultMonthlyDues = settings?.monthly_dues_amount || 3000;
 
     const { data: members } = await supabase
       .from("profiles")
@@ -235,6 +235,11 @@ const Reports = () => {
       .from("dues_payments")
       .select("*")
       .eq("status", "approved");
+
+    const { data: variableDuesSettings } = await supabase
+      .from("variable_dues_settings")
+      .select("*")
+      .order("year");
 
     // Fetch all events and event payments
     const { data: allEvents } = await supabase
@@ -250,14 +255,45 @@ const Reports = () => {
       // Calculate dues
       const payments = duesPayments?.filter(p => p.user_id === member.id) || [];
       const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-      const monthsPaid = payments.reduce((sum, p) => sum + p.months_paid, 0);
       
-      // Calculate expected dues (assuming since creation date)
-      const monthsSinceJoin = Math.floor(
-        (new Date().getTime() - new Date(member.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)
-      );
-      const expectedDues = monthsSinceJoin * monthlyDues;
-      const duesOutstanding = Math.max(0, expectedDues - totalPaid);
+      // Get all months they've paid for
+      const paidMonths = new Set<string>();
+      payments.forEach(payment => {
+        const startMonth = payment.start_month;
+        const startYear = payment.start_year;
+        for (let i = 0; i < payment.months_paid; i++) {
+          const month = ((startMonth + i - 1) % 12) + 1;
+          const year = startYear + Math.floor((startMonth + i - 1) / 12);
+          paidMonths.add(`${year}-${month}`);
+        }
+      });
+
+      // Calculate expected dues from join date to current date
+      const joinDate = new Date(member.created_at);
+      const currentDate = new Date();
+      let expectedDues = 0;
+      
+      let date = new Date(joinDate.getFullYear(), joinDate.getMonth(), 1);
+      while (date <= currentDate) {
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const monthKey = `${year}-${month}`;
+        
+        // Check if this month has been paid
+        if (!paidMonths.has(monthKey)) {
+          // Find the monthly amount for this year
+          const yearSetting = variableDuesSettings?.find(s => s.year === year);
+          const monthlyAmount = yearSetting 
+            ? (yearSetting.is_waived ? 0 : Number(yearSetting.monthly_amount))
+            : defaultMonthlyDues;
+          
+          expectedDues += monthlyAmount;
+        }
+        
+        date.setMonth(date.getMonth() + 1);
+      }
+
+      const monthsPaid = payments.reduce((sum, p) => sum + p.months_paid, 0);
 
       // Calculate event payments owed
       const memberEventPayments = eventPayments?.filter(ep => ep.user_id === member.id) || [];
@@ -272,14 +308,14 @@ const Reports = () => {
       }) || [];
 
       const eventsOutstanding = unpaidEvents.reduce((sum, event) => sum + Number(event.amount), 0);
-      const totalOutstanding = duesOutstanding + eventsOutstanding;
+      const totalOutstanding = expectedDues + eventsOutstanding;
 
       return {
         ...member,
         totalPaid,
         monthsPaid,
         outstanding: totalOutstanding,
-        duesOutstanding,
+        duesOutstanding: expectedDues,
         eventsOutstanding,
         status: totalOutstanding > 0 ? "Owing" : "Up-to-date"
       };
