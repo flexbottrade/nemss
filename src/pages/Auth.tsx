@@ -148,7 +148,19 @@ const Auth = () => {
         }
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to create account");
+      // Check if email already exists
+      if (error.message?.toLowerCase().includes('already registered') || 
+          error.message?.toLowerCase().includes('already exists') ||
+          error.message?.toLowerCase().includes('duplicate')) {
+        toast.error("This email is already registered. Please login instead.", {
+          action: {
+            label: "Go to Login",
+            onClick: () => setActiveTab("login")
+          }
+        });
+      } else {
+        toast.error(error.message || "Failed to create account");
+      }
     } finally {
       setLoading(false);
     }
