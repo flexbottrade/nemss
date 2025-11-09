@@ -33,6 +33,7 @@ const Reports = () => {
   }, []);
 
   const generateFinanceReport = async () => {
+    // Fetch all transactions within date range
     let duesQuery = supabase
       .from("dues_payments")
       .select("*, profiles(first_name, last_name, member_id)")
@@ -53,6 +54,16 @@ const Reports = () => {
     
     const { data: eventPayments } = await eventQuery;
 
+    let donationQuery = supabase
+      .from("donation_payments")
+      .select("*, profiles(first_name, last_name, member_id), donations(title)")
+      .eq("status", "approved");
+    
+    if (startDate) donationQuery = donationQuery.gte("created_at", startDate);
+    if (endDate) donationQuery = donationQuery.lte("created_at", endDate);
+    
+    const { data: donationPayments } = await donationQuery;
+
     let adjustmentQuery = supabase
       .from("finance_adjustments")
       .select("*, profiles(first_name, last_name)");
@@ -62,47 +73,127 @@ const Reports = () => {
     
     const { data: adjustments } = await adjustmentQuery;
 
+    // Create transaction array (bank statement style)
+    const transactions: any[] = [];
+
+    // Add dues payments as inflow
+    duesPayments?.forEach(p => {
+      transactions.push({
+        date: new Date(p.created_at),
+        payer: `${p.profiles?.first_name} ${p.profiles?.last_name}`,
+        description: `Dues Payment (${p.start_month}/${p.start_year} - ${p.months_paid}m)`,
+        amount: Number(p.amount),
+        type: 'inflow'
+      });
+    });
+
+    // Add event payments as inflow
+    eventPayments?.forEach(p => {
+      transactions.push({
+        date: new Date(p.created_at),
+        payer: `${p.profiles?.first_name} ${p.profiles?.last_name}`,
+        description: `Event: ${p.events?.title}`,
+        amount: Number(p.amount),
+        type: 'inflow'
+      });
+    });
+
+    // Add donation payments as inflow
+    donationPayments?.forEach(p => {
+      transactions.push({
+        date: new Date(p.created_at),
+        payer: `${p.profiles?.first_name} ${p.profiles?.last_name}`,
+        description: `Donation: ${p.donations?.title}`,
+        amount: Number(p.amount),
+        type: 'inflow'
+      });
+    });
+
+    // Add adjustments (both inflow and outflow)
+    adjustments?.forEach(a => {
+      const isInflow = a.adjustment_type === "inflow" || a.adjustment_type === "income";
+      transactions.push({
+        date: new Date(a.created_at),
+        payer: isInflow ? (a.profiles ? `${a.profiles.first_name} ${a.profiles.last_name}` : 'System') : 'N/A',
+        description: `${isInflow ? 'Adjustment (Inflow)' : 'Adjustment (Outflow)'}: ${a.reason}`,
+        amount: Number(a.amount),
+        type: isInflow ? 'inflow' : 'outflow'
+      });
+    });
+
+    // Sort transactions by date (oldest first)
+    transactions.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    // Calculate totals
+    const totalInflow = transactions
+      .filter(t => t.type === 'inflow')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const totalOutflow = transactions
+      .filter(t => t.type === 'outflow')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const currentBalance = totalInflow - totalOutflow;
+
+    // Create PDF
     const doc = new jsPDF();
     
     doc.setFontSize(18);
     doc.text("NEMSS09 Set - Finance Report", 14, 20);
     doc.setFontSize(10);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
-    if (startDate || endDate) {
-      const period = `Period: ${startDate ? new Date(startDate).toLocaleDateString() : 'Start'} - ${endDate ? new Date(endDate).toLocaleDateString() : 'Now'}`;
-      doc.text(period, 14, 34);
-    }
+    
+    // Date range
+    const dateRange = startDate && endDate 
+      ? `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`
+      : startDate 
+      ? `From ${new Date(startDate).toLocaleDateString()}`
+      : endDate
+      ? `Until ${new Date(endDate).toLocaleDateString()}`
+      : 'All Time';
+    
+    doc.text(`Statement Period: ${dateRange}`, 14, 34);
 
-    // Summary
-    const totalDues = duesPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-    const totalEvents = eventPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-    const totalAdjustments = adjustments?.reduce((sum, a) => {
-      return sum + ((a.adjustment_type === "inflow" || a.adjustment_type === "income") ? Number(a.amount) : -Number(a.amount));
-    }, 0) || 0;
-    const balance = totalDues + totalEvents + totalAdjustments;
-
+    // Financial Summary
     doc.setFontSize(12);
-    doc.text("Financial Summary", 14, 40);
+    doc.text("Financial Summary", 14, 44);
     doc.setFontSize(10);
-    doc.text(`Total Dues: ₦${totalDues.toLocaleString()}`, 14, 48);
-    doc.text(`Total Events: ₦${totalEvents.toLocaleString()}`, 14, 54);
-    doc.text(`Adjustments: ₦${totalAdjustments.toLocaleString()}`, 14, 60);
-    doc.text(`Balance: ₦${balance.toLocaleString()}`, 14, 66);
+    doc.setTextColor(0, 150, 0); // Green for inflow
+    doc.text(`Total Inflow: ₦${totalInflow.toLocaleString()}`, 14, 52);
+    doc.setTextColor(200, 0, 0); // Red for outflow
+    doc.text(`Total Outflow: ₦${totalOutflow.toLocaleString()}`, 14, 58);
+    doc.setTextColor(0, 0, 0); // Black for balance
+    doc.text(`Current Balance: ₦${currentBalance.toLocaleString()}`, 14, 64);
 
-    // Dues Payments Table
-    if (duesPayments && duesPayments.length > 0) {
+    // Transactions Table (Bank Statement Style)
+    if (transactions.length > 0) {
       autoTable(doc, {
-        startY: 75,
-        head: [['Member', 'Member ID', 'Period', 'Amount']],
-        body: duesPayments.map(p => [
-          `${p.profiles?.first_name} ${p.profiles?.last_name}`,
-          p.profiles?.member_id,
-          `${p.start_month}/${p.start_year} (${p.months_paid}m)`,
-          `₦${Number(p.amount).toLocaleString()}`
+        startY: 72,
+        head: [['Date', 'Payer', 'Description', 'Amount']],
+        body: transactions.map(t => [
+          t.date.toLocaleDateString(),
+          t.payer,
+          t.description,
+          `₦${t.amount.toLocaleString()}`
         ]),
         theme: 'grid',
-        styles: { fontSize: 8 }
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [59, 130, 246] },
+        didParseCell: function(data) {
+          // Color code amounts column
+          if (data.column.index === 3 && data.section === 'body') {
+            const rowIndex = data.row.index;
+            const transaction = transactions[rowIndex];
+            if (transaction.type === 'inflow') {
+              data.cell.styles.textColor = [0, 150, 0]; // Green
+            } else {
+              data.cell.styles.textColor = [200, 0, 0]; // Red
+            }
+          }
+        }
       });
+    } else {
+      doc.text("No transactions found for the selected period", 14, 80);
     }
 
     doc.save("finance-report.pdf");
