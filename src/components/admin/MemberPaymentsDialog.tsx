@@ -124,11 +124,8 @@ export const MemberPaymentsDialog = ({
                     <div>
                       <p className="font-medium">₦{payment.amount.toLocaleString()}</p>
                       <p className="text-sm text-muted-foreground">
-                        {payment.start_year} - Month {payment.start_month} ({payment.months_paid} months)
+                        {payment.start_year} - Month {payment.start_month}
                       </p>
-                      {payment.admin_note && (
-                        <p className="text-xs text-muted-foreground mt-1">{payment.admin_note}</p>
-                      )}
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => handleEditDues(payment)}>
                       <Edit className="w-4 h-4" />
@@ -152,9 +149,6 @@ export const MemberPaymentsDialog = ({
                     <div>
                       <p className="font-medium">₦{payment.amount.toLocaleString()}</p>
                       <p className="text-sm text-muted-foreground">{payment.events?.title}</p>
-                      {payment.admin_note && (
-                        <p className="text-xs text-muted-foreground mt-1">{payment.admin_note}</p>
-                      )}
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => handleEditEvent(payment)}>
                       <Edit className="w-4 h-4" />
@@ -178,9 +172,6 @@ export const MemberPaymentsDialog = ({
                     <div>
                       <p className="font-medium">₦{payment.amount.toLocaleString()}</p>
                       <p className="text-sm text-muted-foreground">{payment.donations?.title}</p>
-                      {payment.admin_note && (
-                        <p className="text-xs text-muted-foreground mt-1">{payment.admin_note}</p>
-                      )}
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => handleEditDonation(payment)}>
                       <Edit className="w-4 h-4" />

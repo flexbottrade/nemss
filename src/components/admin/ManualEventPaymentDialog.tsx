@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -24,7 +23,6 @@ interface ManualEventPaymentDialogProps {
     id: string;
     event_id: string;
     amount: number;
-    admin_note: string;
   } | null;
 }
 
@@ -39,27 +37,35 @@ export const ManualEventPaymentDialog = ({
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState(existingPayment?.event_id || "");
   const [amount, setAmount] = useState(existingPayment?.amount.toString() || "");
-  const [adminNote, setAdminNote] = useState(existingPayment?.admin_note || "");
+  const [paidEventIds, setPaidEventIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     loadEvents();
-  }, []);
+  }, [memberId]);
 
   useEffect(() => {
     if (existingPayment) {
       setSelectedEvent(existingPayment.event_id);
       setAmount(existingPayment.amount.toString());
-      setAdminNote(existingPayment.admin_note || "");
     }
   }, [existingPayment]);
 
   const loadEvents = async () => {
-    const { data } = await supabase
+    const { data: eventsData } = await supabase
       .from("events")
       .select("*")
       .order("event_date", { ascending: false });
-    setEvents(data || []);
+    setEvents(eventsData || []);
+
+    // Load paid events for this user
+    const { data: paymentsData } = await supabase
+      .from("event_payments")
+      .select("event_id")
+      .eq("user_id", memberId)
+      .eq("status", "approved");
+    
+    setPaidEventIds(paymentsData?.map(p => p.event_id) || []);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,7 +76,6 @@ export const ManualEventPaymentDialog = ({
       user_id: memberId,
       event_id: selectedEvent,
       amount: parseFloat(amount),
-      admin_note: adminNote,
       status: "approved",
       is_manually_updated: true,
     };
@@ -115,11 +120,19 @@ export const ManualEventPaymentDialog = ({
                   <SelectValue placeholder="Select event" />
                 </SelectTrigger>
                 <SelectContent>
-                  {events.map((event) => (
-                    <SelectItem key={event.id} value={event.id}>
-                      {event.title} - {new Date(event.event_date).toLocaleDateString()}
-                    </SelectItem>
-                  ))}
+                  {events.map((event) => {
+                    const isPaid = paidEventIds.includes(event.id);
+                    return (
+                      <SelectItem 
+                        key={event.id} 
+                        value={event.id}
+                        disabled={isPaid && !existingPayment}
+                      >
+                        {event.title} - {new Date(event.event_date).toLocaleDateString()}
+                        {isPaid && !existingPayment && " (Paid)"}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -132,15 +145,6 @@ export const ManualEventPaymentDialog = ({
                 onChange={(e) => setAmount(e.target.value)}
                 required
                 min="0"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="admin_note">Admin Note</Label>
-              <Textarea
-                id="admin_note"
-                value={adminNote}
-                onChange={(e) => setAdminNote(e.target.value)}
-                placeholder="Optional note about this payment..."
               />
             </div>
           </div>
