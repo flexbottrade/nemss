@@ -3,13 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Wallet, Calendar, TrendingUp, LogOut, Gift } from "lucide-react";
+import { Wallet, Calendar, TrendingUp, LogOut, Gift, Shield } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { DonationSection } from "@/components/DonationSection";
+import { useRole } from "@/hooks/useRole";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { isAdmin } = useRole();
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState({
     totalDuesPaid: 0,
@@ -179,14 +181,27 @@ const Dashboard = () => {
                 </p>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              className="text-primary-foreground hover:bg-primary-foreground/10 h-7 w-7 md:h-9 md:w-9"
-            >
-              <LogOut className="w-3 h-3 md:w-4 md:h-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/admin")}
+                  className="text-primary-foreground hover:bg-primary-foreground/10 h-7 w-7 md:h-9 md:w-9"
+                  title="Admin Dashboard"
+                >
+                  <Shield className="w-3 h-3 md:w-4 md:h-4" />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                className="text-primary-foreground hover:bg-primary-foreground/10 h-7 w-7 md:h-9 md:w-9"
+              >
+                <LogOut className="w-3 h-3 md:w-4 md:h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>

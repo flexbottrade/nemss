@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Users, DollarSign, Calendar, Settings, FileText, CreditCard, BarChart3, Menu, LogOut, LayoutDashboard, Heart } from "lucide-react";
+import { Users, DollarSign, Calendar, Settings, FileText, CreditCard, BarChart3, Menu, LogOut, LayoutDashboard, Heart, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -34,6 +34,20 @@ export const AdminSidebar = () => {
         <h2 className="text-base md:text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           NEMSS09 Admin
         </h2>
+      </div>
+
+      <div className="p-2 md:p-4 border-b">
+        <Button
+          variant="secondary"
+          className="w-full justify-start text-sm md:text-base"
+          onClick={() => {
+            setOpen(false);
+            navigate("/dashboard");
+          }}
+        >
+          <User className="w-4 h-4 md:w-5 md:h-5 mr-2 md:mr-3" />
+          User Dashboard
+        </Button>
       </div>
       
       <nav className="flex-1 p-2 md:p-4 space-y-1">
