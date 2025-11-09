@@ -81,11 +81,17 @@ const AdminSettings = () => {
         <div className="max-w-2xl mx-auto">
           <div className="mb-4 md:mb-6 pl-12 md:pl-0">
             <h1 className="text-xl md:text-3xl font-bold">Settings</h1>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">
+              Configure system-wide settings and default values for the application
+            </p>
           </div>
 
           <Card>
             <CardHeader className="p-3 md:p-6">
               <CardTitle className="text-base md:text-lg">Monthly Dues Configuration</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Set the default monthly dues amount that all members are expected to pay
+              </p>
             </CardHeader>
             <CardContent className="p-3 md:p-6 pt-0">
               <div className="space-y-3 md:space-y-4">

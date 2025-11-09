@@ -185,7 +185,7 @@ const AdminDashboard = () => {
             <h1 className="text-xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Dashboard
             </h1>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1">Manage NEMSS09 Set</p>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">Overview of key metrics, financial status, and membership statistics</p>
           </header>
 
           {/* Stats */}

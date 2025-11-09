@@ -204,6 +204,9 @@ const Transactions = () => {
         <div className="max-w-7xl mx-auto">
           <div className="mb-4 md:mb-6 pl-12 md:pl-0">
             <h1 className="text-lg md:text-2xl font-bold">Transactions</h1>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">
+              Review and approve member payments for dues, events, and donations. Filter by status to manage pending items.
+            </p>
           </div>
 
           <Tabs defaultValue="dues">

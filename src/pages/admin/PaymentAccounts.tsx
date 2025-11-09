@@ -123,12 +123,19 @@ const PaymentAccounts = () => {
       
       <main className="flex-1 p-3 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-4 md:mb-6 pl-12 md:pl-0">
-            <h1 className="text-xl md:text-3xl font-bold">Payment Accounts</h1>
-            <Button onClick={() => openDialog()} size="sm" className="text-xs md:text-sm h-8 md:h-10">
-              <Plus className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-              Add Account
-            </Button>
+          <div className="mb-4 md:mb-6 pl-12 md:pl-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl md:text-3xl font-bold">Payment Accounts</h1>
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                  Manage bank accounts where members can send their payments
+                </p>
+              </div>
+              <Button onClick={() => openDialog()} size="sm" className="text-xs md:text-sm h-8 md:h-10">
+                <Plus className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                Add Account
+              </Button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">

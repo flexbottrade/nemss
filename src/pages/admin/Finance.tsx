@@ -132,12 +132,19 @@ const Finance = () => {
       
       <main className="flex-1 p-3 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-4 md:mb-6 pl-12 md:pl-0">
-            <h1 className="text-lg md:text-2xl font-bold">Finance Tracker</h1>
-            <Button onClick={() => setIsDialogOpen(true)} size="sm" className="text-xs h-7 md:h-8 px-2 md:px-3">
-              <Plus className="w-3 h-3 mr-1" />
-              Add Adjustment
-            </Button>
+          <div className="mb-4 md:mb-6 pl-12 md:pl-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-lg md:text-2xl font-bold">Finance Tracker</h1>
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                  Track all financial transactions including manual adjustments for income and expenses
+                </p>
+              </div>
+              <Button onClick={() => setIsDialogOpen(true)} size="sm" className="text-xs h-7 md:h-8 px-2 md:px-3">
+                <Plus className="w-3 h-3 mr-1" />
+                Add Adjustment
+              </Button>
+            </div>
           </div>
 
           {/* Summary Cards */}

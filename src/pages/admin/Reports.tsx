@@ -552,12 +552,17 @@ const Reports = () => {
         <div className="max-w-4xl mx-auto">
           <div className="mb-4 md:mb-6 pl-12 md:pl-0">
             <h1 className="text-xl md:text-3xl font-bold">Generate Reports</h1>
-            <p className="text-xs md:text-sm text-muted-foreground">Download detailed PDF reports</p>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">
+              Create detailed PDF reports for finances, member payments, and event attendance
+            </p>
           </div>
 
           <Card>
             <CardHeader className="p-3 md:p-6">
               <CardTitle className="text-base md:text-lg">Report Configuration</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Select report type and customize filters to generate your desired report
+              </p>
             </CardHeader>
             <CardContent className="space-y-4 p-3 md:p-6 pt-0">
               <div>
@@ -567,9 +572,9 @@ const Reports = () => {
                     <SelectValue placeholder="Select report type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="finance">Finance Report</SelectItem>
-                    <SelectItem value="members">Member Report</SelectItem>
-                    <SelectItem value="events">Events Report</SelectItem>
+                    <SelectItem value="finance">Finance Report - All transactions with inflow/outflow details</SelectItem>
+                    <SelectItem value="members">Member Report - Payment status and outstanding balances</SelectItem>
+                    <SelectItem value="events">Events Report - Event attendance and payment tracking</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -587,6 +592,9 @@ const Reports = () => {
                       <SelectItem value="owing">Owing Members</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Filter members by their payment status
+                  </p>
                 </div>
               )}
 
@@ -600,6 +608,9 @@ const Reports = () => {
                       onChange={(e) => setStartDate(e.target.value)}
                       className="text-xs md:text-sm h-8 md:h-10"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Filter transactions from this date onwards
+                    </p>
                   </div>
                   <div>
                     <Label className="text-xs md:text-sm">End Date (Optional)</Label>
@@ -609,6 +620,9 @@ const Reports = () => {
                       onChange={(e) => setEndDate(e.target.value)}
                       className="text-xs md:text-sm h-8 md:h-10"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Filter transactions up to this date
+                    </p>
                   </div>
                 </>
               )}
@@ -629,6 +643,9 @@ const Reports = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Generate report for a specific event or all events
+                  </p>
                 </div>
               )}
 

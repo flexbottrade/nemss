@@ -144,7 +144,9 @@ const Donations = () => {
           <div className="flex justify-between items-center mb-4 md:mb-6 pl-12 md:pl-0">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold">Donation Management</h1>
-              <p className="text-sm md:text-base text-muted-foreground">Create and manage donation campaigns</p>
+              <p className="text-xs md:text-sm text-muted-foreground">
+                Create and manage donation campaigns with minimum amounts. Toggle campaigns on/off as needed.
+              </p>
             </div>
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
