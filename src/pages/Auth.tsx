@@ -134,8 +134,11 @@ const Auth = () => {
       if (authError) throw authError;
 
       if (authData.user) {
-        // Check if email confirmation is required
-        if (authData.user.identities && authData.user.identities.length === 0) {
+        // Check if email confirmation is required by checking if session exists
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          // No session means email confirmation is required
           setVerificationEmail(signupData.email);
           setShowVerificationDialog(true);
           toast.success(`Account created! Please check your email to verify your account. Your Member ID is ${memberId}`);
