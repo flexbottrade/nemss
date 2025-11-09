@@ -379,61 +379,17 @@ const Reports = () => {
     doc.save(`member-report-${memberFilter}.pdf`);
   };
 
-  const generateDuesReport = async () => {
-    let query = supabase
-      .from("dues_payments")
-      .select("*, profiles(first_name, last_name, member_id)")
-      .order("created_at", { ascending: false });
-    
-    if (startDate) query = query.gte("created_at", startDate);
-    if (endDate) query = query.lte("created_at", endDate);
-    
-    const { data: payments } = await query;
-
-    const doc = new jsPDF();
-    
-    doc.setFontSize(18);
-    doc.text("NEMSS09 Set - Dues Payment Report", 14, 20);
-    doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
-    if (startDate || endDate) {
-      const period = `Period: ${startDate ? new Date(startDate).toLocaleDateString() : 'Start'} - ${endDate ? new Date(endDate).toLocaleDateString() : 'Now'}`;
-      doc.text(period, 14, 34);
-    }
-
-    const pending = payments?.filter(p => p.status === "pending").length || 0;
-    const approved = payments?.filter(p => p.status === "approved").length || 0;
-    const rejected = payments?.filter(p => p.status === "rejected").length || 0;
-
-    doc.text(`Total Payments: ${payments?.length || 0}`, 14, 36);
-    doc.text(`Pending: ${pending} | Approved: ${approved} | Rejected: ${rejected}`, 14, 42);
-
-    if (payments && payments.length > 0) {
-      autoTable(doc, {
-        startY: 50,
-        head: [['Member', 'Member ID', 'Period', 'Months', 'Amount', 'Status', 'Date']],
-        body: payments.map(p => [
-          `${p.profiles?.first_name} ${p.profiles?.last_name}`,
-          p.profiles?.member_id,
-          `${p.start_month}/${p.start_year}`,
-          p.months_paid,
-          `NGN ${Number(p.amount).toLocaleString()}`,
-          p.status,
-          new Date(p.created_at).toLocaleDateString()
-        ]),
-        theme: 'grid',
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [59, 130, 246] }
-      });
-    }
-
-    doc.save("dues-report.pdf");
-  };
-
   const generateEventReport = async () => {
+    // Fetch all members
+    const { data: allMembers } = await supabase
+      .from("profiles")
+      .select("*")
+      .neq("role", "admin")
+      .order("first_name");
+
     let query = supabase
       .from("events")
-      .select("*, event_payments(amount, status, profiles(first_name, last_name))")
+      .select("*, event_payments(user_id, amount, status, profiles(first_name, last_name))")
       .order("event_date", { ascending: false });
     
     // Only filter by specific event if selectedEventId is provided and not empty/default
@@ -464,15 +420,22 @@ const Reports = () => {
     let yPos = 38;
 
     events?.forEach((event) => {
-      if (yPos > 250) {
+      // Check if we need a new page
+      if (yPos > 220) {
         doc.addPage();
         yPos = 20;
       }
 
       const payments = event.event_payments || [];
-      const totalCollected = payments
-        .filter((p: any) => p.status === "approved")
-        .reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+      const approvedPayments = payments.filter((p: any) => p.status === "approved");
+      const totalCollected = approvedPayments.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+
+      // Get member IDs who paid for this event
+      const paidMemberIds = approvedPayments.map((p: any) => p.user_id);
+
+      // Separate members into paid and unpaid
+      const paidMembers = allMembers?.filter(m => paidMemberIds.includes(m.id)) || [];
+      const unpaidMembers = allMembers?.filter(m => !paidMemberIds.includes(m.id)) || [];
 
       doc.setFontSize(12);
       doc.text(`${event.title}`, 14, yPos);
@@ -480,9 +443,66 @@ const Reports = () => {
       doc.text(`Date: ${new Date(event.event_date).toLocaleDateString()}`, 14, yPos + 6);
       doc.text(`Amount: NGN ${Number(event.amount).toLocaleString()}`, 14, yPos + 12);
       doc.text(`Total Collected: NGN ${totalCollected.toLocaleString()}`, 14, yPos + 18);
-      doc.text(`Contributors: ${payments.length}`, 14, yPos + 24);
+      doc.text(`Paid: ${paidMembers.length} | Unpaid: ${unpaidMembers.length}`, 14, yPos + 24);
 
       yPos += 32;
+
+      // Add table for paid members
+      if (paidMembers.length > 0) {
+        doc.setFontSize(10);
+        doc.setTextColor(0, 150, 0);
+        doc.text("Members Who Paid:", 14, yPos);
+        doc.setTextColor(0, 0, 0);
+        yPos += 6;
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Name', 'Member ID']],
+          body: paidMembers.map(m => [
+            `${m.first_name} ${m.last_name}`,
+            m.member_id
+          ]),
+          theme: 'grid',
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [0, 150, 0] },
+          margin: { left: 14 }
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 8;
+      }
+
+      // Add table for unpaid members
+      if (unpaidMembers.length > 0) {
+        // Check if we need a new page for unpaid table
+        if (yPos > 200) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        doc.setFontSize(10);
+        doc.setTextColor(200, 0, 0);
+        doc.text("Members Who Did Not Pay:", 14, yPos);
+        doc.setTextColor(0, 0, 0);
+        yPos += 6;
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Name', 'Member ID']],
+          body: unpaidMembers.map(m => [
+            `${m.first_name} ${m.last_name}`,
+            m.member_id
+          ]),
+          theme: 'grid',
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [200, 0, 0] },
+          margin: { left: 14 }
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 12;
+      }
+
+      // Add extra space between events
+      yPos += 8;
     });
 
     doc.save("events-report.pdf");
@@ -502,9 +522,6 @@ const Reports = () => {
           break;
         case "members":
           await generateMemberReport();
-          break;
-        case "dues":
-          await generateDuesReport();
           break;
         case "events":
           await generateEventReport();
@@ -552,7 +569,6 @@ const Reports = () => {
                   <SelectContent>
                     <SelectItem value="finance">Finance Report</SelectItem>
                     <SelectItem value="members">Member Report</SelectItem>
-                    <SelectItem value="dues">Dues Payment Report</SelectItem>
                     <SelectItem value="events">Events Report</SelectItem>
                   </SelectContent>
                 </Select>
@@ -574,7 +590,7 @@ const Reports = () => {
                 </div>
               )}
 
-              {(reportType === "finance" || reportType === "dues" || reportType === "events") && (
+              {(reportType === "finance" || reportType === "events") && (
                 <>
                   <div>
                     <Label className="text-xs md:text-sm">Start Date (Optional)</Label>
@@ -627,7 +643,7 @@ const Reports = () => {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mt-4 md:mt-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mt-4 md:mt-6">
             <Card>
               <CardHeader className="p-3 md:p-6">
                 <div className="flex items-center gap-2 md:gap-3">
@@ -652,20 +668,6 @@ const Reports = () => {
               <CardContent className="p-3 md:p-6 pt-0">
                 <p className="text-xs md:text-sm text-muted-foreground">
                   Member list with payment status and outstanding amounts
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="p-3 md:p-6">
-                <div className="flex items-center gap-2 md:gap-3">
-                  <FileText className="w-5 h-5 md:w-6 md:h-6 text-highlight" />
-                  <CardTitle className="text-sm md:text-base">Dues Report</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="p-3 md:p-6 pt-0">
-                <p className="text-xs md:text-sm text-muted-foreground">
-                  All dues payments with status and member details
                 </p>
               </CardContent>
             </Card>
