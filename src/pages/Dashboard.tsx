@@ -290,35 +290,48 @@ const Dashboard = () => {
             ) : (
               <>
                 <div className="space-y-1.5 md:space-y-2">
-                  {paginatedHistory.map((payment, index) => (
-                    <div
-                      key={`${payment.type}-${payment.id}-${index}`}
-                      className="flex items-center justify-between p-1.5 md:p-2 rounded-lg bg-card border border-border"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs md:text-sm font-medium text-foreground truncate">
-                          {payment.type === 'dues' 
-                            ? `Dues Payment (${payment.start_month}/${payment.start_year})`
-                            : payment.type === 'event'
-                            ? payment.events?.title || 'Event Payment'
-                            : payment.donations?.title || 'Donation'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(payment.created_at).toLocaleDateString()}
-                        </p>
+                  {paginatedHistory.map((payment, index) => {
+                    const getDuesLabel = () => {
+                      if (payment.type !== 'dues') return '';
+                      
+                      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                      if (payment.months_paid === 1) {
+                        return `${months[payment.start_month - 1]} ${payment.start_year}`;
+                      }
+                      const endMonth = ((payment.start_month - 1 + payment.months_paid - 1) % 12);
+                      return `${months[payment.start_month - 1]} - ${months[endMonth]} ${payment.start_year}`;
+                    };
+                    
+                    return (
+                      <div
+                        key={`${payment.type}-${payment.id}-${index}`}
+                        className="flex items-center justify-between p-1.5 md:p-2 rounded-lg bg-card border border-border"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs md:text-sm font-medium text-foreground truncate">
+                            {payment.type === 'dues' 
+                              ? `Dues: ${getDuesLabel()}`
+                              : payment.type === 'event'
+                              ? payment.events?.title || 'Event Payment'
+                              : payment.donations?.title || 'Donation'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(payment.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs md:text-sm font-bold text-foreground">₦{Number(payment.amount).toLocaleString()}</p>
+                          <p className={`text-xs ${
+                            payment.status === 'approved' ? 'text-green-500' : 
+                            payment.status === 'pending' ? 'text-yellow-500' : 
+                            'text-red-500'
+                          }`}>
+                            {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs md:text-sm font-bold text-foreground">₦{Number(payment.amount).toLocaleString()}</p>
-                        <p className={`text-xs ${
-                          payment.status === 'approved' ? 'text-green-500' : 
-                          payment.status === 'pending' ? 'text-yellow-500' : 
-                          'text-red-500'
-                        }`}>
-                          {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 
                 {totalPages > 1 && (

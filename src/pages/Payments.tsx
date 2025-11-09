@@ -221,38 +221,48 @@ const Payments = () => {
               <p className="text-center text-muted-foreground py-6 md:py-8 text-xs md:text-sm">No payments yet</p>
             ) : (
               <div className="space-y-2">
-                {payments.map((payment) => (
-                  <div key={payment.id} className="p-2 md:p-3 rounded-lg border border-border bg-background">
-                    <div className="flex items-start justify-between mb-1 gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-card-foreground text-xs md:text-sm">
-                          {fullMonthNames[payment.start_month - 1]} {payment.start_year}
-                        </p>
+                {payments.map((payment) => {
+                  const getMonthRange = () => {
+                    if (payment.months_paid === 1) {
+                      return fullMonthNames[payment.start_month - 1];
+                    }
+                    const endMonth = ((payment.start_month - 1 + payment.months_paid - 1) % 12);
+                    return `${fullMonthNames[payment.start_month - 1]} - ${fullMonthNames[endMonth]}`;
+                  };
+                  
+                  return (
+                    <div key={payment.id} className="p-2 md:p-3 rounded-lg border border-border bg-background">
+                      <div className="flex items-start justify-between mb-1 gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-card-foreground text-xs md:text-sm">
+                            {getMonthRange()} {payment.start_year}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {payment.months_paid} month{payment.months_paid > 1 ? "s" : ""}
+                          </p>
+                        </div>
+                        <Badge className={`${getStatusColor(payment.status)} text-xs`}>
+                          <span className="flex items-center gap-1">
+                            {getStatusIcon(payment.status)}
+                            {payment.status}
+                          </span>
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-base md:text-lg font-bold text-accent">₦{Number(payment.amount).toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground">
-                          {payment.months_paid} month{payment.months_paid > 1 ? "s" : ""}
+                          {new Date(payment.created_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <Badge className={`${getStatusColor(payment.status)} text-xs`}>
-                        <span className="flex items-center gap-1">
-                          {getStatusIcon(payment.status)}
-                          {payment.status}
-                        </span>
-                      </Badge>
+                      {payment.admin_note && (
+                        <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
+                          <span className="font-semibold">Note: </span>
+                          {payment.admin_note}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-base md:text-lg font-bold text-accent">₦{Number(payment.amount).toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(payment.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    {payment.admin_note && (
-                      <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
-                        <span className="font-semibold">Note: </span>
-                        {payment.admin_note}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
