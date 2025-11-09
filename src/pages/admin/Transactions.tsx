@@ -22,6 +22,7 @@ const Transactions = () => {
   const { isAdmin, loading } = useRole();
   const [duesPayments, setDuesPayments] = useState<any[]>([]);
   const [eventPayments, setEventPayments] = useState<any[]>([]);
+  const [donationPayments, setDonationPayments] = useState<any[]>([]);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [adminNote, setAdminNote] = useState("");
 
@@ -49,12 +50,18 @@ const Transactions = () => {
       .select("*, profiles(first_name, last_name, member_id), events(title)")
       .order("created_at", { ascending: false });
 
+    const { data: donations } = await supabase
+      .from("donation_payments")
+      .select("*, profiles(first_name, last_name, member_id), donations(title)")
+      .order("created_at", { ascending: false });
+
     setDuesPayments(dues || []);
     setEventPayments(events || []);
+    setDonationPayments(donations || []);
   };
 
-  const handleUpdatePayment = async (id: string, status: string, type: "dues" | "event") => {
-    const table = type === "dues" ? "dues_payments" : "event_payments";
+  const handleUpdatePayment = async (id: string, status: string, type: "dues" | "event" | "donation") => {
+    const table = type === "dues" ? "dues_payments" : type === "event" ? "event_payments" : "donation_payments";
     const { error } = await supabase
       .from(table)
       .update({ status, admin_note: adminNote })
@@ -75,7 +82,7 @@ const Transactions = () => {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  const renderPayment = (payment: any, type: "dues" | "event") => (
+  const renderPayment = (payment: any, type: "dues" | "event" | "donation") => (
     <Card key={payment.id} className="mb-2 md:mb-3">
       <CardContent className="pt-2 md:pt-3 p-2 md:p-3">
         <div className="flex flex-col md:flex-row justify-between gap-3">
@@ -86,6 +93,9 @@ const Transactions = () => {
             <p className="text-xs text-muted-foreground">ID: {payment.profiles?.member_id}</p>
             {type === "event" && payment.events && (
               <p className="text-xs mt-0.5">Event: {payment.events.title}</p>
+            )}
+            {type === "donation" && payment.donations && (
+              <p className="text-xs mt-0.5">Campaign: {payment.donations.title}</p>
             )}
             {type === "dues" && (
               <p className="text-xs mt-0.5">
@@ -161,6 +171,7 @@ const Transactions = () => {
             <TabsList className="mb-3 md:mb-4">
               <TabsTrigger value="dues" className="text-xs md:text-sm">Dues Payments</TabsTrigger>
               <TabsTrigger value="events" className="text-xs md:text-sm">Event Payments</TabsTrigger>
+              <TabsTrigger value="donations" className="text-xs md:text-sm">Donations</TabsTrigger>
             </TabsList>
 
           <TabsContent value="dues">
@@ -176,6 +187,14 @@ const Transactions = () => {
               <p className="text-center text-muted-foreground py-12">No event payments yet</p>
             ) : (
               eventPayments.map((payment) => renderPayment(payment, "event"))
+            )}
+          </TabsContent>
+
+          <TabsContent value="donations">
+            {donationPayments.length === 0 ? (
+              <p className="text-center text-muted-foreground py-12">No donation payments yet</p>
+            ) : (
+              donationPayments.map((payment) => renderPayment(payment, "donation"))
             )}
           </TabsContent>
           </Tabs>
