@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Edit, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { ManualDuesPaymentDialog } from "./ManualDuesPaymentDialog";
 import { ManualEventPaymentDialog } from "./ManualEventPaymentDialog";
 import { ManualDonationPaymentDialog } from "./ManualDonationPaymentDialog";
@@ -38,7 +38,6 @@ export const MemberPaymentsDialog = ({
   const [duesDialogOpen, setDuesDialogOpen] = useState(false);
   const [eventDialogOpen, setEventDialogOpen] = useState(false);
   const [donationDialogOpen, setDonationDialogOpen] = useState(false);
-  const [editingPayment, setEditingPayment] = useState<any>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [paymentToDelete, setPaymentToDelete] = useState<{ ids: string[]; type: 'dues' | 'event' | 'donation' } | null>(null);
 
@@ -77,24 +76,8 @@ export const MemberPaymentsDialog = ({
     setDonationPayments(donations || []);
   };
 
-  const handleEditDues = (payment: any) => {
-    setEditingPayment(payment);
-    setDuesDialogOpen(true);
-  };
-
-  const handleEditEvent = (payment: any) => {
-    setEditingPayment(payment);
-    setEventDialogOpen(true);
-  };
-
-  const handleEditDonation = (payment: any) => {
-    setEditingPayment(payment);
-    setDonationDialogOpen(true);
-  };
-
   const handleDialogClose = (dialogSetter: (open: boolean) => void) => {
     dialogSetter(false);
-    setEditingPayment(null);
     loadPayments();
     onSuccess();
   };
@@ -139,6 +122,10 @@ export const MemberPaymentsDialog = ({
           <DialogHeader>
             <DialogTitle>Manage Payments for {member.first_name} {member.last_name}</DialogTitle>
           </DialogHeader>
+          
+          <div className="bg-muted/50 p-3 rounded-lg text-sm text-muted-foreground mb-4">
+            <p><strong>Note:</strong> Manual payments can only be deleted, not edited. To correct a payment, delete it and add a new one to avoid mistakes.</p>
+          </div>
           
           <Tabs defaultValue="dues" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
@@ -206,10 +193,7 @@ export const MemberPaymentsDialog = ({
                               {year} - {monthRange}
                             </p>
                           </div>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleEditDues(firstPayment)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
+                          <div>
                             <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(group.map(p => p.id), 'dues')}>
                               <Trash2 className="w-4 h-4 text-destructive" />
                             </Button>
@@ -237,10 +221,7 @@ export const MemberPaymentsDialog = ({
                       <p className="font-medium">₦{payment.amount.toLocaleString()}</p>
                       <p className="text-sm text-muted-foreground">{payment.events?.title}</p>
                     </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => handleEditEvent(payment)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                    <div>
                       <Button variant="ghost" size="sm" onClick={() => handleDeleteClick([payment.id], 'event')}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
@@ -265,10 +246,7 @@ export const MemberPaymentsDialog = ({
                       <p className="font-medium">₦{payment.amount.toLocaleString()}</p>
                       <p className="text-sm text-muted-foreground">{payment.donations?.title}</p>
                     </div>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => handleEditDonation(payment)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                    <div>
                       <Button variant="ghost" size="sm" onClick={() => handleDeleteClick([payment.id], 'donation')}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
@@ -290,7 +268,6 @@ export const MemberPaymentsDialog = ({
         memberId={member.id}
         memberName={`${member.first_name} ${member.last_name}`}
         onSuccess={() => {}}
-        existingPayment={editingPayment}
       />
 
       <ManualEventPaymentDialog
@@ -299,7 +276,6 @@ export const MemberPaymentsDialog = ({
         memberId={member.id}
         memberName={`${member.first_name} ${member.last_name}`}
         onSuccess={() => {}}
-        existingPayment={editingPayment}
       />
 
       <ManualDonationPaymentDialog
@@ -308,7 +284,6 @@ export const MemberPaymentsDialog = ({
         memberId={member.id}
         memberName={`${member.first_name} ${member.last_name}`}
         onSuccess={() => {}}
-        existingPayment={editingPayment}
       />
 
       <ConfirmationDialog
