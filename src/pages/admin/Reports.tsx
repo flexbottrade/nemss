@@ -134,10 +134,11 @@ const Reports = () => {
     // Add adjustments (both inflow and outflow)
     adjustments?.forEach(a => {
       const isInflow = a.adjustment_type === "inflow" || a.adjustment_type === "income";
+      const adjustmentLabel = isInflow ? 'Manual Adjustment (Inflow)' : 'Manual Adjustment (Outflow)';
       transactions.push({
         date: new Date(a.created_at),
         payer: isInflow ? (a.profiles ? `${a.profiles.first_name} ${a.profiles.last_name}` : 'System') : 'N/A',
-        description: `${isInflow ? 'Adjustment (Inflow)' : 'Adjustment (Outflow)'}: ${a.reason}`,
+        description: `${adjustmentLabel} - Reason: ${a.reason || 'No reason provided'}`,
         amount: Number(a.amount),
         type: isInflow ? 'inflow' : 'outflow'
       });
