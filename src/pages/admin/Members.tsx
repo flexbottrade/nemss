@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, UserCog, ShieldOff } from "lucide-react";
+import { Search, UserCog, ShieldOff, Edit, DollarSign } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { EditMemberNameDialog } from "@/components/admin/EditMemberNameDialog";
+import { MemberPaymentsDialog } from "@/components/admin/MemberPaymentsDialog";
 
 const Members = () => {
   const navigate = useNavigate();
@@ -27,6 +29,9 @@ const Members = () => {
     description: "",
     onConfirm: () => {},
   });
+  const [editNameDialog, setEditNameDialog] = useState(false);
+  const [paymentsDialog, setPaymentsDialog] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !isAdmin) {
@@ -238,54 +243,102 @@ const Members = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {filteredMembers.map((member) => (
-              <Card key={member.id}>
-                <CardHeader className="p-3 md:p-6">
-                  <CardTitle className="text-sm md:text-lg">
-                    {member.first_name} {member.last_name}
-                  </CardTitle>
-                  <p className="text-xs md:text-sm text-muted-foreground">ID: {member.member_id}</p>
+              <Card key={member.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="p-3 pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-sm md:text-base">
+                        {member.first_name} {member.last_name}
+                      </CardTitle>
+                      <p className="text-xs text-muted-foreground">ID: {member.member_id}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedMember(member);
+                        setEditNameDialog(true);
+                      }}
+                      className="h-7 w-7 p-0"
+                    >
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </CardHeader>
-                <CardContent className="p-3 md:p-6 pt-0">
-                  <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
+                <CardContent className="p-3 pt-2 space-y-2">
+                  <div className="text-xs space-y-1">
                     <p>
                       <span className="font-medium">Phone:</span> {member.phone_number}
                     </p>
                     {member.position && (
                       <p>
-                        <span className="font-medium text-card-foreground">Position:</span>{" "}
-                        <span className="bg-primary text-primary-foreground px-1.5 md:px-2 py-0.5 md:py-1 rounded-full text-xs">
+                        <span className="font-medium">Position:</span>{" "}
+                        <span className="bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full text-xs">
                           {member.position}
                         </span>
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      Joined: {new Date(member.created_at).toLocaleDateString()}
-                    </p>
-                    
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <p className="font-medium mb-2">Financial Status:</p>
-                      {member.totalOwing > 0 ? (
-                        <div className="space-y-1">
-                          {member.duesOwing > 0 && (
-                            <p className="text-red-600 dark:text-red-400">
-                              <span className="font-medium">Dues Owing:</span> ₦{member.duesOwing.toLocaleString()}
-                            </p>
-                          )}
-                          {member.eventsOwing > 0 && (
-                            <p className="text-orange-600 dark:text-orange-400">
-                              <span className="font-medium">Events Owing:</span> ₦{member.eventsOwing.toLocaleString()}
-                            </p>
-                          )}
-                          <p className="font-bold text-red-600 dark:text-red-400">
-                            Total Owing: ₦{member.totalOwing.toLocaleString()}
+                  </div>
+                  
+                  <div className="pt-2 border-t border-border">
+                    <p className="font-medium text-xs mb-1">Financial Status:</p>
+                    {member.totalOwing > 0 ? (
+                      <div className="space-y-0.5 text-xs">
+                        {member.duesOwing > 0 && (
+                          <p className="text-red-600 dark:text-red-400">
+                            Dues: ₦{member.duesOwing.toLocaleString()}
                           </p>
-                        </div>
-                      ) : (
-                        <p className="text-green-600 dark:text-green-400 font-medium">
-                          ✓ Up-to-date
+                        )}
+                        {member.eventsOwing > 0 && (
+                          <p className="text-orange-600 dark:text-orange-400">
+                            Events: ₦{member.eventsOwing.toLocaleString()}
+                          </p>
+                        )}
+                        <p className="font-bold text-red-600 dark:text-red-400">
+                          Total: ₦{member.totalOwing.toLocaleString()}
                         </p>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <p className="text-green-600 dark:text-green-400 font-medium text-xs">
+                        ✓ Up-to-date
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedMember(member);
+                        setPaymentsDialog(true);
+                      }}
+                      className="flex-1 h-8 text-xs"
+                    >
+                      <DollarSign className="h-3 w-3 mr-1" />
+                      Payments
+                    </Button>
+                    {isSuperAdmin && (
+                      member.isAdmin ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemoveAdmin(member.id, `${member.first_name} ${member.last_name}`)}
+                          className="h-8 px-2"
+                        >
+                          <ShieldOff className="h-3 w-3" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleMakeAdmin(member.id, `${member.first_name} ${member.last_name}`)}
+                          className="h-8 px-2"
+                        >
+                          <UserCog className="h-3 w-3" />
+                        </Button>
+                      )
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -306,6 +359,20 @@ const Members = () => {
         onConfirm={confirmDialog.onConfirm}
         title={confirmDialog.title}
         description={confirmDialog.description}
+      />
+
+      <EditMemberNameDialog
+        open={editNameDialog}
+        onOpenChange={setEditNameDialog}
+        member={selectedMember}
+        onSuccess={loadMembers}
+      />
+
+      <MemberPaymentsDialog
+        open={paymentsDialog}
+        onOpenChange={setPaymentsDialog}
+        member={selectedMember}
+        onSuccess={loadMembers}
       />
     </div>
   );

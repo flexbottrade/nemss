@@ -45,6 +45,7 @@ export type Database = {
           created_at: string
           donation_id: string | null
           id: string
+          is_manually_updated: boolean | null
           payment_proof_url: string | null
           status: string
           updated_at: string
@@ -56,6 +57,7 @@ export type Database = {
           created_at?: string
           donation_id?: string | null
           id?: string
+          is_manually_updated?: boolean | null
           payment_proof_url?: string | null
           status?: string
           updated_at?: string
@@ -67,6 +69,7 @@ export type Database = {
           created_at?: string
           donation_id?: string | null
           id?: string
+          is_manually_updated?: boolean | null
           payment_proof_url?: string | null
           status?: string
           updated_at?: string
