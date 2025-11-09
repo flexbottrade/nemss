@@ -21,10 +21,12 @@ interface EmailRequest {
 }
 
 const getEmailTemplate = (emailActionType: string, token: string, tokenHash: string, siteUrl: string, redirectTo: string) => {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || "https://ifftfzcyxkkduxnexdwm.supabase.co";
   const baseUrl = siteUrl || "https://www.nemss09.com";
   
   if (emailActionType === "signup" || emailActionType === "invite") {
-    const confirmationUrl = `${baseUrl}/auth/confirm?token_hash=${tokenHash}&type=email&redirect_to=${redirectTo}`;
+    // Use Supabase auth verification endpoint directly
+    const confirmationUrl = `${supabaseUrl}/auth/v1/verify?token=${tokenHash}&type=signup&redirect_to=${encodeURIComponent(redirectTo || `${baseUrl}/dashboard`)}`;
     
     return {
       subject: "Verify Your Email - NEMSS09 Set",
@@ -70,7 +72,8 @@ const getEmailTemplate = (emailActionType: string, token: string, tokenHash: str
       `,
     };
   } else if (emailActionType === "recovery" || emailActionType === "magiclink") {
-    const resetUrl = `${baseUrl}/reset-password?token_hash=${tokenHash}&type=recovery`;
+    // Use Supabase auth verification endpoint directly
+    const resetUrl = `${supabaseUrl}/auth/v1/verify?token=${tokenHash}&type=recovery&redirect_to=${encodeURIComponent(redirectTo || `${baseUrl}/reset-password`)}`;
     
     return {
       subject: "Reset Your Password - NEMSS09 Set",
