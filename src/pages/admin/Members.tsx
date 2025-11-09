@@ -50,6 +50,7 @@ const Members = () => {
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
+      .eq("email_verified", true)
       .order("first_name", { ascending: true });
 
     if (error) {
