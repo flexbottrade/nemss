@@ -236,7 +236,18 @@ const Reports = () => {
       .select("*")
       .eq("status", "approved");
 
+    // Fetch all events and event payments
+    const { data: allEvents } = await supabase
+      .from("events")
+      .select("*");
+
+    const { data: eventPayments } = await supabase
+      .from("event_payments")
+      .select("*")
+      .eq("status", "approved");
+
     const memberData = members?.map(member => {
+      // Calculate dues
       const payments = duesPayments?.filter(p => p.user_id === member.id) || [];
       const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
       const monthsPaid = payments.reduce((sum, p) => sum + p.months_paid, 0);
@@ -246,14 +257,31 @@ const Reports = () => {
         (new Date().getTime() - new Date(member.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)
       );
       const expectedDues = monthsSinceJoin * monthlyDues;
-      const outstanding = expectedDues - totalPaid;
+      const duesOutstanding = Math.max(0, expectedDues - totalPaid);
+
+      // Calculate event payments owed
+      const memberEventPayments = eventPayments?.filter(ep => ep.user_id === member.id) || [];
+      const paidEventIds = memberEventPayments.map(ep => ep.event_id);
+      
+      // Find events that happened but member hasn't paid for
+      const unpaidEvents = allEvents?.filter(event => {
+        const eventDate = new Date(event.event_date);
+        const memberJoinDate = new Date(member.created_at);
+        // Only count events that happened after member joined and before today
+        return eventDate >= memberJoinDate && eventDate <= new Date() && !paidEventIds.includes(event.id);
+      }) || [];
+
+      const eventsOutstanding = unpaidEvents.reduce((sum, event) => sum + Number(event.amount), 0);
+      const totalOutstanding = duesOutstanding + eventsOutstanding;
 
       return {
         ...member,
         totalPaid,
         monthsPaid,
-        outstanding: outstanding > 0 ? outstanding : 0,
-        status: outstanding > 0 ? "Owing" : "Up-to-date"
+        outstanding: totalOutstanding,
+        duesOutstanding,
+        eventsOutstanding,
+        status: totalOutstanding > 0 ? "Owing" : "Up-to-date"
       };
     }) || [];
 
