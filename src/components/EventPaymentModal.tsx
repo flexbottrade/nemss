@@ -85,8 +85,8 @@ export const EventPaymentModal = ({ open, onOpenChange, event, userId, onSuccess
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const fileExt = paymentProof.name.split('.').pop();
-      const fileName = `${userId || user?.id}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${userId || user?.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('payment-proofs')
@@ -171,7 +171,7 @@ export const EventPaymentModal = ({ open, onOpenChange, event, userId, onSuccess
           <Button
             type="submit"
             disabled={uploading}
-            className="w-full bg-[#0E3B43] text-[#F8E39C] hover:bg-[#0E3B43]/90"
+            className="w-full"
           >
             <Upload className="mr-2 h-4 w-4" />
             {uploading ? "Submitting..." : "Submit Payment"}

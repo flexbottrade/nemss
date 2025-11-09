@@ -104,7 +104,7 @@ const Events = () => {
                         <Calendar className="w-3 h-3 md:w-4 md:h-4" />
                         <span>{new Date(event.event_date).toLocaleDateString()}</span>
                         <span className={`px-2 py-0.5 rounded-full text-xs ${
-                          status === "upcoming" ? "bg-blue-500/10 text-blue-600" :
+                          status === "upcoming" ? "bg-yellow-500/10 text-yellow-600" :
                           status === "active" ? "bg-green-500/10 text-green-600" :
                           "bg-gray-500/10 text-gray-600"
                         }`}>
