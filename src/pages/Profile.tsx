@@ -1,11 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import BottomNav from "@/components/BottomNav";
-import { User, Award, Phone, Hash, Crown } from "lucide-react";
+import { User, Award, Phone, Hash, Crown, Camera, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadProfile();
@@ -25,13 +30,103 @@ const Profile = () => {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+
+      setUploading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      // Delete old avatar if exists
+      if (profile?.avatar_url) {
+        const oldPath = profile.avatar_url.split('/').pop();
+        if (oldPath) {
+          await supabase.storage
+            .from('avatars')
+            .remove([`${user.id}/${oldPath}`]);
+        }
+      }
+
+      // Upload new avatar
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile({ ...profile, avatar_url: publicUrl });
+      toast.success('Profile picture updated successfully');
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error);
+      toast.error(error.message || 'Failed to upload profile picture');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
       <div className="container mx-auto px-4 py-3 md:py-6">
         {/* Header */}
         <div className="mb-4 md:mb-6 text-center">
-          <div className="w-16 h-16 md:w-24 md:h-24 mx-auto mb-3 md:mb-4 rounded-full bg-primary flex items-center justify-center shadow-lg">
-            <User className="w-8 h-8 md:w-12 md:h-12 text-primary-foreground" />
+          <div className="relative w-16 h-16 md:w-24 md:h-24 mx-auto mb-3 md:mb-4">
+            <Avatar className="w-full h-full shadow-lg">
+              <AvatarImage src={profile?.avatar_url} alt={`${profile?.first_name} ${profile?.last_name}`} />
+              <AvatarFallback className="bg-primary text-primary-foreground text-xl md:text-4xl">
+                {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+              disabled={uploading}
+            />
+            <Button
+              size="icon"
+              variant="secondary"
+              className="absolute bottom-0 right-0 h-6 w-6 md:h-8 md:w-8 rounded-full shadow-lg"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" />
+              ) : (
+                <Camera className="w-3 h-3 md:w-4 md:h-4" />
+              )}
+            </Button>
           </div>
           <h1 className="text-xl md:text-3xl font-bold mb-1 text-foreground">
             {profile?.first_name} {profile?.last_name}
