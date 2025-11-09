@@ -32,9 +32,9 @@ const Reports = () => {
 
   // Helper function to format dues period
   const formatDuesPeriod = (startMonth: number, startYear: number, monthsPaid: number) => {
-    const endMonthIndex = (startMonth + monthsPaid - 1) % 12;
-    const endMonth = endMonthIndex === 0 ? 12 : endMonthIndex;
-    const endYear = startYear + Math.floor((startMonth + monthsPaid - 1) / 12);
+    const lastMonthNumber = startMonth + monthsPaid - 1;
+    const endMonth = ((lastMonthNumber - 1) % 12) + 1;
+    const endYear = startYear + Math.floor((lastMonthNumber - 1) / 12);
     
     const startMonthName = getMonthName(startMonth);
     const endMonthName = getMonthName(endMonth);
@@ -287,7 +287,29 @@ const Reports = () => {
       ]),
       theme: 'grid',
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [59, 130, 246] }
+      headStyles: { fillColor: [59, 130, 246] },
+      didParseCell: function(data) {
+        // Color code status column
+        if (data.column.index === 5 && data.section === 'body') {
+          const rowIndex = data.row.index;
+          const member = filteredMembers[rowIndex];
+          if (member.status === 'Owing') {
+            data.cell.styles.textColor = [200, 0, 0]; // Red
+            data.cell.styles.fontStyle = 'bold';
+          } else {
+            data.cell.styles.textColor = [0, 150, 0]; // Green
+            data.cell.styles.fontStyle = 'bold';
+          }
+        }
+        // Color code outstanding amount column
+        if (data.column.index === 4 && data.section === 'body') {
+          const rowIndex = data.row.index;
+          const member = filteredMembers[rowIndex];
+          if (member.outstanding > 0) {
+            data.cell.styles.textColor = [200, 0, 0]; // Red for owing amounts
+          }
+        }
+      }
     });
 
     doc.save(`member-report-${memberFilter}.pdf`);
