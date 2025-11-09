@@ -119,19 +119,30 @@ export const MemberPaymentsDialog = ({
                 Add Dues Payment
               </Button>
               <div className="space-y-2">
-                {duesPayments.map((payment) => (
-                  <div key={payment.id} className="p-3 border rounded-lg flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">₦{payment.amount.toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {payment.start_year} - Month {payment.start_month}
-                      </p>
+                {duesPayments.map((payment) => {
+                  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                  const getMonthRange = () => {
+                    if (payment.months_paid === 1) {
+                      return months[payment.start_month - 1];
+                    }
+                    const endMonth = (payment.start_month + payment.months_paid - 1) % 12 || 12;
+                    return `${months[payment.start_month - 1]} - ${months[endMonth - 1]}`;
+                  };
+                  
+                  return (
+                    <div key={payment.id} className="p-3 border rounded-lg flex justify-between items-center">
+                      <div>
+                        <p className="font-medium">₦{payment.amount.toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {payment.start_year} - {getMonthRange()}
+                        </p>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => handleEditDues(payment)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => handleEditDues(payment)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
+                  );
+                })}
                 {duesPayments.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-4">No manual dues payments</p>
                 )}

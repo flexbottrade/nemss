@@ -210,10 +210,15 @@ export const ManualDuesPaymentDialog = ({
                 </div>
                 
                 {monthlyAmount !== null && (
-                  <div className="p-3 bg-muted rounded-lg">
+                  <div className="p-3 bg-muted rounded-lg space-y-1">
                     <p className="text-sm font-medium">
                       Monthly Due Amount for {selectedYear}: ₦{monthlyAmount.toLocaleString()}
                     </p>
+                    {selectedMonths.length > 0 && (
+                      <p className="text-sm font-medium text-primary">
+                        Total Amount: ₦{(monthlyAmount * selectedMonths.length).toLocaleString()}
+                      </p>
+                    )}
                   </div>
                 )}
 

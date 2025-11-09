@@ -40,6 +40,16 @@ export const ManualEventPaymentDialog = ({
   const [paidEventIds, setPaidEventIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Update amount when event is selected
+  useEffect(() => {
+    if (selectedEvent && !existingPayment) {
+      const event = events.find(e => e.id === selectedEvent);
+      if (event) {
+        setAmount(event.amount.toString());
+      }
+    }
+  }, [selectedEvent, events, existingPayment]);
+
   useEffect(() => {
     loadEvents();
   }, [memberId]);
