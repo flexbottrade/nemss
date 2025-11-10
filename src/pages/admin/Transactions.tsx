@@ -45,20 +45,32 @@ const Transactions = () => {
   }, [isAdmin]);
 
   const loadPayments = async () => {
-    const { data: dues } = await supabase
+    const { data: dues, error: duesError } = await supabase
       .from("dues_payments")
       .select("*, profiles(first_name, last_name, member_id)")
       .order("created_at", { ascending: false });
 
-    const { data: events } = await supabase
+    const { data: events, error: eventsError } = await supabase
       .from("event_payments")
       .select("*, profiles(first_name, last_name, member_id), events(title)")
       .order("created_at", { ascending: false });
 
-    const { data: donations } = await supabase
+    const { data: donations, error: donationsError } = await supabase
       .from("donation_payments")
       .select("*, profiles(first_name, last_name, member_id), donations(title)")
       .order("created_at", { ascending: false });
+
+    console.log("Loaded payments:", { 
+      dues: dues?.length, 
+      duesData: dues,
+      duesError,
+      events: events?.length, 
+      eventsData: events,
+      eventsError,
+      donations: donations?.length,
+      donationsData: donations,
+      donationsError
+    });
 
     // Sort to show pending first
     const sortByStatus = (a: any, b: any) => {
@@ -232,9 +244,12 @@ const Transactions = () => {
           <TabsContent value="dues">
             <div className="mb-4">
               <Label className="text-xs md:text-sm mb-2">Filter by Status</Label>
-              <Select value={duesFilter} onValueChange={setDuesFilter}>
+              <Select value={duesFilter} onValueChange={(value) => {
+                console.log("Dues filter changed to:", value);
+                setDuesFilter(value);
+              }}>
                 <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue />
+                  <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
@@ -244,21 +259,26 @@ const Transactions = () => {
                 </SelectContent>
               </Select>
             </div>
-            {duesPayments.filter(p => duesFilter === "all" || p.status === duesFilter).length === 0 ? (
-              <p className="text-center text-muted-foreground py-12">No dues payments found</p>
-            ) : (
-              duesPayments
-                .filter(p => duesFilter === "all" || p.status === duesFilter)
-                .map((payment) => renderPayment(payment, "dues"))
-            )}
+            {(() => {
+              const filtered = duesPayments.filter(p => duesFilter === "all" || p.status === duesFilter);
+              console.log("Filtering dues:", { duesFilter, totalPayments: duesPayments.length, filteredCount: filtered.length, statuses: duesPayments.map(p => p.status) });
+              return filtered.length === 0 ? (
+                <p className="text-center text-muted-foreground py-12">No dues payments found</p>
+              ) : (
+                filtered.map((payment) => renderPayment(payment, "dues"))
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="events">
             <div className="mb-4">
               <Label className="text-xs md:text-sm mb-2">Filter by Status</Label>
-              <Select value={eventFilter} onValueChange={setEventFilter}>
+              <Select value={eventFilter} onValueChange={(value) => {
+                console.log("Event filter changed to:", value);
+                setEventFilter(value);
+              }}>
                 <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue />
+                  <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
@@ -268,21 +288,26 @@ const Transactions = () => {
                 </SelectContent>
               </Select>
             </div>
-            {eventPayments.filter(p => eventFilter === "all" || p.status === eventFilter).length === 0 ? (
-              <p className="text-center text-muted-foreground py-12">No event payments found</p>
-            ) : (
-              eventPayments
-                .filter(p => eventFilter === "all" || p.status === eventFilter)
-                .map((payment) => renderPayment(payment, "event"))
-            )}
+            {(() => {
+              const filtered = eventPayments.filter(p => eventFilter === "all" || p.status === eventFilter);
+              console.log("Filtering events:", { eventFilter, totalPayments: eventPayments.length, filteredCount: filtered.length, statuses: eventPayments.map(p => p.status) });
+              return filtered.length === 0 ? (
+                <p className="text-center text-muted-foreground py-12">No event payments found</p>
+              ) : (
+                filtered.map((payment) => renderPayment(payment, "event"))
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="donations">
             <div className="mb-4">
               <Label className="text-xs md:text-sm mb-2">Filter by Status</Label>
-              <Select value={donationFilter} onValueChange={setDonationFilter}>
+              <Select value={donationFilter} onValueChange={(value) => {
+                console.log("Donation filter changed to:", value);
+                setDonationFilter(value);
+              }}>
                 <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue />
+                  <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
@@ -292,13 +317,15 @@ const Transactions = () => {
                 </SelectContent>
               </Select>
             </div>
-            {donationPayments.filter(p => donationFilter === "all" || p.status === donationFilter).length === 0 ? (
-              <p className="text-center text-muted-foreground py-12">No donation payments found</p>
-            ) : (
-              donationPayments
-                .filter(p => donationFilter === "all" || p.status === donationFilter)
-                .map((payment) => renderPayment(payment, "donation"))
-            )}
+            {(() => {
+              const filtered = donationPayments.filter(p => donationFilter === "all" || p.status === donationFilter);
+              console.log("Filtering donations:", { donationFilter, totalPayments: donationPayments.length, filteredCount: filtered.length, statuses: donationPayments.map(p => p.status) });
+              return filtered.length === 0 ? (
+                <p className="text-center text-muted-foreground py-12">No donation payments found</p>
+              ) : (
+                filtered.map((payment) => renderPayment(payment, "donation"))
+              );
+            })()}
           </TabsContent>
           </Tabs>
 
