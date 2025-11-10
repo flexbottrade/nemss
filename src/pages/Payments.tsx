@@ -23,7 +23,7 @@ const Payments = () => {
   const [uploading, setUploading] = useState(false);
   const [paidMonths, setPaidMonths] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
-    year: 2023,
+    year: new Date().getFullYear(),
     selectedMonths: [] as number[],
     proof: null as File | null,
   });
@@ -136,7 +136,7 @@ const Payments = () => {
       toast.success("Payment submitted successfully");
       setIsDialogOpen(false);
       setFormData({
-        year: 2023,
+        year: new Date().getFullYear(),
         selectedMonths: [],
         proof: null,
       });
