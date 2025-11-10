@@ -215,7 +215,7 @@ const Home = () => {
               <h4 className="font-semibold mb-4 text-card-foreground">Quick Links</h4>
               <div className="space-y-2">
                 <Link to="/about" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">About</Link>
-                <a href="#" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">Privacy Policy</a>
+                <Link to="/privacy" className="block text-sm text-card-foreground/70 hover:text-primary transition-colors">Privacy Policy</Link>
               </div>
             </div>
             <div>
