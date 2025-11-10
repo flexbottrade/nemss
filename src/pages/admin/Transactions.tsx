@@ -9,15 +9,8 @@ import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -26,7 +19,6 @@ const Transactions = () => {
   const [eventPayments, setEventPayments] = useState<any[]>([]);
   const [donationPayments, setDonationPayments] = useState<any[]>([]);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
-  const [adminNote, setAdminNote] = useState("");
   const [duesFilter, setDuesFilter] = useState<string>("all");
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [donationFilter, setDonationFilter] = useState<string>("all");
@@ -76,16 +68,10 @@ const Transactions = () => {
     try {
       const table = type === "dues" ? "dues_payments" : type === "event" ? "event_payments" : "donation_payments";
       
-      console.log("Updating payment:", { id, status, type, table, adminNote });
-      
       const updateData: any = { 
         status,
         updated_at: new Date().toISOString()
       };
-      
-      if (adminNote.trim()) {
-        updateData.admin_note = adminNote;
-      }
       
       const { data, error } = await supabase
         .from(table)
@@ -93,26 +79,20 @@ const Transactions = () => {
         .eq("id", id)
         .select();
 
-      console.log("Update result:", { data, error });
-
       if (error) {
-        console.error("Update error:", error);
         toast.error(`Failed to update payment: ${error.message}`);
         return;
       }
 
       if (!data || data.length === 0) {
         toast.error("Payment not found or insufficient permissions");
-        console.error("No data returned from update");
         return;
       }
 
       toast.success(`Payment ${status} successfully`);
       setSelectedPayment(null);
-      setAdminNote("");
       await loadPayments();
     } catch (error: any) {
-      console.error("Unexpected error:", error);
       toast.error(`Error: ${error.message || "Unknown error occurred"}`);
     }
   };
@@ -302,39 +282,30 @@ const Transactions = () => {
           </TabsContent>
           </Tabs>
 
-          <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {selectedPayment?.action === "approved" 
-                  ? "Approve Payment" 
-                  : selectedPayment?.action === "rejected" 
-                  ? "Reject Payment" 
-                  : "Return to Pending"}
-              </DialogTitle>
-              <DialogDescription>Add an optional note before updating status</DialogDescription>
-            </DialogHeader>
-            <Textarea
-              placeholder="Admin note (optional)"
-              value={adminNote}
-              onChange={(e) => setAdminNote(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <Button
-                onClick={() =>
-                  selectedPayment &&
-                  handleUpdatePayment(selectedPayment.id, selectedPayment.action, selectedPayment.type)
-                }
-                variant={selectedPayment?.action === "rejected" ? "destructive" : "default"}
-              >
-                Confirm {selectedPayment?.action === "approved" ? "Approval" : selectedPayment?.action === "rejected" ? "Rejection" : "Return to Pending"}
-              </Button>
-              <Button variant="outline" onClick={() => setSelectedPayment(null)}>
-                Cancel
-              </Button>
-            </div>
-          </DialogContent>
-          </Dialog>
+          <ConfirmationDialog
+            open={!!selectedPayment}
+            onOpenChange={() => setSelectedPayment(null)}
+            onConfirm={() =>
+              selectedPayment &&
+              handleUpdatePayment(selectedPayment.id, selectedPayment.action, selectedPayment.type)
+            }
+            title={
+              selectedPayment?.action === "approved" 
+                ? "Approve Payment" 
+                : selectedPayment?.action === "rejected" 
+                ? "Reject Payment" 
+                : "Return to Pending"
+            }
+            description={
+              selectedPayment?.action === "approved" 
+                ? "Are you sure you want to approve this payment?" 
+                : selectedPayment?.action === "rejected" 
+                ? "Are you sure you want to reject this payment?" 
+                : "Are you sure you want to return this payment to pending status?"
+            }
+            confirmText="Confirm"
+            cancelText="Cancel"
+          />
         </div>
       </main>
     </div>
