@@ -121,7 +121,7 @@ const Payments = () => {
       const sortedMonths = [...formData.selectedMonths].sort((a, b) => a - b);
       const amount = monthlyDues * sortedMonths.length;
       
-      const { error } = await supabase.from("dues_payments").insert({
+      const { data: insertedPayment, error } = await supabase.from("dues_payments").insert({
         user_id: user.id,
         start_month: sortedMonths[0],
         start_year: formData.year,
@@ -129,9 +129,27 @@ const Payments = () => {
         amount,
         payment_proof_url: publicUrl,
         status: "pending",
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Get user profile for notification
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", user.id)
+        .single();
+
+      // Send WhatsApp notification
+      await supabase.functions.invoke("payment-notify", {
+        body: {
+          payment_type: "Dues",
+          payment_id: insertedPayment.id,
+          user_name: profile ? `${profile.first_name} ${profile.last_name}` : "Unknown User",
+          amount: amount,
+          date: new Date().toLocaleDateString('en-GB'),
+        },
+      });
 
       toast.success("Payment submitted successfully");
       setIsDialogOpen(false);

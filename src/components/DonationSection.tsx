@@ -78,15 +78,33 @@ export const DonationSection = () => {
         .from("payment-proofs")
         .getPublicUrl(fileName);
 
-      const { error } = await supabase.from("donation_payments").insert({
+      const { data: insertedPayment, error } = await supabase.from("donation_payments").insert({
         user_id: user.id,
         donation_id: selectedDonation.id,
         amount: parseFloat(amount),
         payment_proof_url: publicUrl,
         status: "pending",
-      });
+      }).select().single();
 
       if (error) throw error;
+
+      // Get user profile for notification
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", user.id)
+        .single();
+
+      // Send WhatsApp notification
+      await supabase.functions.invoke("payment-notify", {
+        body: {
+          payment_type: "Donation",
+          payment_id: insertedPayment.id,
+          user_name: profile ? `${profile.first_name} ${profile.last_name}` : "Unknown User",
+          amount: parseFloat(amount),
+          date: new Date().toLocaleDateString('en-GB'),
+        },
+      });
 
       toast.success("Donation submitted successfully!");
       setSelectedDonation(null);

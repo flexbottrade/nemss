@@ -405,6 +405,48 @@ export type Database = {
         }
         Relationships: []
       }
+      message_logs: {
+        Row: {
+          amount: number
+          created_at: string
+          error_message: string | null
+          id: string
+          payment_id: string
+          payment_type: string
+          phone_number: string
+          status: string
+          updated_at: string
+          user_name: string
+          whatsapp_message_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payment_id: string
+          payment_type: string
+          phone_number: string
+          status?: string
+          updated_at?: string
+          user_name: string
+          whatsapp_message_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payment_id?: string
+          payment_type?: string
+          phone_number?: string
+          status?: string
+          updated_at?: string
+          user_name?: string
+          whatsapp_message_id?: string | null
+        }
+        Relationships: []
+      }
       payment_accounts: {
         Row: {
           account_name: string

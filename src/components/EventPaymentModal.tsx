@@ -40,14 +40,32 @@ export const EventPaymentModal = ({ open, onOpenChange, event, userId, onSuccess
   const createPaymentMutation = useMutation({
     mutationFn: async (proofUrl: string) => {
       const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from("event_payments").insert([{
+      const { data: insertedPayment, error } = await supabase.from("event_payments").insert([{
         event_id: event.id,
         user_id: userId || user?.id,
         amount: event.amount,
         payment_proof_url: proofUrl,
         status: "pending",
-      }]);
+      }]).select().single();
       if (error) throw error;
+
+      // Get user profile for notification
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", userId || user?.id)
+        .single();
+
+      // Send WhatsApp notification
+      await supabase.functions.invoke("payment-notify", {
+        body: {
+          payment_type: "Event",
+          payment_id: insertedPayment.id,
+          user_name: profile ? `${profile.first_name} ${profile.last_name}` : "Unknown User",
+          amount: event.amount,
+          date: new Date().toLocaleDateString('en-GB'),
+        },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["event-payments"] });
