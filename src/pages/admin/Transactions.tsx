@@ -60,16 +60,11 @@ const Transactions = () => {
       .select("*, profiles(first_name, last_name, member_id), donations(title)")
       .order("created_at", { ascending: false });
 
-    console.log("Loaded payments:", { 
-      dues: dues?.length, 
-      duesData: dues,
-      duesError,
-      events: events?.length, 
-      eventsData: events,
-      eventsError,
-      donations: donations?.length,
-      donationsData: donations,
-      donationsError
+    console.log("Raw loaded payments with statuses:", { 
+      dues: dues?.map(d => ({ id: d.id, status: d.status, statusType: typeof d.status, statusLength: d.status?.length })),
+      events: events?.map(e => ({ id: e.id, status: e.status, statusType: typeof e.status, statusLength: e.status?.length })),
+      donations: donations?.map(d => ({ id: d.id, status: d.status, statusType: typeof d.status, statusLength: d.status?.length })),
+      errors: { duesError, eventsError, donationsError }
     });
 
     // Sort to show pending first
@@ -260,8 +255,12 @@ const Transactions = () => {
               </Select>
             </div>
             {(() => {
-              const filtered = duesPayments.filter(p => duesFilter === "all" || p.status === duesFilter);
-              console.log("Filtering dues:", { duesFilter, totalPayments: duesPayments.length, filteredCount: filtered.length, statuses: duesPayments.map(p => p.status) });
+              const filtered = duesPayments.filter(p => {
+                const matches = duesFilter === "all" || p.status?.toLowerCase()?.trim() === duesFilter.toLowerCase()?.trim();
+                console.log("Dues payment match:", { id: p.id, status: p.status, filter: duesFilter, matches, statusRaw: JSON.stringify(p.status) });
+                return matches;
+              });
+              console.log("Filtering dues:", { duesFilter, totalPayments: duesPayments.length, filteredCount: filtered.length, statuses: duesPayments.map(p => ({ status: p.status, raw: JSON.stringify(p.status) })) });
               return filtered.length === 0 ? (
                 <p className="text-center text-muted-foreground py-12">No dues payments found</p>
               ) : (
@@ -289,8 +288,12 @@ const Transactions = () => {
               </Select>
             </div>
             {(() => {
-              const filtered = eventPayments.filter(p => eventFilter === "all" || p.status === eventFilter);
-              console.log("Filtering events:", { eventFilter, totalPayments: eventPayments.length, filteredCount: filtered.length, statuses: eventPayments.map(p => p.status) });
+              const filtered = eventPayments.filter(p => {
+                const matches = eventFilter === "all" || p.status?.toLowerCase()?.trim() === eventFilter.toLowerCase()?.trim();
+                console.log("Event payment match:", { id: p.id, status: p.status, filter: eventFilter, matches, statusRaw: JSON.stringify(p.status) });
+                return matches;
+              });
+              console.log("Filtering events:", { eventFilter, totalPayments: eventPayments.length, filteredCount: filtered.length, statuses: eventPayments.map(p => ({ status: p.status, raw: JSON.stringify(p.status) })) });
               return filtered.length === 0 ? (
                 <p className="text-center text-muted-foreground py-12">No event payments found</p>
               ) : (
@@ -318,8 +321,12 @@ const Transactions = () => {
               </Select>
             </div>
             {(() => {
-              const filtered = donationPayments.filter(p => donationFilter === "all" || p.status === donationFilter);
-              console.log("Filtering donations:", { donationFilter, totalPayments: donationPayments.length, filteredCount: filtered.length, statuses: donationPayments.map(p => p.status) });
+              const filtered = donationPayments.filter(p => {
+                const matches = donationFilter === "all" || p.status?.toLowerCase()?.trim() === donationFilter.toLowerCase()?.trim();
+                console.log("Donation payment match:", { id: p.id, status: p.status, filter: donationFilter, matches, statusRaw: JSON.stringify(p.status) });
+                return matches;
+              });
+              console.log("Filtering donations:", { donationFilter, totalPayments: donationPayments.length, filteredCount: filtered.length, statuses: donationPayments.map(p => ({ status: p.status, raw: JSON.stringify(p.status) })) });
               return filtered.length === 0 ? (
                 <p className="text-center text-muted-foreground py-12">No donation payments found</p>
               ) : (
