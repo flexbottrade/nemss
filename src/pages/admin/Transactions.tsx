@@ -172,24 +172,37 @@ const Transactions = () => {
                 View Proof
               </Button>
             )}
-            <Button
-              size="sm"
-              className="h-7 text-xs"
-              variant={payment.status === "approved" ? "secondary" : "default"}
-              onClick={() => setSelectedPayment({ ...payment, type, action: "approved" })}
-            >
-              <Check className="w-3 h-3 mr-1" />
-              {payment.status === "approved" ? "Approved" : "Approve"}
-            </Button>
-            <Button
-              size="sm"
-              className="h-7 text-xs"
-              variant={payment.status === "rejected" ? "secondary" : "destructive"}
-              onClick={() => setSelectedPayment({ ...payment, type, action: "rejected" })}
-            >
-              <X className="w-3 h-3 mr-1" />
-              {payment.status === "rejected" ? "Rejected" : "Reject"}
-            </Button>
+            {payment.status === "pending" && (
+              <>
+                <Button
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setSelectedPayment({ ...payment, type, action: "approved" })}
+                >
+                  <Check className="w-3 h-3 mr-1" />
+                  Approve
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-7 text-xs"
+                  variant="destructive"
+                  onClick={() => setSelectedPayment({ ...payment, type, action: "rejected" })}
+                >
+                  <X className="w-3 h-3 mr-1" />
+                  Reject
+                </Button>
+              </>
+            )}
+            {payment.status !== "pending" && (
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                variant="outline"
+                onClick={() => setSelectedPayment({ ...payment, type, action: "pending" })}
+              >
+                Return to Pending
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>
@@ -231,11 +244,11 @@ const Transactions = () => {
                 </SelectContent>
               </Select>
             </div>
-            {duesPayments.filter(p => duesFilter === "all" || p.status === duesFilter).length === 0 ? (
+            {duesPayments.filter(p => !duesFilter || duesFilter === "all" || p.status === duesFilter).length === 0 ? (
               <p className="text-center text-muted-foreground py-12">No dues payments found</p>
             ) : (
               duesPayments
-                .filter(p => duesFilter === "all" || p.status === duesFilter)
+                .filter(p => !duesFilter || duesFilter === "all" || p.status === duesFilter)
                 .map((payment) => renderPayment(payment, "dues"))
             )}
           </TabsContent>
@@ -255,11 +268,11 @@ const Transactions = () => {
                 </SelectContent>
               </Select>
             </div>
-            {eventPayments.filter(p => eventFilter === "all" || p.status === eventFilter).length === 0 ? (
+            {eventPayments.filter(p => !eventFilter || eventFilter === "all" || p.status === eventFilter).length === 0 ? (
               <p className="text-center text-muted-foreground py-12">No event payments found</p>
             ) : (
               eventPayments
-                .filter(p => eventFilter === "all" || p.status === eventFilter)
+                .filter(p => !eventFilter || eventFilter === "all" || p.status === eventFilter)
                 .map((payment) => renderPayment(payment, "event"))
             )}
           </TabsContent>
@@ -279,11 +292,11 @@ const Transactions = () => {
                 </SelectContent>
               </Select>
             </div>
-            {donationPayments.filter(p => donationFilter === "all" || p.status === donationFilter).length === 0 ? (
+            {donationPayments.filter(p => !donationFilter || donationFilter === "all" || p.status === donationFilter).length === 0 ? (
               <p className="text-center text-muted-foreground py-12">No donation payments found</p>
             ) : (
               donationPayments
-                .filter(p => donationFilter === "all" || p.status === donationFilter)
+                .filter(p => !donationFilter || donationFilter === "all" || p.status === donationFilter)
                 .map((payment) => renderPayment(payment, "donation"))
             )}
           </TabsContent>
@@ -293,7 +306,11 @@ const Transactions = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                {selectedPayment?.action === "approved" ? "Approve" : "Reject"} Payment
+                {selectedPayment?.action === "approved" 
+                  ? "Approve Payment" 
+                  : selectedPayment?.action === "rejected" 
+                  ? "Reject Payment" 
+                  : "Return to Pending"}
               </DialogTitle>
               <DialogDescription>Add an optional note before updating status</DialogDescription>
             </DialogHeader>
@@ -310,7 +327,7 @@ const Transactions = () => {
                 }
                 variant={selectedPayment?.action === "rejected" ? "destructive" : "default"}
               >
-                Confirm {selectedPayment?.action === "approved" ? "Approval" : "Rejection"}
+                Confirm {selectedPayment?.action === "approved" ? "Approval" : selectedPayment?.action === "rejected" ? "Rejection" : "Return to Pending"}
               </Button>
               <Button variant="outline" onClick={() => setSelectedPayment(null)}>
                 Cancel
