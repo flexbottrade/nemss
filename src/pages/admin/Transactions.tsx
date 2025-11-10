@@ -244,11 +244,11 @@ const Transactions = () => {
                 </SelectContent>
               </Select>
             </div>
-            {duesPayments.filter(p => !duesFilter || duesFilter === "all" || p.status === duesFilter).length === 0 ? (
+            {duesPayments.filter(p => duesFilter === "all" || p.status === duesFilter).length === 0 ? (
               <p className="text-center text-muted-foreground py-12">No dues payments found</p>
             ) : (
               duesPayments
-                .filter(p => !duesFilter || duesFilter === "all" || p.status === duesFilter)
+                .filter(p => duesFilter === "all" || p.status === duesFilter)
                 .map((payment) => renderPayment(payment, "dues"))
             )}
           </TabsContent>
@@ -268,11 +268,11 @@ const Transactions = () => {
                 </SelectContent>
               </Select>
             </div>
-            {eventPayments.filter(p => !eventFilter || eventFilter === "all" || p.status === eventFilter).length === 0 ? (
+            {eventPayments.filter(p => eventFilter === "all" || p.status === eventFilter).length === 0 ? (
               <p className="text-center text-muted-foreground py-12">No event payments found</p>
             ) : (
               eventPayments
-                .filter(p => !eventFilter || eventFilter === "all" || p.status === eventFilter)
+                .filter(p => eventFilter === "all" || p.status === eventFilter)
                 .map((payment) => renderPayment(payment, "event"))
             )}
           </TabsContent>
@@ -292,11 +292,11 @@ const Transactions = () => {
                 </SelectContent>
               </Select>
             </div>
-            {donationPayments.filter(p => !donationFilter || donationFilter === "all" || p.status === donationFilter).length === 0 ? (
+            {donationPayments.filter(p => donationFilter === "all" || p.status === donationFilter).length === 0 ? (
               <p className="text-center text-muted-foreground py-12">No donation payments found</p>
             ) : (
               donationPayments
-                .filter(p => !donationFilter || donationFilter === "all" || p.status === donationFilter)
+                .filter(p => donationFilter === "all" || p.status === donationFilter)
                 .map((payment) => renderPayment(payment, "donation"))
             )}
           </TabsContent>
