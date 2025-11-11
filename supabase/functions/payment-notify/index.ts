@@ -24,9 +24,31 @@ const handler = async (req: Request): Promise<Response> => {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const whatsappToken = Deno.env.get("WHATSAPP_TOKEN")!;
   const phoneNumberId = Deno.env.get("PHONE_NUMBER_ID")!;
-  const recipientPhone = "+2347069423623";
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  // Fetch recipient phone number from database
+  const { data: recipients, error: recipientError } = await supabase
+    .from("alert_recipients")
+    .select("phone_number")
+    .limit(1)
+    .single();
+
+  if (recipientError || !recipients) {
+    console.error("Error fetching recipient phone number:", recipientError);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: "No recipient phone number configured" 
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  const recipientPhone = recipients.phone_number;
 
   try {
     const { payment_type, payment_id, user_name, amount, date }: PaymentNotificationRequest = await req.json();
