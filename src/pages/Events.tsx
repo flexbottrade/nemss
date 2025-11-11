@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, MapPin } from "lucide-react";
+import { Calendar, MapPin, Eye, RefreshCw } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { EventPaymentModal } from "@/components/EventPaymentModal";
+import { UpdatePaymentProofDialog } from "@/components/UpdatePaymentProofDialog";
 
 const Events = () => {
   const navigate = useNavigate();
@@ -14,6 +15,10 @@ const Events = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [updateProofDialog, setUpdateProofDialog] = useState<{ open: boolean; payment: any }>({
+    open: false,
+    payment: null,
+  });
 
   useEffect(() => {
     checkAuth();
@@ -67,6 +72,10 @@ const Events = () => {
     return "pending";
   };
 
+  const getEventPayment = (eventId: string) => {
+    return payments.find(p => p.event_id === eventId);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -92,6 +101,7 @@ const Events = () => {
           {events.map((event) => {
             const status = getEventStatus(event.event_date);
             const paymentStatus = getPaymentStatus(event.id);
+            const eventPayment = getEventPayment(event.id);
             
             return (
               <Card key={event.id} className="border-border bg-card shadow-md">
@@ -134,6 +144,30 @@ const Events = () => {
                       </Button>
                     </div>
                   </div>
+                  {eventPayment?.payment_proof_url && (
+                    <div className="flex gap-2 mt-2 pt-2 border-t border-border">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs flex items-center gap-1"
+                        onClick={() => window.open(eventPayment.payment_proof_url, "_blank")}
+                      >
+                        <Eye className="w-3 h-3" />
+                        View Proof
+                      </Button>
+                      {paymentStatus === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs flex items-center gap-1"
+                          onClick={() => setUpdateProofDialog({ open: true, payment: eventPayment })}
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Update Proof
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </CardHeader>
               </Card>
             );
@@ -156,6 +190,17 @@ const Events = () => {
             setSelectedEvent(null);
             loadData();
           }}
+        />
+      )}
+
+      {updateProofDialog.payment && (
+        <UpdatePaymentProofDialog
+          open={updateProofDialog.open}
+          onOpenChange={(open) => setUpdateProofDialog({ open, payment: null })}
+          paymentId={updateProofDialog.payment.id}
+          paymentType="event"
+          currentProofUrl={updateProofDialog.payment.payment_proof_url}
+          onSuccess={loadData}
         />
       )}
 

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, CheckCircle2, XCircle, Clock, Calendar, CreditCard, DollarSign, FileText, Copy } from "lucide-react";
+import { Upload, CheckCircle2, XCircle, Clock, Calendar, CreditCard, DollarSign, FileText, Copy, Eye, RefreshCw } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Spinner } from "@/components/ui/spinner";
+import { UpdatePaymentProofDialog } from "@/components/UpdatePaymentProofDialog";
 
 const Payments = () => {
   const navigate = useNavigate();
@@ -22,6 +23,10 @@ const Payments = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [paidMonths, setPaidMonths] = useState<Set<string>>(new Set());
+  const [updateProofDialog, setUpdateProofDialog] = useState<{ open: boolean; payment: any }>({
+    open: false,
+    payment: null,
+  });
   const [formData, setFormData] = useState({
     year: new Date().getFullYear(),
     selectedMonths: [] as number[],
@@ -266,12 +271,36 @@ const Payments = () => {
                           </span>
                         </Badge>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-2">
                         <p className="text-base md:text-lg font-bold text-accent">₦{Number(payment.amount).toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(payment.created_at).toLocaleDateString()}
                         </p>
                       </div>
+                      {payment.payment_proof_url && (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs flex items-center gap-1"
+                            onClick={() => window.open(payment.payment_proof_url, "_blank")}
+                          >
+                            <Eye className="w-3 h-3" />
+                            View Proof
+                          </Button>
+                          {payment.status === "pending" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs flex items-center gap-1"
+                              onClick={() => setUpdateProofDialog({ open: true, payment })}
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              Update Proof
+                            </Button>
+                          )}
+                        </div>
+                      )}
                       {payment.admin_note && (
                         <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
                           <span className="font-semibold">Note: </span>
@@ -426,6 +455,17 @@ const Payments = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {updateProofDialog.payment && (
+          <UpdatePaymentProofDialog
+            open={updateProofDialog.open}
+            onOpenChange={(open) => setUpdateProofDialog({ open, payment: null })}
+            paymentId={updateProofDialog.payment.id}
+            paymentType="dues"
+            currentProofUrl={updateProofDialog.payment.payment_proof_url}
+            onSuccess={loadData}
+          />
+        )}
       </div>
       <BottomNav />
     </div>
