@@ -198,6 +198,9 @@ const AdminSettings = () => {
               <p className="text-xs text-muted-foreground mt-1">
                 Manage phone numbers that receive WhatsApp payment alerts (Max: 1 number)
               </p>
+              <p className="text-xs text-muted-foreground mt-2 font-medium">
+                Format: +[country code][number] (e.g., +2348012345678 for Nigeria)
+              </p>
             </CardHeader>
             <CardContent className="p-3 md:p-6 pt-0">
               <div className="space-y-3 md:space-y-4">

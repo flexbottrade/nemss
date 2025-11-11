@@ -53,7 +53,7 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { payment_type, payment_id, user_name, amount, date }: PaymentNotificationRequest = await req.json();
 
-    console.log("Processing payment notification:", { payment_type, payment_id, user_name, amount });
+    console.log("Processing payment notification:", { payment_type, payment_id, user_name, amount, date });
 
     // Format amount with currency
     const formattedAmount = new Intl.NumberFormat('en-NG', {
