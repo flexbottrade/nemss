@@ -55,12 +55,64 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Processing payment notification:", { payment_type, payment_id, user_name, amount, date });
 
+    // Validate all required parameters
+    if (!payment_type || !payment_id || !user_name || !amount || !date) {
+      console.error("Missing payment details:", { payment_type, payment_id, user_name, amount, date });
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Missing payment details - all fields (payment_type, payment_id, user_name, amount, date) are required" 
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     // Format amount with currency
     const formattedAmount = new Intl.NumberFormat('en-NG', {
       style: 'currency',
       currency: 'NGN',
       minimumFractionDigits: 0,
     }).format(amount).replace('NGN', '').trim();
+
+    const whatsappPayload = {
+      messaging_product: "whatsapp",
+      to: recipientPhone,
+      type: "template",
+      template: {
+        name: "payment_alert",
+        language: {
+          code: "en_US"
+        },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              {
+                type: "text",
+                text: String(payment_type)
+              },
+              {
+                type: "text",
+                text: String(user_name)
+              },
+              {
+                type: "text",
+                text: String(formattedAmount)
+              },
+              {
+                type: "text",
+                text: String(date)
+              }
+            ]
+          }
+        ]
+      }
+    };
+
+    console.log("Sending WhatsApp message with payload:", JSON.stringify(whatsappPayload, null, 2));
 
     // Send WhatsApp message using Meta Cloud API
     const whatsappResponse = await fetch(
@@ -71,40 +123,7 @@ const handler = async (req: Request): Promise<Response> => {
           "Authorization": `Bearer ${whatsappToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to: recipientPhone,
-          type: "template",
-          template: {
-            name: "payment_alert",
-            language: {
-              code: "en"
-            },
-            components: [
-              {
-                type: "body",
-                parameters: [
-                  {
-                    type: "text",
-                    text: payment_type
-                  },
-                  {
-                    type: "text",
-                    text: user_name
-                  },
-                  {
-                    type: "text",
-                    text: formattedAmount
-                  },
-                  {
-                    type: "text",
-                    text: date
-                  }
-                ]
-              }
-            ]
-          }
-        }),
+        body: JSON.stringify(whatsappPayload),
       }
     );
 
