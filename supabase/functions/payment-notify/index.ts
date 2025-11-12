@@ -92,18 +92,22 @@ const handler = async (req: Request): Promise<Response> => {
             parameters: [
               {
                 type: "text",
+                parameter_name: "payment_type",
                 text: String(payment_type)
               },
               {
                 type: "text",
+                parameter_name: "user_name",
                 text: String(user_name)
               },
               {
                 type: "text",
+                parameter_name: "amount",
                 text: String(formattedAmount)
               },
               {
                 type: "text",
+                parameter_name: "date",
                 text: String(date)
               }
             ]
