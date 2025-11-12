@@ -84,7 +84,7 @@ const handler = async (req: Request): Promise<Response> => {
       template: {
         name: "payment_alert",
         language: {
-          code: "en_US"
+          code: "en"
         },
         components: [
           {
