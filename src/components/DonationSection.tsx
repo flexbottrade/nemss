@@ -88,23 +88,34 @@ export const DonationSection = () => {
 
       if (error) throw error;
 
-      // Get user profile for notification
+      // Get user profile for email notification
       const { data: profile } = await supabase
         .from("profiles")
-        .select("first_name, last_name")
+        .select("first_name, last_name, member_id")
         .eq("id", user.id)
         .single();
 
-      // Send WhatsApp notification
-      await supabase.functions.invoke("payment-notify", {
-        body: {
-          payment_type: "Donation",
-          payment_id: insertedPayment.id,
-          user_name: profile ? `${profile.first_name} ${profile.last_name}` : "Unknown User",
-          amount: parseFloat(amount),
-          date: new Date().toLocaleDateString('en-GB'),
-        },
-      });
+      // Send email notification
+      try {
+        await supabase.functions.invoke("send-payment-notification-email", {
+          body: {
+            payment_type: "Donation",
+            payment_id: insertedPayment.id,
+            member_name: profile ? `${profile.first_name} ${profile.last_name}` : "Unknown User",
+            member_id: profile?.member_id || "N/A",
+            amount: parseFloat(amount),
+            date: new Date().toLocaleDateString('en-NG', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }),
+            details: selectedDonation.title,
+            payment_proof_url: `payment-proofs/${fileName}`,
+          },
+        });
+      } catch (notificationError) {
+        console.error("Failed to send email notification:", notificationError);
+      }
 
       toast.success("Donation submitted successfully!");
       setSelectedDonation(null);

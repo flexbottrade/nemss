@@ -138,23 +138,40 @@ const Payments = () => {
 
       if (error) throw error;
 
-      // Get user profile for notification
+      // Get user profile for email notification
       const { data: profile } = await supabase
         .from("profiles")
-        .select("first_name, last_name")
+        .select("first_name, last_name, member_id")
         .eq("id", user.id)
         .single();
 
-      // Send WhatsApp notification
-      await supabase.functions.invoke("payment-notify", {
-        body: {
-          payment_type: "Dues",
-          payment_id: insertedPayment.id,
-          user_name: profile ? `${profile.first_name} ${profile.last_name}` : "Unknown User",
-          amount: amount,
-          date: new Date().toLocaleDateString('en-GB'),
-        },
-      });
+      // Prepare details string
+      const monthNames = sortedMonths.map(m => 
+        new Date(formData.year, m - 1).toLocaleDateString('en-NG', { month: 'long' })
+      );
+      const details = `${formData.year} - ${monthNames.join(', ')}`;
+
+      // Send email notification
+      try {
+        await supabase.functions.invoke("send-payment-notification-email", {
+          body: {
+            payment_type: "Dues",
+            payment_id: insertedPayment.id,
+            member_name: profile ? `${profile.first_name} ${profile.last_name}` : "Unknown User",
+            member_id: profile?.member_id || "N/A",
+            amount: amount,
+            date: new Date().toLocaleDateString('en-NG', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }),
+            details: details,
+            payment_proof_url: `payment-proofs/${fileName}`,
+          },
+        });
+      } catch (notificationError) {
+        console.error("Failed to send email notification:", notificationError);
+      }
 
       toast.success("Payment submitted successfully");
       setIsDialogOpen(false);
