@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Spinner } from "@/components/ui/spinner";
 import { UpdatePaymentProofDialog } from "@/components/UpdatePaymentProofDialog";
+import { UpdateRejectedPaymentDialog } from "@/components/UpdateRejectedPaymentDialog";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 
 const Payments = () => {
   const navigate = useNavigate();
@@ -24,6 +26,14 @@ const Payments = () => {
   const [uploading, setUploading] = useState(false);
   const [paidMonths, setPaidMonths] = useState<Set<string>>(new Set());
   const [updateProofDialog, setUpdateProofDialog] = useState<{ open: boolean; payment: any }>({
+    open: false,
+    payment: null,
+  });
+  const [updateRejectedDialog, setUpdateRejectedDialog] = useState<{ open: boolean; payment: any }>({
+    open: false,
+    payment: null,
+  });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; payment: any }>({
     open: false,
     payment: null,
   });
@@ -222,6 +232,35 @@ const Payments = () => {
     }
   };
 
+  const handleDeletePayment = async () => {
+    if (!deleteDialog.payment) return;
+
+    try {
+      // Delete proof from storage if exists
+      if (deleteDialog.payment.payment_proof_url) {
+        const oldPath = deleteDialog.payment.payment_proof_url.split('payment-proofs/')[1];
+        if (oldPath) {
+          await supabase.storage.from("payment-proofs").remove([oldPath]);
+        }
+      }
+
+      // Delete payment record
+      const { error } = await supabase
+        .from("dues_payments")
+        .delete()
+        .eq("id", deleteDialog.payment.id);
+
+      if (error) throw error;
+
+      toast.success("Payment deleted successfully");
+      loadData();
+      setDeleteDialog({ open: false, payment: null });
+    } catch (error: any) {
+      console.error("Error deleting payment:", error);
+      toast.error("Failed to delete payment");
+    }
+  };
+
   if (loading) {
     return <Spinner />;
   }
@@ -316,6 +355,27 @@ const Payments = () => {
                               Update Proof
                             </Button>
                           )}
+                        </div>
+                      )}
+                      {payment.status === "rejected" && (
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="h-7 text-xs flex items-center gap-1"
+                            onClick={() => setUpdateRejectedDialog({ open: true, payment })}
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            Update & Resubmit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-7 text-xs"
+                            onClick={() => setDeleteDialog({ open: true, payment })}
+                          >
+                            Delete
+                          </Button>
                         </div>
                       )}
                       {payment.admin_note && (
@@ -483,6 +543,25 @@ const Payments = () => {
             onSuccess={loadData}
           />
         )}
+
+        {updateRejectedDialog.payment && (
+          <UpdateRejectedPaymentDialog
+            open={updateRejectedDialog.open}
+            onOpenChange={(open) => setUpdateRejectedDialog({ open, payment: null })}
+            payment={updateRejectedDialog.payment}
+            paymentType="dues"
+            variableDues={variableDues}
+            onSuccess={loadData}
+          />
+        )}
+
+        <ConfirmationDialog
+          open={deleteDialog.open}
+          onOpenChange={(open) => setDeleteDialog({ open, payment: null })}
+          title="Delete Payment"
+          description="Are you sure you want to delete this payment? This action cannot be undone."
+          onConfirm={handleDeletePayment}
+        />
       </div>
       <BottomNav />
     </div>

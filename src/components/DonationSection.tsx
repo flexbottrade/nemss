@@ -5,15 +5,26 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Gift, Copy } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Gift, Copy, CheckCircle2, XCircle, Clock, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { UpdateRejectedPaymentDialog } from "@/components/UpdateRejectedPaymentDialog";
+import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 
 export const DonationSection = () => {
   const [selectedDonation, setSelectedDonation] = useState<any>(null);
   const [amount, setAmount] = useState("");
   const [proof, setProof] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [updateRejectedDialog, setUpdateRejectedDialog] = useState<{ open: boolean; payment: any }>({
+    open: false,
+    payment: null,
+  });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; payment: any }>({
+    open: false,
+    payment: null,
+  });
 
   const { data: donations = [] } = useQuery({
     queryKey: ["active-donations"],
