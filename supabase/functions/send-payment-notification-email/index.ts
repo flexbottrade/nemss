@@ -82,10 +82,8 @@ const handler = async (req: Request): Promise<Response> => {
       minimumFractionDigits: 0,
     }).format(amount);
 
-    // Admin dashboard link to view payment proof
-    const adminDashboardLink = payment_proof_url 
-      ? `${supabaseUrl.replace('https://', 'https://ifftfzcyxkkduxnexdwm.')}/storage/v1/object/public/${payment_proof_url}`
-      : "No proof uploaded";
+    // Admin dashboard link to transaction page
+    const adminDashboardLink = "https://www.nemss09.com/admin/transactions";
 
     // Create email HTML with brand colors
     const emailHtml = `
@@ -197,11 +195,7 @@ const handler = async (req: Request): Promise<Response> => {
               <span class="detail-value">${payment_id.substring(0, 8)}</span>
             </div>
             
-            ${payment_proof_url ? `
-              <a href="${adminDashboardLink}" class="button">View Payment Proof</a>
-            ` : `
-              <p style="color: #999; font-style: italic;">No payment proof uploaded</p>
-            `}
+            <a href="${adminDashboardLink}" class="button">Visit Transaction Page</a>
           </div>
           <div class="footer">
             <p>NEMSS 09 Set Payment Notification System</p>
