@@ -292,11 +292,20 @@ const Payments = () => {
               <div className="space-y-2">
                 {payments.map((payment) => {
                   const getMonthRange = () => {
+                    const startMonth = payment.start_month - 1;
+                    const endMonthIndex = (startMonth + payment.months_paid - 1) % 12;
+                    const startYear = payment.start_year;
+                    const endYear = payment.start_year + Math.floor((startMonth + payment.months_paid - 1) / 12);
+                    
                     if (payment.months_paid === 1) {
-                      return fullMonthNames[payment.start_month - 1];
+                      return `${monthNames[startMonth]} ${startYear}`;
                     }
-                    const endMonth = ((payment.start_month - 1 + payment.months_paid - 1) % 12);
-                    return `${fullMonthNames[payment.start_month - 1]} - ${fullMonthNames[endMonth]}`;
+                    
+                    if (startYear === endYear) {
+                      return `${monthNames[startMonth]} - ${monthNames[endMonthIndex]} ${startYear}`;
+                    } else {
+                      return `${monthNames[startMonth]} ${startYear} - ${monthNames[endMonthIndex]} ${endYear}`;
+                    }
                   };
                   
                   return (
@@ -304,7 +313,7 @@ const Payments = () => {
                       <div className="flex items-start justify-between mb-1 gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-card-foreground text-xs md:text-sm">
-                            {getMonthRange()} {payment.start_year}
+                            {getMonthRange()}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {payment.months_paid} month{payment.months_paid > 1 ? "s" : ""}
