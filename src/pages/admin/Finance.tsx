@@ -21,7 +21,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Finance = () => {
   const navigate = useNavigate();
-  const { isAdmin, loading } = useRole();
+  const { isAdmin, isFinancialSecretary, loading } = useRole();
   const [adjustments, setAdjustments] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -140,10 +140,12 @@ const Finance = () => {
                   Track all financial transactions including manual adjustments for income and expenses
                 </p>
               </div>
-              <Button onClick={() => setIsDialogOpen(true)} size="sm" className="text-xs h-7 md:h-8 px-2 md:px-3">
-                <Plus className="w-3 h-3 mr-1" />
-                Add Adjustment
-              </Button>
+              {isFinancialSecretary && (
+                <Button onClick={() => setIsDialogOpen(true)} size="sm" className="text-xs h-7 md:h-8 px-2 md:px-3">
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add Adjustment
+                </Button>
+              )}
             </div>
           </div>
 

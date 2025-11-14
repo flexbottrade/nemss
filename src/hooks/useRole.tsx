@@ -20,7 +20,7 @@ export const useRole = () => {
       setIsSuperAdmin(superAdminCheck || false);
 
       // Check if user is financial secretary
-      const { data: financialSecretaryCheck } = await supabase.rpc('is_financial_secretary', { _user_id: user.id });
+      const { data: financialSecretaryCheck } = await supabase.rpc('is_financial_secretary' as any, { _user_id: user.id });
       setIsFinancialSecretary(financialSecretaryCheck || false);
 
       const { data } = await supabase
