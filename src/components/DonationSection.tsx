@@ -6,10 +6,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Gift, Copy, CheckCircle2, XCircle, Clock, RefreshCw } from "lucide-react";
+import { Gift, Copy, CheckCircle2, XCircle, Clock, RefreshCw, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UpdateRejectedPaymentDialog } from "@/components/UpdateRejectedPaymentDialog";
+import { UpdatePaymentProofDialog } from "@/components/UpdatePaymentProofDialog";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 
 export const DonationSection = () => {
@@ -17,6 +18,10 @@ export const DonationSection = () => {
   const [amount, setAmount] = useState("");
   const [proof, setProof] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [updateProofDialog, setUpdateProofDialog] = useState<{ open: boolean; payment: any }>({
+    open: false,
+    payment: null,
+  });
   const [updateRejectedDialog, setUpdateRejectedDialog] = useState<{ open: boolean; payment: any }>({
     open: false,
     payment: null,
@@ -140,6 +145,34 @@ export const DonationSection = () => {
     }
   };
 
+  const handleDeletePayment = async () => {
+    if (!deleteDialog.payment) return;
+
+    try {
+      // Delete proof from storage if exists
+      if (deleteDialog.payment.payment_proof_url) {
+        const oldPath = deleteDialog.payment.payment_proof_url.split('payment-proofs/')[1];
+        if (oldPath) {
+          await supabase.storage.from("payment-proofs").remove([oldPath]);
+        }
+      }
+
+      // Delete payment record
+      const { error } = await supabase
+        .from("donation_payments")
+        .delete()
+        .eq("id", deleteDialog.payment.id);
+
+      if (error) throw error;
+
+      toast.success("Payment deleted successfully");
+      setDeleteDialog({ open: false, payment: null });
+      refetchPayments();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete payment");
+    }
+  };
+
   if (donations.length === 0) return null;
 
   return (
@@ -178,6 +211,59 @@ export const DonationSection = () => {
                     {paymentStatus === "approved" ? "Paid" : paymentStatus === "pending" ? "Pending" : "Donate"}
                   </Button>
                 </div>
+                {payment?.payment_proof_url && (
+                  <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-border">
+                    {payment.status === "rejected" && payment.admin_note && (
+                      <div className="mb-1 p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                        <p className="text-xs font-semibold text-destructive mb-1">Rejection Reason:</p>
+                        <p className="text-xs text-muted-foreground">{payment.admin_note}</p>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs flex items-center gap-1"
+                        onClick={() => window.open(payment.payment_proof_url, "_blank")}
+                      >
+                        <Eye className="w-3 h-3" />
+                        View Proof
+                      </Button>
+                      {paymentStatus === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs flex items-center gap-1"
+                          onClick={() => setUpdateProofDialog({ open: true, payment })}
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                          Update Proof
+                        </Button>
+                      )}
+                      {paymentStatus === "rejected" && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="h-7 text-xs flex items-center gap-1"
+                            onClick={() => setUpdateRejectedDialog({ open: true, payment })}
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            Update & Resubmit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-7 text-xs"
+                            onClick={() => setDeleteDialog({ open: true, payment })}
+                          >
+                            Delete
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -263,6 +349,33 @@ export const DonationSection = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <UpdatePaymentProofDialog
+        open={updateProofDialog.open}
+        onOpenChange={(open) => setUpdateProofDialog({ open, payment: null })}
+        paymentId={updateProofDialog.payment?.id || ""}
+        paymentType="donation"
+        currentProofUrl={updateProofDialog.payment?.payment_proof_url || null}
+        onSuccess={refetchPayments}
+      />
+
+      <UpdateRejectedPaymentDialog
+        open={updateRejectedDialog.open}
+        onOpenChange={(open) => setUpdateRejectedDialog({ open, payment: null })}
+        payment={updateRejectedDialog.payment}
+        paymentType="donation"
+        onSuccess={refetchPayments}
+      />
+
+      <ConfirmationDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog({ open, payment: null })}
+        onConfirm={handleDeletePayment}
+        title="Delete Payment"
+        description="Are you sure you want to delete this payment? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </>
   );
 };
