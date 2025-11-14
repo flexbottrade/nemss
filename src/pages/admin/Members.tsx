@@ -42,17 +42,17 @@ const Members = () => {
   const [selectedMember, setSelectedMember] = useState<any>(null);
 
   useEffect(() => {
-    if (!loading && !isAdmin) {
+    if (!loading && !isAdmin && !isFinancialSecretary) {
       navigate("/dashboard");
       toast.error("Access denied");
     }
-  }, [isAdmin, loading, navigate]);
+  }, [isAdmin, isFinancialSecretary, loading, navigate]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin || isFinancialSecretary) {
       loadMembers();
     }
-  }, [isAdmin]);
+  }, [isAdmin, isFinancialSecretary]);
 
   const loadMembers = async () => {
     // Parallel fetch all required data
@@ -213,7 +213,7 @@ const Members = () => {
       m.member_id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading || !isAdmin) {
+  if (loading || (!isAdmin && !isFinancialSecretary)) {
     return <Spinner size="lg" />;
   }
 
