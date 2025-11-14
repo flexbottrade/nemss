@@ -313,10 +313,7 @@ const Payments = () => {
                       <div className="flex items-start justify-between mb-1 gap-2">
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-card-foreground text-xs md:text-sm">
-                            {getMonthRange()}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {payment.months_paid} month{payment.months_paid > 1 ? "s" : ""}
+                            {getMonthRange()} ({payment.months_paid} month{payment.months_paid > 1 ? "s" : ""})
                           </p>
                         </div>
                         <Badge className={`${getStatusColor(payment.status)} text-xs`}>

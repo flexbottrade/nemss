@@ -161,7 +161,7 @@ const Transactions = () => {
             )}
             {type === "dues" && (
               <p className="text-xs mt-0.5">
-                Period: {getMonthRangeForDues(payment)}
+                Period: {getMonthRangeForDues(payment)} ({payment.months_paid} month{payment.months_paid > 1 ? "s" : ""})
               </p>
             )}
             <p className="text-base md:text-lg font-bold mt-1">₦{Number(payment.amount).toLocaleString()}</p>
