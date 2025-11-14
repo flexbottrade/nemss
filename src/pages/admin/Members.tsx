@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, UserCog, ShieldOff, Edit, DollarSign } from "lucide-react";
+import { Search, UserCog, ShieldOff, Edit, DollarSign, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { EditMemberNameDialog } from "@/components/admin/EditMemberNameDialog";
 import { MemberPaymentsDialog } from "@/components/admin/MemberPaymentsDialog";
 import { AssignRoleDialog } from "@/components/admin/AssignRoleDialog";
+import { AddMemberDialog } from "@/components/admin/AddMemberDialog";
 import { Spinner } from "@/components/ui/spinner";
 
 const Members = () => {
@@ -37,6 +38,7 @@ const Members = () => {
   const [editNameDialog, setEditNameDialog] = useState(false);
   const [paymentsDialog, setPaymentsDialog] = useState(false);
   const [assignRoleDialog, setAssignRoleDialog] = useState(false);
+  const [addMemberDialog, setAddMemberDialog] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
 
   useEffect(() => {
@@ -239,8 +241,8 @@ const Members = () => {
             </p>
           </div>
 
-          <div className="mb-4 md:mb-6">
-            <div className="relative">
+          <div className="mb-4 md:mb-6 flex flex-col md:flex-row gap-3 md:gap-4">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3 h-3 md:w-4 md:h-4" />
               <Input
                 placeholder="Search by name or member ID..."
@@ -249,6 +251,13 @@ const Members = () => {
                 className="pl-8 md:pl-10 text-xs md:text-sm h-8 md:h-10"
               />
             </div>
+            <Button
+              onClick={() => setAddMemberDialog(true)}
+              className="h-8 md:h-10 text-xs md:text-sm"
+            >
+              <UserPlus className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+              Add Member
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
@@ -405,6 +414,12 @@ const Members = () => {
         open={assignRoleDialog}
         onOpenChange={setAssignRoleDialog}
         member={selectedMember}
+        onSuccess={loadMembers}
+      />
+
+      <AddMemberDialog
+        open={addMemberDialog}
+        onOpenChange={setAddMemberDialog}
         onSuccess={loadMembers}
       />
     </div>
