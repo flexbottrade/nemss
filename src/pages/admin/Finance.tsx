@@ -38,17 +38,17 @@ const Finance = () => {
   });
 
   useEffect(() => {
-    if (!loading && !isAdmin) {
+    if (!loading && !isAdmin && !isFinancialSecretary) {
       navigate("/dashboard");
       toast.error("Access denied");
     }
-  }, [isAdmin, loading, navigate]);
+  }, [isAdmin, isFinancialSecretary, loading, navigate]);
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin || isFinancialSecretary) {
       loadData();
     }
-  }, [isAdmin]);
+  }, [isAdmin, isFinancialSecretary]);
 
   const loadData = async () => {
     // Parallel fetch all data
@@ -115,7 +115,7 @@ const Finance = () => {
     loadData();
   };
 
-  if (loading || !isAdmin) {
+  if (loading || (!isAdmin && !isFinancialSecretary)) {
     return <Spinner size="lg" />;
   }
 
