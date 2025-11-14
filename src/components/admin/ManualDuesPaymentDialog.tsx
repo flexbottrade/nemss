@@ -108,19 +108,40 @@ export const ManualDuesPaymentDialog = ({
         .eq("id", existingPayment.id);
       error = updateError;
     } else {
-      // Create new payments for each selected month
+      // Create new payments for consecutive month groups
       if (selectedMonths.length === 0 || !monthlyAmount) {
         toast.error("Please select at least one month");
         setLoading(false);
         return;
       }
 
-      const payments = selectedMonths.map(month => ({
+      // Sort selected months
+      const sortedMonths = [...selectedMonths].sort((a, b) => a - b);
+      
+      // Group consecutive months
+      const paymentGroups: Array<{ start_month: number; months_paid: number }> = [];
+      let currentGroup = { start_month: sortedMonths[0], months_paid: 1 };
+      
+      for (let i = 1; i < sortedMonths.length; i++) {
+        if (sortedMonths[i] === sortedMonths[i - 1] + 1) {
+          // Consecutive month, extend current group
+          currentGroup.months_paid++;
+        } else {
+          // Non-consecutive, start new group
+          paymentGroups.push(currentGroup);
+          currentGroup = { start_month: sortedMonths[i], months_paid: 1 };
+        }
+      }
+      // Add the last group
+      paymentGroups.push(currentGroup);
+
+      // Create one payment record per consecutive group
+      const payments = paymentGroups.map(group => ({
         user_id: memberId,
-        amount: monthlyAmount,
+        amount: monthlyAmount * group.months_paid,
         start_year: parseInt(selectedYear),
-        start_month: month,
-        months_paid: 1,
+        start_month: group.start_month,
+        months_paid: group.months_paid,
         status: "approved",
         is_manually_updated: true,
       }));
