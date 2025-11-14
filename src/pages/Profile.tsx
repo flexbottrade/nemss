@@ -6,9 +6,11 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import BottomNav from "@/components/BottomNav";
 import { User, Award, Phone, Hash, Crown, Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { Spinner } from "@/components/ui/spinner";
 
 const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -28,6 +30,7 @@ const Profile = () => {
 
       setProfile(data);
     }
+    setLoading(false);
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,6 +96,10 @@ const Profile = () => {
       setUploading(false);
     }
   };
+
+  if (loading) {
+    return <Spinner size="lg" />;
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
