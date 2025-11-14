@@ -14,7 +14,7 @@ import { MemberPaymentsDialog } from "@/components/admin/MemberPaymentsDialog";
 
 const Members = () => {
   const navigate = useNavigate();
-  const { isAdmin, isSuperAdmin, loading } = useRole();
+  const { isAdmin, isSuperAdmin, isFinancialSecretary, loading } = useRole();
   const [members, setMembers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [membersWithOwing, setMembersWithOwing] = useState<any[]>([]);
@@ -309,18 +309,20 @@ const Members = () => {
                   </div>
 
                   <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedMember(member);
-                        setPaymentsDialog(true);
-                      }}
-                      className="flex-1 h-8 text-xs"
-                    >
-                      <DollarSign className="h-3 w-3 mr-1" />
-                      Payments
-                    </Button>
+                    {isFinancialSecretary && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedMember(member);
+                          setPaymentsDialog(true);
+                        }}
+                        className="flex-1 h-8 text-xs"
+                      >
+                        <DollarSign className="h-3 w-3 mr-1" />
+                        Payments
+                      </Button>
+                    )}
                     {isSuperAdmin && (
                       member.isAdmin ? (
                         <Button
