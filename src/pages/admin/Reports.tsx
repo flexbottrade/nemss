@@ -13,6 +13,7 @@ import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { Spinner } from "@/components/ui/spinner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { formatDateDDMMYYYY } from "@/lib/utils";
 
 const Reports = () => {
   const navigate = useNavigate();
@@ -165,15 +166,15 @@ const Reports = () => {
     doc.setFontSize(18);
     doc.text("NEMSS09 Set - Finance Report", 14, 20);
     doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    doc.text(`Generated: ${formatDateDDMMYYYY(new Date())}`, 14, 28);
     
     // Date range
     const dateRange = startDate && endDate 
-      ? `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`
+      ? `${formatDateDDMMYYYY(new Date(startDate))} - ${formatDateDDMMYYYY(new Date(endDate))}`
       : startDate 
-      ? `From ${new Date(startDate).toLocaleDateString()}`
+      ? `From ${formatDateDDMMYYYY(new Date(startDate))}`
       : endDate
-      ? `Until ${new Date(endDate).toLocaleDateString()}`
+      ? `Until ${formatDateDDMMYYYY(new Date(endDate))}`
       : 'All Time';
     
     doc.text(`Statement Period: ${dateRange}`, 14, 34);
@@ -195,7 +196,7 @@ const Reports = () => {
         startY: 72,
         head: [['Date', 'Payer', 'Description', 'Amount']],
         body: transactions.map(t => [
-          t.date.toLocaleDateString(),
+          formatDateDDMMYYYY(t.date),
           t.payer,
           t.description,
           `NGN ${t.amount.toLocaleString()}`
@@ -337,7 +338,7 @@ const Reports = () => {
     doc.setFontSize(18);
     doc.text("NEMSS09 Set - Member Report", 14, 20);
     doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    doc.text(`Generated: ${formatDateDDMMYYYY(new Date())}`, 14, 28);
     doc.text(`Filter: ${memberFilter === "all" ? "All Members" : memberFilter === "uptodate" ? "Up-to-date" : "Owing"}`, 14, 34);
     doc.text(`Total Members: ${filteredMembers.length}`, 14, 40);
 
@@ -415,9 +416,9 @@ const Reports = () => {
     doc.setFontSize(18);
     doc.text("NEMSS09 Set - Events Report", 14, 20);
     doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    doc.text(`Generated: ${formatDateDDMMYYYY(new Date())}`, 14, 28);
     if (startDate || endDate) {
-      const period = `Period: ${startDate ? new Date(startDate).toLocaleDateString() : 'Start'} - ${endDate ? new Date(endDate).toLocaleDateString() : 'Now'}`;
+      const period = `Period: ${startDate ? formatDateDDMMYYYY(new Date(startDate)) : 'Start'} - ${endDate ? formatDateDDMMYYYY(new Date(endDate)) : 'Now'}`;
       doc.text(period, 14, 34);
     }
 
@@ -444,7 +445,7 @@ const Reports = () => {
       doc.setFontSize(12);
       doc.text(`${event.title}`, 14, yPos);
       doc.setFontSize(10);
-      doc.text(`Date: ${new Date(event.event_date).toLocaleDateString()}`, 14, yPos + 6);
+      doc.text(`Date: ${formatDateDDMMYYYY(new Date(event.event_date))}`, 14, yPos + 6);
       doc.text(`Amount: NGN ${Number(event.amount).toLocaleString()}`, 14, yPos + 12);
       doc.text(`Total Collected: NGN ${totalCollected.toLocaleString()}`, 14, yPos + 18);
       doc.text(`Paid: ${paidMembers.length} | Unpaid: ${unpaidMembers.length}`, 14, yPos + 24);
