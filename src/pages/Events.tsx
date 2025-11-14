@@ -184,48 +184,56 @@ const Events = () => {
                     </div>
                   </div>
                   {eventPayment?.payment_proof_url && (
-                    <div className="flex gap-2 mt-2 pt-2 border-t border-border">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs flex items-center gap-1"
-                        onClick={() => window.open(eventPayment.payment_proof_url, "_blank")}
-                      >
-                        <Eye className="w-3 h-3" />
-                        View Proof
-                      </Button>
-                      {paymentStatus === "pending" && (
+                    <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-border">
+                      {eventPayment.status === "rejected" && eventPayment.admin_note && (
+                        <div className="mb-1 p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                          <p className="text-xs font-semibold text-destructive mb-1">Rejection Reason:</p>
+                          <p className="text-xs text-muted-foreground">{eventPayment.admin_note}</p>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-7 text-xs flex items-center gap-1"
-                          onClick={() => setUpdateProofDialog({ open: true, payment: eventPayment })}
+                          onClick={() => window.open(eventPayment.payment_proof_url, "_blank")}
                         >
-                          <RefreshCw className="w-3 h-3" />
-                          Update Proof
+                          <Eye className="w-3 h-3" />
+                          View Proof
                         </Button>
-                      )}
-                      {paymentStatus === "rejected" && (
-                        <>
+                        {paymentStatus === "pending" && (
                           <Button
                             size="sm"
-                            variant="default"
+                            variant="outline"
                             className="h-7 text-xs flex items-center gap-1"
-                            onClick={() => setUpdateRejectedDialog({ open: true, payment: eventPayment })}
+                            onClick={() => setUpdateProofDialog({ open: true, payment: eventPayment })}
                           >
                             <RefreshCw className="w-3 h-3" />
-                            Update & Resubmit
+                            Update Proof
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="h-7 text-xs"
-                            onClick={() => setDeleteDialog({ open: true, payment: eventPayment })}
-                          >
-                            Delete
-                          </Button>
-                        </>
-                      )}
+                        )}
+                        {paymentStatus === "rejected" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="h-7 text-xs flex items-center gap-1"
+                              onClick={() => setUpdateRejectedDialog({ open: true, payment: eventPayment })}
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              Update & Resubmit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-7 text-xs"
+                              onClick={() => setDeleteDialog({ open: true, payment: eventPayment })}
+                            >
+                              Delete
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   )}
                 </CardHeader>

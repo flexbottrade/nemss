@@ -333,6 +333,12 @@ const Payments = () => {
                           {new Date(payment.created_at).toLocaleDateString()}
                         </p>
                       </div>
+                      {payment.status === "rejected" && payment.admin_note && (
+                        <div className="mb-2 p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                          <p className="text-xs font-semibold text-destructive mb-1">Rejection Reason:</p>
+                          <p className="text-xs text-muted-foreground">{payment.admin_note}</p>
+                        </div>
+                      )}
                       {payment.payment_proof_url && (
                         <div className="flex gap-2">
                           <Button

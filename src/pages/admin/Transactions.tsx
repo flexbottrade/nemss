@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, X, ExternalLink } from "lucide-react";
+import { Check, X, ExternalLink, RotateCcw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
@@ -11,14 +11,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { RejectPaymentDialog } from "@/components/admin/RejectPaymentDialog";
 
 const Transactions = () => {
   const navigate = useNavigate();
-  const { isAdmin, loading } = useRole();
+  const { isAdmin, isFinancialSecretary, loading } = useRole();
   const [duesPayments, setDuesPayments] = useState<any[]>([]);
   const [eventPayments, setEventPayments] = useState<any[]>([]);
   const [donationPayments, setDonationPayments] = useState<any[]>([]);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [paymentToReject, setPaymentToReject] = useState<{ id: string; type: "dues" | "event" | "donation" } | null>(null);
   const [duesFilter, setDuesFilter] = useState<string>("all");
   const [eventFilter, setEventFilter] = useState<string>("all");
   const [donationFilter, setDonationFilter] = useState<string>("all");
@@ -64,7 +67,7 @@ const Transactions = () => {
     setDonationPayments((donations || []).sort(sortByStatus));
   };
 
-  const handleUpdatePayment = async (id: string, status: string, type: "dues" | "event" | "donation") => {
+  const handleUpdatePayment = async (id: string, status: string, type: "dues" | "event" | "donation", adminNote?: string) => {
     try {
       const table = type === "dues" ? "dues_payments" : type === "event" ? "event_payments" : "donation_payments";
       
@@ -72,6 +75,10 @@ const Transactions = () => {
         status,
         updated_at: new Date().toISOString()
       };
+
+      if (adminNote) {
+        updateData.admin_note = adminNote;
+      }
       
       const { data, error } = await supabase
         .from(table)
@@ -94,6 +101,18 @@ const Transactions = () => {
       await loadPayments();
     } catch (error: any) {
       toast.error(`Error: ${error.message || "Unknown error occurred"}`);
+    }
+  };
+
+  const handleRejectClick = (id: string, type: "dues" | "event" | "donation") => {
+    setPaymentToReject({ id, type });
+    setRejectDialogOpen(true);
+  };
+
+  const handleRejectConfirm = async (reason: string) => {
+    if (paymentToReject) {
+      await handleUpdatePayment(paymentToReject.id, "rejected", paymentToReject.type, reason);
+      setPaymentToReject(null);
     }
   };
 
@@ -152,7 +171,7 @@ const Transactions = () => {
                 View Proof
               </Button>
             )}
-            {payment.status === "pending" && (
+            {payment.status === "pending" && isFinancialSecretary && (
               <>
                 <Button
                   size="sm"
@@ -166,20 +185,21 @@ const Transactions = () => {
                   size="sm"
                   className="h-7 text-xs"
                   variant="destructive"
-                  onClick={() => setSelectedPayment({ ...payment, type, action: "rejected" })}
+                  onClick={() => handleRejectClick(payment.id, type)}
                 >
                   <X className="w-3 h-3 mr-1" />
                   Reject
                 </Button>
               </>
             )}
-            {payment.status !== "pending" && (
+            {payment.status !== "pending" && isFinancialSecretary && (
               <Button
                 size="sm"
                 className="h-7 text-xs"
                 variant="outline"
                 onClick={() => setSelectedPayment({ ...payment, type, action: "pending" })}
               >
+                <RotateCcw className="w-3 h-3 mr-1" />
                 Return to Pending
               </Button>
             )}
@@ -283,7 +303,7 @@ const Transactions = () => {
           </Tabs>
 
           <ConfirmationDialog
-            open={!!selectedPayment}
+            open={!!selectedPayment && selectedPayment.action !== "rejected"}
             onOpenChange={() => setSelectedPayment(null)}
             onConfirm={() =>
               selectedPayment &&
@@ -292,19 +312,21 @@ const Transactions = () => {
             title={
               selectedPayment?.action === "approved" 
                 ? "Approve Payment" 
-                : selectedPayment?.action === "rejected" 
-                ? "Reject Payment" 
                 : "Return to Pending"
             }
             description={
               selectedPayment?.action === "approved" 
                 ? "Are you sure you want to approve this payment?" 
-                : selectedPayment?.action === "rejected" 
-                ? "Are you sure you want to reject this payment?" 
                 : "Are you sure you want to return this payment to pending status?"
             }
             confirmText="Confirm"
             cancelText="Cancel"
+          />
+          <RejectPaymentDialog
+            open={rejectDialogOpen}
+            onOpenChange={setRejectDialogOpen}
+            onConfirm={handleRejectConfirm}
+            paymentType={paymentToReject?.type || ""}
           />
         </div>
       </main>
