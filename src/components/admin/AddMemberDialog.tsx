@@ -52,31 +52,24 @@ export const AddMemberDialog = ({ open, onOpenChange, onSuccess }: AddMemberDial
 
     setLoading(true);
     try {
-      // Create auth user with auto-confirm
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone_number: formData.phoneNumber,
-          },
-          emailRedirectTo: undefined, // Prevent email verification
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // Call edge function to create member with admin privileges
+      const { data, error } = await supabase.functions.invoke('create-member', {
+        body: {
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phoneNumber: formData.phoneNumber,
+        },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
       });
 
-      if (authError) throw authError;
-
-      // Auto-confirm the email by updating the profile
-      if (authData.user) {
-        const { error: updateError } = await supabase
-          .from("profiles")
-          .update({ email_verified: true })
-          .eq("id", authData.user.id);
-
-        if (updateError) throw updateError;
-      }
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast.success("Member added successfully!");
       setFormData({
