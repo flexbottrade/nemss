@@ -17,6 +17,8 @@ import { Spinner } from "@/components/ui/spinner";
 const Members = () => {
   const navigate = useNavigate();
   const { isAdmin, isSuperAdmin, isFinancialSecretary, loading } = useRole();
+  
+  console.log('Members page - isSuperAdmin:', isSuperAdmin, 'isAdmin:', isAdmin);
   const [dataLoading, setDataLoading] = useState(true);
   const [members, setMembers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -328,16 +330,17 @@ const Members = () => {
                         Payments
                       </Button>
                     )}
-                    {isSuperAdmin && (
-                      <>
+                    {isSuperAdmin ? (
+                      <div className="flex gap-2 flex-1">
                         <Button
                           variant="default"
                           size="sm"
                           onClick={() => handleAssignRole(member)}
-                          className="h-8 px-2"
+                          className="h-8 px-3 flex-1"
                           title="Assign Role"
                         >
-                          <UserCog className="h-3 w-3" />
+                          <UserCog className="h-3 w-3 mr-1" />
+                          <span className="text-xs">Assign</span>
                         </Button>
                         {member.isAdmin ? (
                           <Button
@@ -360,8 +363,8 @@ const Members = () => {
                             <UserCog className="h-3 w-3" />
                           </Button>
                         )}
-                      </>
-                    )}
+                      </div>
+                    ) : null}
                   </div>
                 </CardContent>
               </Card>
