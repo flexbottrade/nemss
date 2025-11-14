@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDateDDMMYY } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
 
 const Finance = () => {
@@ -215,7 +216,7 @@ const Finance = () => {
                       <p className="text-xs text-muted-foreground mt-1">{adj.reason}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         By: {adj.profiles?.first_name} {adj.profiles?.last_name} •{" "}
-                        {new Date(adj.created_at).toLocaleDateString()}
+                        {formatDateDDMMYY(adj.created_at)}
                       </p>
                     </div>
                     <div

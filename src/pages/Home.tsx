@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import logo from "@/assets/logo.png";
+import { formatDateDDMMYY } from "@/lib/utils";
 
 const Home = () => {
   const navigate = useNavigate();
@@ -161,7 +162,7 @@ const Home = () => {
                     <div className="flex items-center gap-2 text-primary">
                       <Calendar className="w-5 h-5" />
                       <span className="text-sm font-medium">
-                        {new Date(event.event_date).toLocaleDateString()}
+                        {formatDateDDMMYY(event.event_date)}
                       </span>
                     </div>
                     <h4 className="text-xl font-semibold text-foreground">{event.title}</h4>
