@@ -16,11 +16,17 @@ export const useRole = () => {
       }
 
       // Check if user is super admin
-      const { data: superAdminCheck } = await supabase.rpc('is_super_admin', { _user_id: user.id });
+      const { data: superAdminCheck, error: superAdminError } = await supabase.rpc('is_super_admin', { _user_id: user.id });
+      if (superAdminError) {
+        console.error('Error checking super admin status:', superAdminError);
+      }
       setIsSuperAdmin(superAdminCheck || false);
 
       // Check if user is financial secretary
-      const { data: financialSecretaryCheck } = await supabase.rpc('is_financial_secretary' as any, { _user_id: user.id });
+      const { data: financialSecretaryCheck, error: financialSecretaryError } = await supabase.rpc('is_financial_secretary' as any, { _user_id: user.id });
+      if (financialSecretaryError) {
+        console.error('Error checking financial secretary status:', financialSecretaryError);
+      }
       setIsFinancialSecretary(financialSecretaryCheck || false);
 
       const { data } = await supabase
