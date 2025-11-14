@@ -17,10 +17,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { Spinner } from "@/components/ui/spinner";
 
 const AdminEvents = () => {
   const navigate = useNavigate();
   const { isAdmin, loading } = useRole();
+  const [dataLoading, setDataLoading] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
@@ -51,6 +53,7 @@ const AdminEvents = () => {
       .order("event_date", { ascending: false });
 
     setEvents(data || []);
+    setDataLoading(false);
   };
 
   const handleSave = async () => {
@@ -108,7 +111,18 @@ const AdminEvents = () => {
   };
 
   if (loading || !isAdmin) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <Spinner size="lg" />;
+  }
+
+  if (dataLoading) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <AdminSidebar />
+        <main className="flex-1">
+          <Spinner size="lg" />
+        </main>
+      </div>
+    );
   }
 
   const getEventStatus = (eventDate: string) => {

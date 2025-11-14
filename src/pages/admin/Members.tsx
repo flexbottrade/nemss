@@ -11,10 +11,12 @@ import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { EditMemberNameDialog } from "@/components/admin/EditMemberNameDialog";
 import { MemberPaymentsDialog } from "@/components/admin/MemberPaymentsDialog";
+import { Spinner } from "@/components/ui/spinner";
 
 const Members = () => {
   const navigate = useNavigate();
   const { isAdmin, isSuperAdmin, isFinancialSecretary, loading } = useRole();
+  const [dataLoading, setDataLoading] = useState(true);
   const [members, setMembers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [membersWithOwing, setMembersWithOwing] = useState<any[]>([]);
@@ -131,6 +133,7 @@ const Members = () => {
     }) || [];
 
     setMembersWithOwing(membersData);
+    setDataLoading(false);
   };
 
   const handleMakeAdmin = async (userId: string, userName: string) => {
@@ -216,7 +219,18 @@ const Members = () => {
   );
 
   if (loading || !isAdmin) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <Spinner size="lg" />;
+  }
+
+  if (dataLoading) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <AdminSidebar />
+        <main className="flex-1">
+          <Spinner size="lg" />
+        </main>
+      </div>
+    );
   }
 
   return (
