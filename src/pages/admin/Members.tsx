@@ -11,6 +11,7 @@ import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { EditMemberNameDialog } from "@/components/admin/EditMemberNameDialog";
 import { MemberPaymentsDialog } from "@/components/admin/MemberPaymentsDialog";
+import { AssignRoleDialog } from "@/components/admin/AssignRoleDialog";
 import { Spinner } from "@/components/ui/spinner";
 
 const Members = () => {
@@ -33,6 +34,7 @@ const Members = () => {
   });
   const [editNameDialog, setEditNameDialog] = useState(false);
   const [paymentsDialog, setPaymentsDialog] = useState(false);
+  const [assignRoleDialog, setAssignRoleDialog] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
 
   useEffect(() => {
@@ -129,7 +131,8 @@ const Members = () => {
           .upsert({ user_id: userId, role: "admin" }, { onConflict: "user_id,role" });
 
         if (error) {
-          toast.error("Failed to make member admin");
+          console.error("Error making admin:", error);
+          toast.error(`Failed to make member admin: ${error.message}`);
         } else {
           toast.success(`${userName} is now an admin`);
           loadMembers();
@@ -137,6 +140,11 @@ const Members = () => {
         setConfirmDialog({ ...confirmDialog, open: false });
       },
     });
+  };
+
+  const handleAssignRole = (member: any) => {
+    setSelectedMember(member);
+    setAssignRoleDialog(true);
   };
 
   const handleRemoveAdmin = async (userId: string, userName: string) => {
@@ -152,7 +160,8 @@ const Members = () => {
           .eq("role", "admin");
 
         if (error) {
-          toast.error("Failed to remove admin access");
+          console.error("Error removing admin:", error);
+          toast.error(`Failed to remove admin access: ${error.message}`);
         } else {
           toast.success(`${userName} is no longer an admin`);
           loadMembers();
@@ -320,25 +329,38 @@ const Members = () => {
                       </Button>
                     )}
                     {isSuperAdmin && (
-                      member.isAdmin ? (
+                      <>
                         <Button
-                          variant="outline"
+                          variant="default"
                           size="sm"
-                          onClick={() => handleRemoveAdmin(member.id, `${member.first_name} ${member.last_name}`)}
+                          onClick={() => handleAssignRole(member)}
                           className="h-8 px-2"
-                        >
-                          <ShieldOff className="h-3 w-3" />
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleMakeAdmin(member.id, `${member.first_name} ${member.last_name}`)}
-                          className="h-8 px-2"
+                          title="Assign Role"
                         >
                           <UserCog className="h-3 w-3" />
                         </Button>
-                      )
+                        {member.isAdmin ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemoveAdmin(member.id, `${member.first_name} ${member.last_name}`)}
+                            className="h-8 px-2"
+                            title="Remove Admin"
+                          >
+                            <ShieldOff className="h-3 w-3" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleMakeAdmin(member.id, `${member.first_name} ${member.last_name}`)}
+                            className="h-8 px-2"
+                            title="Make Admin"
+                          >
+                            <UserCog className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
                 </CardContent>
@@ -372,6 +394,13 @@ const Members = () => {
       <MemberPaymentsDialog
         open={paymentsDialog}
         onOpenChange={setPaymentsDialog}
+        member={selectedMember}
+        onSuccess={loadMembers}
+      />
+
+      <AssignRoleDialog
+        open={assignRoleDialog}
+        onOpenChange={setAssignRoleDialog}
         member={selectedMember}
         onSuccess={loadMembers}
       />
