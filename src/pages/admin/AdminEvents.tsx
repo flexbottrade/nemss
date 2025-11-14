@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { Spinner } from "@/components/ui/spinner";
+import { formatDateDDMMYY } from "@/lib/utils";
 
 const AdminEvents = () => {
   const navigate = useNavigate();
@@ -174,7 +175,7 @@ const AdminEvents = () => {
                       )}
                       <p className="text-lg md:text-xl font-bold">₦{Number(event.amount).toLocaleString()}</p>
                       <p className="text-xs md:text-sm">
-                        Date: {new Date(event.event_date).toLocaleDateString()}
+                        Date: {formatDateDDMMYY(event.event_date)}
                       </p>
                     </div>
                     <Button

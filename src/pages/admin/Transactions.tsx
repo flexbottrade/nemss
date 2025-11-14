@@ -13,6 +13,7 @@ import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { RejectPaymentDialog } from "@/components/admin/RejectPaymentDialog";
 import { Spinner } from "@/components/ui/spinner";
+import { formatDateDDMMYY } from "@/lib/utils";
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -166,7 +167,7 @@ const Transactions = () => {
             )}
             <p className="text-base md:text-lg font-bold mt-1">₦{Number(payment.amount).toLocaleString()}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {new Date(payment.created_at).toLocaleDateString()}
+              {formatDateDDMMYY(payment.created_at)}
             </p>
             {payment.admin_note && (
               <p className="text-xs mt-1 p-1.5 bg-muted rounded">Note: {payment.admin_note}</p>

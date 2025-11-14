@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatDateDDMMYY } from "@/lib/utils";
 
 interface ManualEventPaymentDialogProps {
   open: boolean;
@@ -138,7 +139,7 @@ export const ManualEventPaymentDialog = ({
                         value={event.id}
                         disabled={isPaid && !existingPayment}
                       >
-                        {event.title} - {new Date(event.event_date).toLocaleDateString()}
+                        {event.title} - {formatDateDDMMYY(event.event_date)}
                         {isPaid && !existingPayment && " (Paid)"}
                       </SelectItem>
                     );

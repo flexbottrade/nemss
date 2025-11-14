@@ -15,6 +15,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { UpdatePaymentProofDialog } from "@/components/UpdatePaymentProofDialog";
 import { UpdateRejectedPaymentDialog } from "@/components/UpdateRejectedPaymentDialog";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { formatDateDDMMYY } from "@/lib/utils";
 
 const Payments = () => {
   const navigate = useNavigate();
@@ -326,7 +327,7 @@ const Payments = () => {
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-base md:text-lg font-bold text-accent">₦{Number(payment.amount).toLocaleString()}</p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(payment.created_at).toLocaleDateString()}
+                          {formatDateDDMMYY(payment.created_at)}
                         </p>
                       </div>
                       {payment.status === "rejected" && payment.admin_note && (

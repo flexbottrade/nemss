@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { DonationSection } from "@/components/DonationSection";
 import { useRole } from "@/hooks/useRole";
 import { Spinner } from "@/components/ui/spinner";
+import { formatDateDDMMYY } from "@/lib/utils";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -312,7 +313,7 @@ const Dashboard = () => {
                               : payment.donations?.title || 'Donation'}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {new Date(payment.created_at).toLocaleDateString()}
+                            {formatDateDDMMYY(payment.created_at)}
                           </p>
                         </div>
                         <div className="text-right">
