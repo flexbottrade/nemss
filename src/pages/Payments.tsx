@@ -60,23 +60,20 @@ const Payments = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Load variable dues settings
-    const { data: duesSettings } = await supabase
-      .from("variable_dues_settings")
-      .select("*")
-      .order("year", { ascending: true });
-    setVariableDues(duesSettings || []);
+    // Parallel fetch all data
+    const [duesSettingsResult, paymentsResult, accountsResult] = await Promise.all([
+      supabase.from("variable_dues_settings").select("*").order("year", { ascending: true }),
+      supabase.from("dues_payments").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("payment_accounts").select("*").order("created_at", { ascending: false })
+    ]);
 
-    const { data: paymentsData } = await supabase
-      .from("dues_payments")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-    setPayments(paymentsData || []);
+    setVariableDues(duesSettingsResult.data || []);
+    setPayments(paymentsResult.data || []);
+    setAccounts(accountsResult.data || []);
 
-    // Build set of paid months (approved or manually updated)
+    // Build set of paid months
     const paid = new Set<string>();
-    paymentsData?.forEach((payment) => {
+    paymentsResult.data?.forEach((payment) => {
       if (payment.status === "approved" || payment.is_manually_updated) {
         for (let i = 0; i < payment.months_paid; i++) {
           const month = ((payment.start_month - 1 + i) % 12) + 1;
@@ -86,13 +83,6 @@ const Payments = () => {
       }
     });
     setPaidMonths(paid);
-
-    const { data: accountsData } = await supabase
-      .from("payment_accounts")
-      .select("*")
-      .order("created_at", { ascending: false});
-    setAccounts(accountsData || []);
-
     setLoading(false);
   };
 

@@ -51,35 +51,25 @@ const Finance = () => {
   }, [isAdmin]);
 
   const loadData = async () => {
-    // Load adjustments
-    const { data: adjustmentsData } = await supabase
-      .from("finance_adjustments")
-      .select("*, profiles(first_name, last_name)")
-      .order("created_at", { ascending: false });
+    // Parallel fetch all data
+    const [adjustmentsResult, duesResult, eventsResult] = await Promise.all([
+      supabase.from("finance_adjustments").select("*, profiles(first_name, last_name)").order("created_at", { ascending: false }),
+      supabase.from("dues_payments").select("amount").eq("status", "approved"),
+      supabase.from("event_payments").select("amount").eq("status", "approved")
+    ]);
 
-    setAdjustments(adjustmentsData || []);
+    setAdjustments(adjustmentsResult.data || []);
 
-    // Calculate totals
-    const { data: approvedDues } = await supabase
-      .from("dues_payments")
-      .select("amount")
-      .eq("status", "approved");
-
-    const { data: approvedEvents } = await supabase
-      .from("event_payments")
-      .select("amount")
-      .eq("status", "approved");
-
-    const duesTotal = approvedDues?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-    const eventsTotal = approvedEvents?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+    const duesTotal = duesResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+    const eventsTotal = eventsResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
     const adjustmentsIncome =
-      adjustmentsData
+      adjustmentsResult.data
         ?.filter((a) => a.adjustment_type === "inflow" || a.adjustment_type === "income")
         .reduce((sum, a) => sum + Number(a.amount), 0) || 0;
 
     const adjustmentsExpense =
-      adjustmentsData
+      adjustmentsResult.data
         ?.filter((a) => a.adjustment_type === "outflow" || a.adjustment_type === "expense")
         .reduce((sum, a) => sum + Number(a.amount), 0) || 0;
 

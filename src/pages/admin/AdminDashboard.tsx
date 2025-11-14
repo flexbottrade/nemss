@@ -37,64 +37,49 @@ const AdminDashboard = () => {
   }, [isAdmin]);
 
   const loadStats = async () => {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("email_verified", true);
+    // Parallel fetch all data at once
+    const [
+      profilesResult,
+      pendingDuesResult,
+      pendingEventResult,
+      pendingDonationResult,
+      eventsResult,
+      approvedDuesResult,
+      approvedEventResult,
+      approvedDonationResult,
+      adjustmentsResult,
+      variableDuesResult,
+      allDuesPaymentsResult,
+      allEventPaymentsResult,
+      allEventsResult
+    ] = await Promise.all([
+      supabase.from("profiles").select("*").eq("email_verified", true),
+      supabase.from("dues_payments").select("*", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("event_payments").select("*", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("donation_payments").select("*", { count: "exact", head: true }).eq("status", "pending"),
+      supabase.from("events").select("*", { count: "exact", head: true }).gte("event_date", new Date().toISOString()),
+      supabase.from("dues_payments").select("amount").eq("status", "approved"),
+      supabase.from("event_payments").select("amount").eq("status", "approved"),
+      supabase.from("donation_payments").select("amount").eq("status", "approved"),
+      supabase.from("finance_adjustments").select("amount, adjustment_type"),
+      supabase.from("variable_dues_settings").select("*"),
+      supabase.from("dues_payments").select("*").eq("status", "approved"),
+      supabase.from("event_payments").select("*, events(amount, event_date)").eq("status", "approved"),
+      supabase.from("events").select("*")
+    ]);
 
+    const profiles = profilesResult.data;
     const membersCount = profiles?.length || 0;
-
-    // Count pending payments across all payment types
-    const { count: pendingDuesCount } = await supabase
-      .from("dues_payments")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending");
-
-    const { count: pendingEventCount } = await supabase
-      .from("event_payments")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending");
-
-    const { count: pendingDonationCount } = await supabase
-      .from("donation_payments")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending");
-
-    const totalPendingPayments = (pendingDuesCount || 0) + (pendingEventCount || 0) + (pendingDonationCount || 0);
-
-    const { count: eventsCount } = await supabase
-      .from("events")
-      .select("*", { count: "exact", head: true })
-      .gte("event_date", new Date().toISOString());
-
-    // Calculate total inflow (approved dues + event payments + donation payments)
-    const { data: approvedDues } = await supabase
-      .from("dues_payments")
-      .select("amount")
-      .eq("status", "approved");
-
-    const { data: approvedEventPayments } = await supabase
-      .from("event_payments")
-      .select("amount")
-      .eq("status", "approved");
-
-    const { data: approvedDonationPayments } = await supabase
-      .from("donation_payments")
-      .select("amount")
-      .eq("status", "approved");
-
-    const { data: adjustments } = await supabase
-      .from("finance_adjustments")
-      .select("amount, adjustment_type");
-
-    const totalDuesInflow = approvedDues?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-    const totalEventInflow = approvedEventPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-    const totalDonationInflow = approvedDonationPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+    const totalPendingPayments = (pendingDuesResult.count || 0) + (pendingEventResult.count || 0) + (pendingDonationResult.count || 0);
+    
+    const totalDuesInflow = approvedDuesResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+    const totalEventInflow = approvedEventResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+    const totalDonationInflow = approvedDonationResult.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
     
     let totalOutflow = 0;
     let totalInflow = totalDuesInflow + totalEventInflow + totalDonationInflow;
     
-    adjustments?.forEach(adj => {
+    adjustmentsResult.data?.forEach(adj => {
       if (adj.adjustment_type === 'expense') {
         totalOutflow += Number(adj.amount);
       } else if (adj.adjustment_type === 'income') {
@@ -105,36 +90,16 @@ const AdminDashboard = () => {
     const totalBalance = totalInflow - totalOutflow;
 
     // Calculate owing status for members
-    const { data: variableDues } = await supabase
-      .from("variable_dues_settings")
-      .select("*");
-
-    const { data: allDuesPayments } = await supabase
-      .from("dues_payments")
-      .select("*")
-      .eq("status", "approved");
-
-    const { data: allEventPayments } = await supabase
-      .from("event_payments")
-      .select("*, events(amount, event_date)")
-      .eq("status", "approved");
-
-    const { data: allEvents } = await supabase
-      .from("events")
-      .select("*");
-
     let owingCount = 0;
     let upToDateCount = 0;
-
     const today = new Date();
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth() + 1;
 
     profiles?.forEach(member => {
-      // Calculate dues owing from 2023 to current month
       let totalDuesExpected = 0;
       for (let year = 2023; year <= currentYear; year++) {
-        const dueSetting = variableDues?.find(d => d.year === year);
+        const dueSetting = variableDuesResult.data?.find(d => d.year === year);
         if (!dueSetting?.is_waived) {
           const monthlyAmount = dueSetting?.monthly_amount || 3000;
           const monthsInYear = year === currentYear ? currentMonth : 12;
@@ -142,15 +107,13 @@ const AdminDashboard = () => {
         }
       }
 
-      const memberDues = allDuesPayments?.filter(p => p.user_id === member.id) || [];
+      const memberDues = allDuesPaymentsResult.data?.filter(p => p.user_id === member.id) || [];
       const totalDuesPaid = memberDues.reduce((sum, p) => sum + Number(p.amount), 0);
       const duesOwing = totalDuesExpected - totalDuesPaid;
 
-      // Calculate events owing (all events, not just approved payments)
-      const memberEventPayments = allEventPayments?.filter(p => p.user_id === member.id) || [];
+      const memberEventPayments = allEventPaymentsResult.data?.filter(p => p.user_id === member.id) || [];
       const paidEventIds = memberEventPayments.map(p => p.event_id);
-      
-      const unpaidEvents = allEvents?.filter(event => !paidEventIds.includes(event.id)) || [];
+      const unpaidEvents = allEventsResult.data?.filter(event => !paidEventIds.includes(event.id)) || [];
       const totalEventsOwed = unpaidEvents.reduce((sum, e) => sum + Number(e.amount), 0);
 
       const totalOwing = (duesOwing > 0 ? duesOwing : 0) + (totalEventsOwed > 0 ? totalEventsOwed : 0);
@@ -166,7 +129,7 @@ const AdminDashboard = () => {
       totalMembers: membersCount,
       pendingPayments: totalPendingPayments,
       totalBalance,
-      activeEvents: eventsCount || 0,
+      activeEvents: eventsResult.count || 0,
       totalInflow,
       totalOutflow,
       membersOwing: owingCount,

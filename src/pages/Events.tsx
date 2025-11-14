@@ -10,6 +10,7 @@ import { EventPaymentModal } from "@/components/EventPaymentModal";
 import { UpdatePaymentProofDialog } from "@/components/UpdatePaymentProofDialog";
 import { UpdateRejectedPaymentDialog } from "@/components/UpdateRejectedPaymentDialog";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
+import { Spinner } from "@/components/ui/spinner";
 
 const Events = () => {
   const navigate = useNavigate();
@@ -47,18 +48,14 @@ const Events = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: eventsData } = await supabase
-      .from("events")
-      .select("*")
-      .order("event_date", { ascending: false });
-    setEvents(eventsData || []);
+    // Parallel fetch
+    const [eventsResult, paymentsResult] = await Promise.all([
+      supabase.from("events").select("*").order("event_date", { ascending: false }),
+      supabase.from("event_payments").select("*").eq("user_id", user.id)
+    ]);
 
-    const { data: paymentsData } = await supabase
-      .from("event_payments")
-      .select("*")
-      .eq("user_id", user.id);
-    setPayments(paymentsData || []);
-
+    setEvents(eventsResult.data || []);
+    setPayments(paymentsResult.data || []);
     setLoading(false);
   };
 
@@ -116,11 +113,7 @@ const Events = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-accent/20 border-t-accent"></div>
-      </div>
-    );
+    return <Spinner size="lg" />;
   }
 
   return (

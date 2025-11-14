@@ -8,6 +8,7 @@ import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { DonationSection } from "@/components/DonationSection";
 import { useRole } from "@/hooks/useRole";
+import { Spinner } from "@/components/ui/spinner";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -25,9 +26,10 @@ const Dashboard = () => {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    loadProfile();
-    loadStats();
-    loadPaymentHistory();
+    const initializeData = async () => {
+      await Promise.all([loadProfile(), loadStats(), loadPaymentHistory()]);
+    };
+    initializeData();
   }, []);
 
   const loadProfile = async () => {
@@ -51,28 +53,33 @@ const Dashboard = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Get approved or manually updated dues payments
-    const { data: duesPayments } = await supabase
-      .from("dues_payments")
-      .select("amount, status, is_manually_updated")
-      .eq("user_id", user.id)
-      .or("status.eq.approved,is_manually_updated.eq.true");
+    // Parallel fetch all data
+    const [duesPaymentsResult, eventPaymentsResult, variableDuesResult, eventsResult, userEventPaymentsResult] = await Promise.all([
+      supabase
+        .from("dues_payments")
+        .select("amount, status, is_manually_updated")
+        .eq("user_id", user.id)
+        .or("status.eq.approved,is_manually_updated.eq.true"),
+      supabase
+        .from("event_payments")
+        .select("amount, status, is_manually_updated")
+        .eq("user_id", user.id)
+        .or("status.eq.approved,is_manually_updated.eq.true"),
+      supabase.from("variable_dues_settings").select("*"),
+      supabase.from("events").select("id, amount, event_date").gte("event_date", new Date().toISOString()),
+      supabase.from("event_payments").select("event_id, status, is_manually_updated").eq("user_id", user.id)
+    ]);
 
-    // Get approved or manually updated event payments
-    const { data: eventPayments } = await supabase
-      .from("event_payments")
-      .select("amount, status, is_manually_updated")
-      .eq("user_id", user.id)
-      .or("status.eq.approved,is_manually_updated.eq.true");
+    const duesPayments = duesPaymentsResult.data;
+    const eventPayments = eventPaymentsResult.data;
+    const variableDues = variableDuesResult.data;
+    const allEvents = eventsResult.data;
+    const userEventPayments = userEventPaymentsResult.data;
 
     const totalDues = duesPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
     const totalEvents = eventPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
-    // Calculate outstanding dues (from 2023 to current month)
-    const { data: variableDues } = await supabase
-      .from("variable_dues_settings")
-      .select("*");
-    
+    // Calculate outstanding dues
     const today = new Date();
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth() + 1;
@@ -86,17 +93,6 @@ const Dashboard = () => {
         totalDuesExpected += monthlyAmount * monthsInYear;
       }
     }
-
-    // Calculate outstanding events (unpaid upcoming or active events)
-    const { data: allEvents } = await supabase
-      .from("events")
-      .select("id, amount, event_date")
-      .gte("event_date", new Date().toISOString());
-
-    const { data: userEventPayments } = await supabase
-      .from("event_payments")
-      .select("event_id, status, is_manually_updated")
-      .eq("user_id", user.id);
 
     const unpaidEvents = allEvents?.filter(event => {
       const payment = userEventPayments?.find(p => p.event_id === event.id);
@@ -118,28 +114,17 @@ const Dashboard = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: duesPayments } = await supabase
-      .from("dues_payments")
-      .select("*, created_at, amount, status")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    const { data: eventPayments } = await supabase
-      .from("event_payments")
-      .select("*, created_at, amount, status, events(title)")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    const { data: donationPayments } = await supabase
-      .from("donation_payments")
-      .select("*, created_at, amount, status, donations(title)")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+    // Parallel fetch payment history
+    const [duesResult, eventResult, donationResult] = await Promise.all([
+      supabase.from("dues_payments").select("*, created_at, amount, status").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("event_payments").select("*, created_at, amount, status, events(title)").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("donation_payments").select("*, created_at, amount, status, donations(title)").eq("user_id", user.id).order("created_at", { ascending: false })
+    ]);
 
     const allPayments = [
-      ...(duesPayments || []).map(p => ({ ...p, type: 'dues' as const })),
-      ...(eventPayments || []).map(p => ({ ...p, type: 'event' as const })),
-      ...(donationPayments || []).map(p => ({ ...p, type: 'donation' as const }))
+      ...(duesResult.data || []).map(p => ({ ...p, type: 'dues' as const })),
+      ...(eventResult.data || []).map(p => ({ ...p, type: 'event' as const })),
+      ...(donationResult.data || []).map(p => ({ ...p, type: 'donation' as const }))
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     setPaymentHistory(allPayments);
@@ -152,11 +137,7 @@ const Dashboard = () => {
   };
 
   if (!profile || loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/20 border-t-primary"></div>
-      </div>
-    );
+    return <Spinner size="lg" />;
   }
 
   const paginatedHistory = paymentHistory.slice(

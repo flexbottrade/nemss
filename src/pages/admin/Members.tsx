@@ -49,18 +49,22 @@ const Members = () => {
   }, [isAdmin]);
 
   const loadMembers = async () => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("email_verified", true)
-      .order("first_name", { ascending: true });
+    // Parallel fetch all required data
+    const [profilesResult, variableDuesResult, duesPaymentsResult, eventPaymentsResult, eventsResult] = await Promise.all([
+      supabase.from("profiles").select("*").eq("email_verified", true).order("first_name", { ascending: true }),
+      supabase.from("variable_dues_settings").select("*"),
+      supabase.from("dues_payments").select("*").eq("status", "approved"),
+      supabase.from("event_payments").select("*, events(amount, event_date)").eq("status", "approved"),
+      supabase.from("events").select("*")
+    ]);
 
-    if (error) {
+    const data = profilesResult.data;
+    if (profilesResult.error) {
       toast.error("Failed to load members");
       return;
     }
 
-    // Check admin status for each member
+    // Check admin status for all members in parallel
     const membersWithRoles = await Promise.all(
       (data || []).map(async (member) => {
         const { data: roleData } = await supabase
@@ -78,34 +82,14 @@ const Members = () => {
 
     setMembers(membersWithRoles);
 
-    // Calculate owing status
-    const { data: variableDues } = await supabase
-      .from("variable_dues_settings")
-      .select("*");
-
-    const { data: duesPayments } = await supabase
-      .from("dues_payments")
-      .select("*")
-      .eq("status", "approved");
-
-    const { data: eventPayments } = await supabase
-      .from("event_payments")
-      .select("*, events(amount, event_date)")
-      .eq("status", "approved");
-
-    const { data: allEvents } = await supabase
-      .from("events")
-      .select("*");
-
     const today = new Date();
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth() + 1;
 
     const membersData = data?.map(member => {
-      // Calculate dues owing from 2023 to current month
       let totalDuesExpected = 0;
       for (let year = 2023; year <= currentYear; year++) {
-        const dueSetting = variableDues?.find(d => d.year === year);
+        const dueSetting = variableDuesResult.data?.find(d => d.year === year);
         if (!dueSetting?.is_waived) {
           const monthlyAmount = dueSetting?.monthly_amount || 3000;
           const monthsInYear = year === currentYear ? currentMonth : 12;
@@ -113,15 +97,13 @@ const Members = () => {
         }
       }
 
-      const memberDues = duesPayments?.filter(p => p.user_id === member.id) || [];
+      const memberDues = duesPaymentsResult.data?.filter(p => p.user_id === member.id) || [];
       const totalDuesPaid = memberDues.reduce((sum, p) => sum + Number(p.amount), 0);
       const duesOwing = totalDuesExpected - totalDuesPaid;
 
-      // Calculate events owing (all events, not just paid ones)
-      const memberEventPayments = eventPayments?.filter(p => p.user_id === member.id) || [];
+      const memberEventPayments = eventPaymentsResult.data?.filter(p => p.user_id === member.id) || [];
       const paidEventIds = memberEventPayments.map(p => p.event_id);
-      
-      const unpaidEvents = allEvents?.filter(event => !paidEventIds.includes(event.id)) || [];
+      const unpaidEvents = eventsResult.data?.filter(event => !paidEventIds.includes(event.id)) || [];
       const totalEventsOwed = unpaidEvents.reduce((sum, e) => sum + Number(e.amount), 0);
 
       return {

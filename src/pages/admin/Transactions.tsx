@@ -42,20 +42,12 @@ const Transactions = () => {
   }, [isAdmin]);
 
   const loadPayments = async () => {
-    const { data: dues } = await supabase
-      .from("dues_payments")
-      .select("*, profiles(first_name, last_name, member_id)")
-      .order("created_at", { ascending: false });
-
-    const { data: events } = await supabase
-      .from("event_payments")
-      .select("*, profiles(first_name, last_name, member_id), events(title)")
-      .order("created_at", { ascending: false });
-
-    const { data: donations } = await supabase
-      .from("donation_payments")
-      .select("*, profiles(first_name, last_name, member_id), donations(title)")
-      .order("created_at", { ascending: false });
+    // Parallel fetch all payments
+    const [duesResult, eventsResult, donationsResult] = await Promise.all([
+      supabase.from("dues_payments").select("*, profiles(first_name, last_name, member_id)").order("created_at", { ascending: false }),
+      supabase.from("event_payments").select("*, profiles(first_name, last_name, member_id), events(title)").order("created_at", { ascending: false }),
+      supabase.from("donation_payments").select("*, profiles(first_name, last_name, member_id), donations(title)").order("created_at", { ascending: false })
+    ]);
 
     // Sort to show pending first
     const sortByStatus = (a: any, b: any) => {
@@ -64,9 +56,9 @@ const Transactions = () => {
       return 0;
     };
 
-    setDuesPayments((dues || []).sort(sortByStatus));
-    setEventPayments((events || []).sort(sortByStatus));
-    setDonationPayments((donations || []).sort(sortByStatus));
+    setDuesPayments((duesResult.data || []).sort(sortByStatus));
+    setEventPayments((eventsResult.data || []).sort(sortByStatus));
+    setDonationPayments((donationsResult.data || []).sort(sortByStatus));
     setDataLoading(false);
   };
 
