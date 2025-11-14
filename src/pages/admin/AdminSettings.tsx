@@ -9,10 +9,12 @@ import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 
 const AdminSettings = () => {
   const navigate = useNavigate();
   const { isAdmin, loading } = useRole();
+  const [dataLoading, setDataLoading] = useState(true);
   const [monthlyDues, setMonthlyDues] = useState("");
   const [settingsId, setSettingsId] = useState<string | null>(null);
 
@@ -36,6 +38,7 @@ const AdminSettings = () => {
       setMonthlyDues(data.monthly_dues_amount.toString());
       setSettingsId(data.id);
     }
+    setDataLoading(false);
   };
 
   const handleSave = async () => {
@@ -70,7 +73,18 @@ const AdminSettings = () => {
   };
 
   if (loading || !isAdmin) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <Spinner size="lg" />;
+  }
+
+  if (dataLoading) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <AdminSidebar />
+        <main className="flex-1">
+          <Spinner size="lg" />
+        </main>
+      </div>
+    );
   }
 
   return (

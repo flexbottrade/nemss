@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { Spinner } from "@/components/ui/spinner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -540,11 +541,7 @@ const Reports = () => {
   };
 
   if (loading || !isAdmin) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary/20 border-t-primary"></div>
-      </div>
-    );
+    return <Spinner size="lg" />;
   }
 
   return (

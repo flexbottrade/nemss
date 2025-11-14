@@ -16,10 +16,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { Spinner } from "@/components/ui/spinner";
 
 const PaymentAccounts = () => {
   const navigate = useNavigate();
   const { isAdmin, loading } = useRole();
+  const [dataLoading, setDataLoading] = useState(true);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<any>(null);
@@ -49,6 +51,7 @@ const PaymentAccounts = () => {
       .order("created_at", { ascending: false });
 
     setAccounts(data || []);
+    setDataLoading(false);
   };
 
   const handleSave = async () => {
@@ -114,7 +117,18 @@ const PaymentAccounts = () => {
   };
 
   if (loading || !isAdmin) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <Spinner size="lg" />;
+  }
+
+  if (dataLoading) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <AdminSidebar />
+        <main className="flex-1">
+          <Spinner size="lg" />
+        </main>
+      </div>
+    );
   }
 
   return (

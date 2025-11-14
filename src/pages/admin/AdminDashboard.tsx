@@ -6,10 +6,12 @@ import { Users, DollarSign, Calendar, TrendingUp, TrendingDown, UserCheck, UserX
 import { toast } from "sonner";
 import { useRole } from "@/hooks/useRole";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { Spinner } from "@/components/ui/spinner";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin, loading } = useRole();
+  const [dataLoading, setDataLoading] = useState(true);
   const [stats, setStats] = useState({
     totalMembers: 0,
     pendingPayments: 0,
@@ -170,10 +172,22 @@ const AdminDashboard = () => {
       membersOwing: owingCount,
       membersUpToDate: upToDateCount,
     });
+    setDataLoading(false);
   };
 
   if (loading || !isAdmin) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <Spinner size="lg" />;
+  }
+
+  if (dataLoading) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <AdminSidebar />
+        <main className="flex-1">
+          <Spinner size="lg" />
+        </main>
+      </div>
+    );
   }
 
   return (

@@ -12,10 +12,12 @@ import { Label } from "@/components/ui/label";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { RejectPaymentDialog } from "@/components/admin/RejectPaymentDialog";
+import { Spinner } from "@/components/ui/spinner";
 
 const Transactions = () => {
   const navigate = useNavigate();
   const { isAdmin, isFinancialSecretary, loading } = useRole();
+  const [dataLoading, setDataLoading] = useState(true);
   const [duesPayments, setDuesPayments] = useState<any[]>([]);
   const [eventPayments, setEventPayments] = useState<any[]>([]);
   const [donationPayments, setDonationPayments] = useState<any[]>([]);
@@ -65,6 +67,7 @@ const Transactions = () => {
     setDuesPayments((dues || []).sort(sortByStatus));
     setEventPayments((events || []).sort(sortByStatus));
     setDonationPayments((donations || []).sort(sortByStatus));
+    setDataLoading(false);
   };
 
   const handleUpdatePayment = async (id: string, status: string, type: "dues" | "event" | "donation", adminNote?: string) => {
@@ -117,7 +120,18 @@ const Transactions = () => {
   };
 
   if (loading || !isAdmin) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <Spinner size="lg" />;
+  }
+
+  if (dataLoading) {
+    return (
+      <div className="flex min-h-screen bg-background">
+        <AdminSidebar />
+        <main className="flex-1">
+          <Spinner size="lg" />
+        </main>
+      </div>
+    );
   }
 
   const renderPayment = (payment: any, type: "dues" | "event" | "donation") => (

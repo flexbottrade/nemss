@@ -11,6 +11,7 @@ import { Plus, Edit2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { Spinner } from "@/components/ui/spinner";
 
 const Donations = () => {
   const queryClient = useQueryClient();
@@ -132,7 +133,14 @@ const Donations = () => {
   };
 
   if (isLoading) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <div className="flex min-h-screen bg-background">
+        <AdminSidebar />
+        <main className="flex-1">
+          <Spinner size="lg" />
+        </main>
+      </div>
+    );
   }
 
   return (
