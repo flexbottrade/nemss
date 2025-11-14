@@ -126,6 +126,24 @@ const Transactions = () => {
     );
   }
 
+  const getMonthRangeForDues = (payment: any) => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const startMonth = payment.start_month - 1;
+    const endMonthIndex = (startMonth + payment.months_paid - 1) % 12;
+    const startYear = payment.start_year;
+    const endYear = payment.start_year + Math.floor((startMonth + payment.months_paid - 1) / 12);
+    
+    if (payment.months_paid === 1) {
+      return `${monthNames[startMonth]} ${startYear}`;
+    }
+    
+    if (startYear === endYear) {
+      return `${monthNames[startMonth]} - ${monthNames[endMonthIndex]} ${startYear}`;
+    } else {
+      return `${monthNames[startMonth]} ${startYear} - ${monthNames[endMonthIndex]} ${endYear}`;
+    }
+  };
+
   const renderPayment = (payment: any, type: "dues" | "event" | "donation") => (
     <Card key={payment.id} className="mb-2 md:mb-3">
       <CardContent className="pt-2 md:pt-3 p-2 md:p-3">
@@ -143,7 +161,7 @@ const Transactions = () => {
             )}
             {type === "dues" && (
               <p className="text-xs mt-0.5">
-                Period: {payment.start_month}/{payment.start_year} ({payment.months_paid} months)
+                Period: {getMonthRangeForDues(payment)}
               </p>
             )}
             <p className="text-base md:text-lg font-bold mt-1">₦{Number(payment.amount).toLocaleString()}</p>
