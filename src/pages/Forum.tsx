@@ -708,126 +708,144 @@ const Forum = () => {
       <div className="flex-1 overflow-hidden">
         {currentView === 'navigation' && (
           <div className="h-full overflow-y-auto">
-            <div className="container max-w-4xl mx-auto px-3 md:px-4 py-3 md:py-4">
-              <div className="grid gap-2 md:gap-3">
-                {/* Polls First */}
-                {polls.map(poll => (
-                  <Card
-                    key={poll.id}
-                    className="cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => handleNavigateToView('poll', poll.id)}
-                  >
-                    <CardContent className="p-3 md:p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-start gap-2 flex-1 min-w-0">
-                          <BarChart3 className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0 mt-0.5" />
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-sm md:text-base line-clamp-1">{poll.question}</h3>
-                            <p className="text-xs md:text-sm text-muted-foreground">
-                              {userVotes[poll.id] ? 'Voted' : 'Tap to vote'}
-                            </p>
+            <div className="container max-w-4xl mx-auto px-3 md:px-4 py-3 md:py-4 space-y-3 md:space-y-4">
+              {/* Polls Section */}
+              {polls.length > 0 && (
+                <div className="space-y-2">
+                  {polls.map(poll => (
+                    <Card
+                      key={poll.id}
+                      className="cursor-pointer hover:bg-accent hover:shadow-md transition-all border-l-4 border-l-primary"
+                      onClick={() => handleNavigateToView('poll', poll.id)}
+                    >
+                      <CardContent className="p-3 md:p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2 md:gap-3 flex-1 min-w-0">
+                            <BarChart3 className="h-5 w-5 md:h-6 md:w-6 text-primary shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-medium text-primary uppercase">Poll</span>
+                              </div>
+                              <h3 className="font-semibold text-sm md:text-base line-clamp-2 mb-1">{poll.question}</h3>
+                              <p className="text-xs text-muted-foreground">
+                                {userVotes[poll.id] ? '✓ Voted' : 'Tap to vote'}
+                              </p>
+                            </div>
+                            <ArrowLeft className="h-4 w-4 text-muted-foreground rotate-180 shrink-0" />
                           </div>
+                          {isAdmin && (
+                            <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 md:h-8 md:w-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingPoll({ ...poll, options: pollOptions[poll.id] || [] });
+                                  setShowPollDialog(true);
+                                }}
+                              >
+                                <Edit2 className="h-3 w-3 md:h-4 md:w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 md:h-8 md:w-8 text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeletingItem({ type: 'poll', id: poll.id });
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                        {isAdmin && (
-                          <div className="flex gap-1 shrink-0">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6 md:h-8 md:w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingPoll({ ...poll, options: pollOptions[poll.id] || [] });
-                                setShowPollDialog(true);
-                              }}
-                            >
-                              <Edit2 className="h-3 w-3 md:h-4 md:w-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6 md:h-8 md:w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeletingItem({ type: 'poll', id: poll.id });
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
 
-                {/* General Chat */}
-                <Card
-                  className="cursor-pointer hover:border-primary/50 transition-colors"
-                  onClick={() => handleNavigateToView('general')}
-                >
-                  <CardContent className="p-3 md:p-4">
-                    <div className="flex items-start gap-2">
-                      <MessageSquare className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm md:text-base">General</h3>
-                        <p className="text-xs md:text-sm text-muted-foreground">
-                          {posts.length} messages
-                        </p>
+              {/* General Discussion Card - Always visible */}
+              <Card
+                className="cursor-pointer hover:bg-accent hover:shadow-md transition-all"
+                onClick={() => handleNavigateToView('general')}
+              >
+                <CardContent className="p-3 md:p-4">
+                  <div className="flex items-start gap-2 md:gap-3">
+                    <MessageSquare className="h-5 w-5 md:h-6 md:w-6 text-primary shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-medium text-primary uppercase">Discussion</span>
                       </div>
+                      <h3 className="font-semibold text-sm md:text-base mb-1">General</h3>
+                      <p className="text-xs text-muted-foreground">
+                        {posts.length} messages • Open for all
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
+                    <ArrowLeft className="h-4 w-4 text-muted-foreground rotate-180 shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Topics */}
-                {topics.map(topic => (
-                  <Card
-                    key={topic.id}
-                    className="cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => handleNavigateToView('topic', topic.id)}
-                  >
-                    <CardContent className="p-3 md:p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-start gap-2 flex-1 min-w-0">
-                          <MessageSquare className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0 mt-0.5" />
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-sm md:text-base line-clamp-1">{topic.title}</h3>
-                            <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">
-                              {topic.description}
-                            </p>
+              {/* Topics Section */}
+              {topics.length > 0 && (
+                <div className="space-y-2">
+                  {topics.map(topic => (
+                    <Card
+                      key={topic.id}
+                      className="cursor-pointer hover:bg-accent hover:shadow-md transition-all"
+                      onClick={() => handleNavigateToView('topic', topic.id)}
+                    >
+                      <CardContent className="p-3 md:p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2 md:gap-3 flex-1 min-w-0">
+                            <MessageSquare className="h-5 w-5 md:h-6 md:w-6 text-primary shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-medium text-primary uppercase">Topic</span>
+                              </div>
+                              <h3 className="font-semibold text-sm md:text-base line-clamp-1 mb-1">{topic.title}</h3>
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {topic.description}
+                              </p>
+                            </div>
+                            <ArrowLeft className="h-4 w-4 text-muted-foreground rotate-180 shrink-0" />
                           </div>
+                          {isAdmin && (
+                            <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 md:h-8 md:w-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingTopic(topic);
+                                  setShowTopicDialog(true);
+                                }}
+                              >
+                                <Edit2 className="h-3 w-3 md:h-4 md:w-4" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6 md:h-8 md:w-8 text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeletingItem({ type: 'topic', id: topic.id });
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
-                        {isAdmin && (
-                          <div className="flex gap-1 shrink-0">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6 md:h-8 md:w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingTopic(topic);
-                                setShowTopicDialog(true);
-                              }}
-                            >
-                              <Edit2 className="h-3 w-3 md:h-4 md:w-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-6 w-6 md:h-8 md:w-8"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeletingItem({ type: 'topic', id: topic.id });
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
