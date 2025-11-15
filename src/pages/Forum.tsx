@@ -78,9 +78,14 @@ interface PollOption {
   votes_count: number;
 }
 
+type ViewType = 'navigation' | 'general' | 'topic' | 'poll';
+
 const Forum = () => {
   const navigate = useNavigate();
   const { isAdmin } = useRole();
+  const [currentView, setCurrentView] = useState<ViewType>('navigation');
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [selectedPollId, setSelectedPollId] = useState<string | null>(null);
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [topics, setTopics] = useState<ForumTopic[]>([]);
   const [polls, setPolls] = useState<ForumPoll[]>([]);
@@ -217,10 +222,10 @@ const Forum = () => {
   }, []);
 
   useEffect(() => {
-    if (posts.length > 0) {
+    if (posts.length > 0 && currentView !== 'navigation') {
       scrollToBottom(false);
     }
-  }, [posts.length]);
+  }, [posts.length, currentView]);
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -283,9 +288,7 @@ const Forum = () => {
       console.error("Failed to load polls:", error);
     } else {
       setPolls(data || []);
-      // Load options for each poll
       data?.forEach(poll => loadPollOptions(poll.id));
-      // Load user votes
       if (currentUserId) {
         loadUserVotes();
       }
@@ -344,7 +347,6 @@ const Forum = () => {
       console.error(error);
     } else {
       setPosts(data as any || []);
-      // Scroll to bottom after posts load
       setTimeout(() => scrollToBottom(false), 300);
     }
     setLoading(false);
@@ -390,7 +392,6 @@ const Forum = () => {
       setNewMessage("");
       setReplyingTo(null);
       toast.success("Message sent");
-      // Scroll to bottom after sending
       setTimeout(() => scrollToBottom(false), 200);
     }
     setSending(false);
@@ -423,6 +424,10 @@ const Forum = () => {
       console.error(error);
     } else {
       toast.success("Topic deleted");
+      if (selectedTopicId === deletingItem.id) {
+        setCurrentView('navigation');
+        setSelectedTopicId(null);
+      }
     }
     setDeletingItem(null);
   };
@@ -440,6 +445,10 @@ const Forum = () => {
       console.error(error);
     } else {
       toast.success("Poll deleted");
+      if (selectedPollId === deletingItem.id) {
+        setCurrentView('navigation');
+        setSelectedPollId(null);
+      }
     }
     setDeletingItem(null);
   };
@@ -502,9 +511,6 @@ const Forum = () => {
       if (searchTerm.length > 0 && !searchTerm.includes(' ')) {
         setMentionSearch(searchTerm);
         setShowMentionMenu(true);
-      } else if (searchTerm.length === 0) {
-        setMentionSearch("");
-        setShowMentionMenu(true);
       } else {
         setShowMentionMenu(false);
       }
@@ -517,7 +523,7 @@ const Forum = () => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
-  const formatTime = (dateString: string) => {
+  const getRelativeTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -554,10 +560,27 @@ const Forum = () => {
     return post.profiles.forum_username || `${post.profiles.first_name} ${post.profiles.last_name}`;
   };
 
-  const filteredUsers = allUsers.filter(u => 
-    u.username.toLowerCase().includes(mentionSearch.toLowerCase()) ||
-    u.name.toLowerCase().includes(mentionSearch.toLowerCase())
+  const filteredUsers = allUsers.filter(u =>
+    u.username.toLowerCase().includes(mentionSearch.toLowerCase())
   );
+
+  const handleNavigateToView = (type: ViewType, id?: string) => {
+    setCurrentView(type);
+    if (type === 'topic' && id) {
+      setSelectedTopicId(id);
+    } else if (type === 'poll' && id) {
+      setSelectedPollId(id);
+    }
+  };
+
+  const handleBackToNavigation = () => {
+    setCurrentView('navigation');
+    setSelectedTopicId(null);
+    setSelectedPollId(null);
+  };
+
+  const selectedTopic = topics.find(t => t.id === selectedTopicId);
+  const selectedPoll = polls.find(p => p.id === selectedPollId);
 
   if (loading) {
     return <Spinner />;
@@ -612,34 +635,41 @@ const Forum = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Header */}
+      {/* Header - Sticky */}
       <div className="shrink-0 sticky top-0 z-10 bg-background border-b border-border">
-        <div className="container max-w-4xl mx-auto px-4 py-4">
+        <div className="container max-w-4xl mx-auto px-3 md:px-4 py-2 md:py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate("/dashboard")}
+                className="h-8 w-8 md:h-10 md:w-10"
+                onClick={currentView === 'navigation' ? () => navigate("/dashboard") : handleBackToNavigation}
               >
-                <ArrowLeft className="h-5 w-5" />
+                <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
               </Button>
               <div>
-                <h1 className="text-xl font-bold">Member Forum</h1>
-                <p className="text-sm text-muted-foreground">
-                  {posts.length} {posts.length === 1 ? "message" : "messages"}
+                <h1 className="text-base md:text-xl font-bold">
+                  {currentView === 'navigation' && 'Member Forum'}
+                  {currentView === 'general' && 'General Chat'}
+                  {currentView === 'topic' && selectedTopic?.title}
+                  {currentView === 'poll' && 'Voting'}
+                </h1>
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  {currentView === 'navigation' ? `${posts.length} messages` : 
+                   currentView === 'poll' && selectedPoll ? selectedPoll.question : ''}
                 </p>
               </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  @{currentUsername || "Set Username"}
+                <Button variant="outline" size="sm" className="text-xs md:text-sm h-7 md:h-9">
+                  @{currentUsername || "Set"}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setShowUsernameDialog(true)}>
-                  <Edit2 className="mr-2 h-4 w-4" />
+                  <Edit2 className="mr-2 h-3 w-3 md:h-4 md:w-4" />
                   Edit Username
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -648,347 +678,373 @@ const Forum = () => {
         </div>
       </div>
 
-      {/* Topics and Polls - Scrollable Section */}
-      <div className="shrink-0 overflow-y-auto max-h-[30vh] border-b border-border">
-        {/* Topics Section */}
-        {(topics.length > 0 || isAdmin) && (
-          <div className="container max-w-4xl mx-auto px-3 md:px-4 pt-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold">Discussion Topics</h2>
-            </div>
-            {isAdmin && (
+      {/* Admin Actions - Sticky */}
+      {isAdmin && currentView === 'navigation' && (
+        <div className="shrink-0 sticky top-[52px] md:top-[64px] z-10 bg-background/95 backdrop-blur border-b border-border">
+          <div className="container max-w-4xl mx-auto px-3 md:px-4 py-2">
+            <div className="flex gap-2">
               <Button
                 size="sm"
                 onClick={() => setShowTopicDialog(true)}
-                className="gap-2"
+                className="gap-1 h-7 md:h-9 text-xs md:text-sm flex-1"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3 w-3 md:h-4 md:w-4" />
                 Add Topic
               </Button>
-            )}
-          </div>
-          <div className="space-y-2 mb-4">
-            {topics.map((topic) => (
-              <Card key={topic.id} className="border-l-4 border-l-primary">
-                <CardContent className="p-3 md:p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm md:text-base mb-1">{topic.title}</h3>
-                      <p className="text-xs md:text-sm text-muted-foreground whitespace-pre-wrap">
-                        {topic.description}
-                      </p>
-                      <p className="text-[10px] md:text-xs text-muted-foreground mt-2">
-                        Posted {formatTime(topic.created_at)}
-                      </p>
-                    </div>
-                    {isAdmin && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setEditingTopic(topic);
-                              setShowTopicDialog(true);
-                            }}
-                          >
-                            <Edit2 className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => setDeletingItem({ type: 'topic', id: topic.id })}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+              <Button
+                size="sm"
+                onClick={() => setShowPollDialog(true)}
+                className="gap-1 h-7 md:h-9 text-xs md:text-sm flex-1"
+              >
+                <Plus className="h-3 w-3 md:h-4 md:w-4" />
+                Add Poll
+              </Button>
+            </div>
           </div>
         </div>
       )}
 
-        {/* Polls Section */}
-        {(polls.length > 0 || isAdmin) && (
-          <div className="container max-w-4xl mx-auto px-3 md:px-4 pt-2 pb-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <h2 className="text-lg font-semibold">Active Polls</h2>
-            </div>
-            {isAdmin && (
-              <Button
-                size="sm"
-                onClick={() => setShowPollDialog(true)}
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Poll
-              </Button>
-            )}
-          </div>
-          <div className="space-y-3 mb-4">
-            {polls.map((poll) => {
-              const options = pollOptions[poll.id] || [];
-              const totalVotes = options.reduce((sum, opt) => sum + opt.votes_count, 0);
-              const userVoted = !!userVotes[poll.id];
-
-              return (
-                <Card key={poll.id} className="border-2 border-primary/20">
-                  <CardContent className="p-3 md:p-4">
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <h3 className="font-semibold text-sm md:text-base flex-1">{poll.question}</h3>
-                      {isAdmin && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setEditingPoll({ ...poll, options });
+      {/* Content Area */}
+      <div className="flex-1 overflow-hidden">
+        {currentView === 'navigation' && (
+          <div className="h-full overflow-y-auto">
+            <div className="container max-w-4xl mx-auto px-3 md:px-4 py-3 md:py-4">
+              <div className="grid gap-2 md:gap-3">
+                {/* Polls First */}
+                {polls.map(poll => (
+                  <Card
+                    key={poll.id}
+                    className="cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => handleNavigateToView('poll', poll.id)}
+                  >
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <BarChart3 className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-sm md:text-base line-clamp-1">{poll.question}</h3>
+                            <p className="text-xs md:text-sm text-muted-foreground">
+                              {userVotes[poll.id] ? 'Voted' : 'Tap to vote'}
+                            </p>
+                          </div>
+                        </div>
+                        {isAdmin && (
+                          <div className="flex gap-1 shrink-0">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 md:h-8 md:w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingPoll({ ...poll, options: pollOptions[poll.id] || [] });
                                 setShowPollDialog(true);
                               }}
                             >
-                              <Edit2 className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => setDeletingItem({ type: 'poll', id: poll.id })}
+                              <Edit2 className="h-3 w-3 md:h-4 md:w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 md:h-8 md:w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletingItem({ type: 'poll', id: poll.id });
+                              }}
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                              <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {/* General Chat */}
+                <Card
+                  className="cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => handleNavigateToView('general')}
+                >
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex items-start gap-2">
+                      <MessageSquare className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm md:text-base">General</h3>
+                        <p className="text-xs md:text-sm text-muted-foreground">
+                          {posts.length} messages
+                        </p>
+                      </div>
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Topics */}
+                {topics.map(topic => (
+                  <Card
+                    key={topic.id}
+                    className="cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => handleNavigateToView('topic', topic.id)}
+                  >
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <MessageSquare className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0 mt-0.5" />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-sm md:text-base line-clamp-1">{topic.title}</h3>
+                            <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">
+                              {topic.description}
+                            </p>
+                          </div>
+                        </div>
+                        {isAdmin && (
+                          <div className="flex gap-1 shrink-0">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 md:h-8 md:w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTopic(topic);
+                                setShowTopicDialog(true);
+                              }}
+                            >
+                              <Edit2 className="h-3 w-3 md:h-4 md:w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 md:h-8 md:w-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletingItem({ type: 'topic', id: topic.id });
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Poll View */}
+        {currentView === 'poll' && selectedPoll && (
+          <div className="h-full flex flex-col">
+            <div className="flex-1 overflow-y-auto">
+              <div className="container max-w-4xl mx-auto px-3 md:px-4 py-3 md:py-4">
+                <Card>
+                  <CardContent className="p-3 md:p-4">
+                    <h3 className="font-semibold text-sm md:text-base mb-3 md:mb-4">{selectedPoll.question}</h3>
                     <div className="space-y-2">
-                      {options.map((option) => {
-                        const percentage = totalVotes > 0 ? (option.votes_count / totalVotes) * 100 : 0;
-                        const isSelected = userVotes[poll.id] === option.id;
+                      {pollOptions[selectedPoll.id]?.map(option => {
+                        const totalVotes = pollOptions[selectedPoll.id]?.reduce((sum, opt) => sum + opt.votes_count, 0) || 0;
+                        const percentage = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
+                        const isSelected = userVotes[selectedPoll.id] === option.id;
+                        const userVoted = !!userVotes[selectedPoll.id];
 
                         return (
                           <div key={option.id}>
                             <Button
                               variant={isSelected ? "default" : "outline"}
-                              className="w-full justify-start mb-1 text-left h-auto py-2 px-3"
-                              onClick={() => !userVoted && handleVote(poll.id, option.id)}
+                              className="w-full justify-start h-auto py-2 md:py-3 text-xs md:text-sm"
+                              onClick={() => handleVote(selectedPoll.id, option.id)}
                               disabled={userVoted}
                             >
-                              <span className="flex-1 text-xs md:text-sm">{option.option_text}</span>
-                              {userVoted && (
-                                <span className="ml-2 text-xs font-semibold">
-                                  {option.votes_count} ({percentage.toFixed(1)}%)
-                                </span>
-                              )}
+                              <div className="flex-1 text-left">
+                                <div className="font-medium">{option.option_text}</div>
+                                {userVoted && (
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    {option.votes_count} votes ({percentage}%)
+                                  </div>
+                                )}
+                              </div>
                             </Button>
                             {userVoted && (
-                              <Progress value={percentage} className="h-1" />
+                              <Progress value={percentage} className="h-1 md:h-2 mt-1" />
                             )}
                           </div>
                         );
                       })}
                     </div>
-                    <p className="text-[10px] md:text-xs text-muted-foreground mt-3">
-                      {totalVotes} total {totalVotes === 1 ? 'vote' : 'votes'}
-                      {userVoted && " • You voted"}
-                    </p>
+                    {userVotes[selectedPoll.id] && (
+                      <p className="text-xs text-muted-foreground mt-3 md:mt-4">
+                        Total votes: {pollOptions[selectedPoll.id]?.reduce((sum, opt) => sum + opt.votes_count, 0) || 0}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
-              );
-              })}
+              </div>
             </div>
           </div>
         )}
-      </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-hidden">
-        <div 
-          ref={messagesContainerRef}
-          className="container max-w-4xl mx-auto px-3 md:px-4 h-full overflow-y-auto"
-        >
-          <div className="py-4 md:py-6 space-y-3 md:space-y-4">
-          {posts.length === 0 ? (
-            <Card className="border-none shadow-sm">
-              <CardContent className="py-8 md:py-12 text-center">
-                <p className="text-muted-foreground text-sm md:text-base">
-                  No messages yet. Be the first to start a conversation!
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            posts.map((post) => {
-              const isOwnPost = post.user_id === currentUserId;
-              const userColor = getUserColor(post.user_id);
-              return (
-                <div
-                  key={post.id}
-                  className={`flex gap-2 md:gap-3 ${isOwnPost ? "flex-row-reverse" : ""}`}
-                >
-                  <Avatar 
-                    className="h-8 w-8 md:h-10 md:w-10 shrink-0 ring-2 ring-offset-1"
-                    style={{ "--tw-ring-color": userColor } as React.CSSProperties}
-                  >
-                    <AvatarFallback 
-                      className="text-white text-xs md:text-sm font-semibold"
-                      style={{ backgroundColor: userColor }}
-                    >
-                      {getInitials(post.profiles.first_name, post.profiles.last_name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className={`flex-1 max-w-[80%] md:max-w-[70%] ${isOwnPost ? "items-end" : ""}`}>
-                    <div className={`flex items-baseline gap-2 mb-1 ${isOwnPost ? "flex-row-reverse" : ""}`}>
-                      <span 
-                        className="font-bold text-xs md:text-sm"
-                        style={{ color: userColor }}
+        {/* General or Topic Chat View */}
+        {(currentView === 'general' || currentView === 'topic') && (
+          <div className="h-full flex flex-col">
+            {/* Topic Description */}
+            {currentView === 'topic' && selectedTopic && (
+              <div className="shrink-0 border-b border-border bg-muted/30">
+                <div className="container max-w-4xl mx-auto px-3 md:px-4 py-2 md:py-3">
+                  <p className="text-xs md:text-sm text-muted-foreground">{selectedTopic.description}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Messages */}
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
+              <div className="container max-w-4xl mx-auto px-3 md:px-4 py-3 md:py-4">
+                <div className="space-y-3 md:space-y-4">
+                  {posts.map((post) => {
+                    const isOwnPost = post.user_id === currentUserId;
+                    const userColor = getUserColor(post.user_id);
+                    return (
+                      <div
+                        key={post.id}
+                        className={`flex gap-2 ${isOwnPost ? 'flex-row-reverse' : 'flex-row'}`}
                       >
-                        @{getDisplayName(post)}
-                      </span>
-                      <span className="text-[10px] md:text-xs text-muted-foreground">
-                        {formatTime(post.created_at)}
-                      </span>
-                    </div>
-                    <div className={`relative group ${isOwnPost ? "flex flex-col items-end" : ""}`}>
-                      <Card 
-                        className="border-2 shadow-sm"
-                        style={{ 
-                          borderColor: userColor,
-                          backgroundColor: isOwnPost ? userColor : "hsl(var(--card))"
-                        }}
-                      >
-                        <CardContent className="p-2.5 md:p-3">
-                          {post.reply_to && post.reply_post && (
-                            <div className="mb-2 p-2 bg-black/10 rounded border-l-2 border-white/30">
-                              <p className="text-[10px] md:text-xs font-semibold opacity-80">
+                        <Avatar className="h-7 w-7 md:h-9 md:w-9 shrink-0">
+                          <AvatarFallback className="text-xs md:text-sm" style={{ backgroundColor: userColor }}>
+                            {getInitials(post.profiles.first_name, post.profiles.last_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div className={`flex-1 min-w-0 ${isOwnPost ? 'items-end' : 'items-start'} flex flex-col`}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-xs md:text-sm" style={{ color: userColor }}>
+                              @{getDisplayName(post)}
+                            </span>
+                            <span className="text-[10px] md:text-xs text-muted-foreground">
+                              {getRelativeTime(post.created_at)}
+                            </span>
+                          </div>
+                          
+                          {post.reply_post && (
+                            <div className={`bg-muted/50 border-l-2 border-primary px-2 py-1 mb-1 rounded text-xs ${isOwnPost ? 'ml-auto' : 'mr-auto'}`}>
+                              <div className="font-semibold text-[10px] md:text-xs">
                                 @{post.reply_post.profiles.forum_username || 
                                   `${post.reply_post.profiles.first_name} ${post.reply_post.profiles.last_name}`}
-                              </p>
-                              <p className="text-[10px] md:text-xs opacity-70 line-clamp-2">
+                              </div>
+                              <div className="text-[10px] md:text-xs text-muted-foreground line-clamp-2">
                                 {post.reply_post.message}
-                              </p>
+                              </div>
                             </div>
                           )}
-                          <p 
-                            className="text-xs md:text-sm whitespace-pre-wrap break-words leading-relaxed"
-                            style={{ color: isOwnPost ? "white" : "hsl(var(--foreground))" }}
-                          >
-                            {renderMessage(post.message)}
-                          </p>
-                        </CardContent>
-                      </Card>
-                      <div className={`absolute ${isOwnPost ? "-left-8 md:-left-10" : "-right-8 md:-right-10"} top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1`}>
-                        {!isOwnPost && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 md:h-8 md:w-8"
-                            onClick={() => setReplyingTo(post)}
-                          >
-                            <Reply className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                          </Button>
-                        )}
-                        {isOwnPost && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 md:h-8 md:w-8"
-                            onClick={() => handleDeletePost(post.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-destructive" />
-                          </Button>
-                        )}
+                          
+                          <Card className={`max-w-[85%] md:max-w-[75%] ${isOwnPost ? 'ml-auto' : 'mr-auto'}`}>
+                            <CardContent className="p-2 md:p-3">
+                              <p className="text-xs md:text-sm break-words" style={{ color: userColor }}>
+                                {renderMessage(post.message)}
+                              </p>
+                            </CardContent>
+                          </Card>
+
+                          <div className="flex gap-1 mt-1">
+                            {!isOwnPost && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-5 w-5 md:h-6 md:w-6"
+                                onClick={() => setReplyingTo(post)}
+                              >
+                                <Reply className="h-3 w-3 md:h-4 md:w-4" />
+                              </Button>
+                            )}
+                            {isOwnPost && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-5 w-5 md:h-6 md:w-6"
+                                onClick={() => handleDeletePost(post.id)}
+                              >
+                                <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
+              </div>
+            </div>
+
+            {/* Input Area */}
+            <div className="shrink-0 border-t border-border bg-background">
+              <div className="container max-w-4xl mx-auto px-3 md:px-4 py-2 md:py-3">
+                {replyingTo && (
+                  <div className="mb-2 bg-muted/50 border-l-2 border-primary px-2 py-1 rounded text-xs flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="font-semibold text-xs">
+                        Replying to @{getDisplayName(replyingTo)}
+                      </div>
+                      <div className="text-[10px] md:text-xs text-muted-foreground line-clamp-1">
+                        {replyingTo.message}
                       </div>
                     </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-4 w-4 md:h-5 md:w-5"
+                      onClick={() => setReplyingTo(null)}
+                    >
+                      <X className="h-3 w-3 md:h-4 md:w-4" />
+                    </Button>
                   </div>
-                </div>
-              );
-              })
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-      </div>
+                )}
 
-      {/* Message Input */}
-      <div className="shrink-0 bg-background border-t border-border shadow-lg">
-        <div className="container max-w-4xl mx-auto px-3 md:px-4 py-3 md:py-4">
-          {replyingTo && (
-            <div className="mb-2 p-2 bg-muted rounded-lg flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-primary">
-                  Replying to @{getDisplayName(replyingTo)}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {replyingTo.message}
-                </p>
+                {showMentionMenu && filteredUsers.length > 0 && (
+                  <Card className="mb-2 max-h-32 md:max-h-40 overflow-y-auto">
+                    <CardContent className="p-1 md:p-2">
+                      {filteredUsers.slice(0, 5).map(user => (
+                        <Button
+                          key={user.id}
+                          variant="ghost"
+                          className="w-full justify-start h-auto py-1 text-xs md:text-sm"
+                          onClick={() => handleMention(user.username)}
+                        >
+                          <div>
+                            <div className="font-medium">@{user.username}</div>
+                            <div className="text-[10px] md:text-xs text-muted-foreground">{user.name}</div>
+                          </div>
+                        </Button>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="flex gap-2">
+                  <Textarea
+                    ref={textareaRef}
+                    value={newMessage}
+                    onChange={handleTextareaChange}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder="Type @ to mention someone..."
+                    className="resize-none text-xs md:text-sm min-h-[60px] md:min-h-[80px]"
+                  />
+                  <Button
+                    size="icon"
+                    onClick={handleSendMessage}
+                    disabled={sending || !newMessage.trim()}
+                    className="h-[60px] w-[60px] md:h-[80px] md:w-[80px] shrink-0"
+                  >
+                    <Send className="h-4 w-4 md:h-5 md:w-5" />
+                  </Button>
+                </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 shrink-0"
-                onClick={() => setReplyingTo(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
-          )}
-          {showMentionMenu && filteredUsers.length > 0 && (
-            <div className="mb-2 p-2 bg-card rounded-lg border shadow-lg max-h-40 overflow-y-auto">
-              {filteredUsers.map(user => (
-                <button
-                  key={user.id}
-                  className="w-full text-left p-2 hover:bg-muted rounded text-sm"
-                  onClick={() => handleMention(user.username)}
-                >
-                  <span className="font-semibold">@{user.username}</span>
-                  <span className="text-muted-foreground ml-2 text-xs">{user.name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-2">
-            <Textarea
-              ref={textareaRef}
-              placeholder="Type your message... (use @ to mention)"
-              value={newMessage}
-              onChange={handleTextareaChange}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-              className="min-h-[52px] md:min-h-[60px] max-h-[100px] md:max-h-[120px] resize-none text-sm md:text-base"
-              maxLength={1000}
-            />
-            <Button
-              onClick={handleSendMessage}
-              disabled={sending || !newMessage.trim()}
-              size="icon"
-              className="h-[52px] w-[52px] md:h-[60px] md:w-[60px] shrink-0"
-            >
-              <Send className="h-4 w-4 md:h-5 md:w-5" />
-            </Button>
           </div>
-          <p className="text-[10px] md:text-xs text-muted-foreground mt-1 text-right">
-            {newMessage.length}/1000
-          </p>
-        </div>
+        )}
       </div>
 
       <BottomNav />
