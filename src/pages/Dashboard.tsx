@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Wallet, Calendar, TrendingUp, LogOut, Gift, Shield } from "lucide-react";
+import { Wallet, Calendar, TrendingUp, LogOut, Gift, Shield, MessageSquare } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { DonationSection } from "@/components/DonationSection";
@@ -274,6 +274,29 @@ const Dashboard = () => {
             </div>
           </Button>
         </div>
+
+        {/* Forum Button */}
+        <Card className="glass-card mt-4 md:mt-6">
+          <CardHeader className="p-3 md:p-4">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              <CardTitle className="text-base md:text-xl font-bold">Member Forum</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-3 md:p-4 pt-0">
+            <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
+              Join the conversation with other members. Share updates, ask questions, and stay connected.
+            </p>
+            <Button
+              onClick={() => navigate("/forum")}
+              className="w-full"
+              size="lg"
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Open Forum
+            </Button>
+          </CardContent>
+        </Card>
 
         <DonationSection />
 
