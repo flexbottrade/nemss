@@ -494,6 +494,7 @@ export type Database = {
           id: string
           message: string
           reply_to: string | null
+          topic_id: string | null
           updated_at: string
           user_id: string
         }
@@ -502,6 +503,7 @@ export type Database = {
           id?: string
           message: string
           reply_to?: string | null
+          topic_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -510,6 +512,7 @@ export type Database = {
           id?: string
           message?: string
           reply_to?: string | null
+          topic_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -519,6 +522,13 @@ export type Database = {
             columns: ["reply_to"]
             isOneToOne: false
             referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_posts_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "forum_topics"
             referencedColumns: ["id"]
           },
           {
