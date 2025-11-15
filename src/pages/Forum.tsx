@@ -86,6 +86,7 @@ const Forum = () => {
   const [elections, setElections] = useState<Election[]>([]);
   const [nominees, setNominees] = useState<Record<string, Nominee[]>>({});
   const [userVotes, setUserVotes] = useState<Record<string, string>>({});
+  const [concluding, setConcluding] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -187,12 +188,33 @@ const Forum = () => {
       )
       .subscribe();
 
+    const votesChannel = supabase
+      .channel('votes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'votes'
+        },
+        (payload) => {
+          if (payload.new && 'voter_id' in payload.new && (payload.new as any).voter_id === currentUserId) {
+            loadUserVotes();
+          }
+          if (payload.new && 'election_id' in payload.new) {
+            loadNominees((payload.new as any).election_id);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       localStorage.setItem(LAST_VISIT_KEY, new Date().toISOString());
       supabase.removeChannel(postsChannel);
       supabase.removeChannel(topicsChannel);
       supabase.removeChannel(electionsChannel);
       supabase.removeChannel(nomineesChannel);
+      supabase.removeChannel(votesChannel);
     };
   }, []);
 
@@ -452,6 +474,12 @@ const Forum = () => {
   const handleVote = async (electionId: string, nomineeId: string) => {
     if (!currentUserId) return;
 
+    const election = elections.find(e => e.id === electionId);
+    if (election?.status === 'concluded' || (election && new Date(election.deadline) < new Date())) {
+      toast.error("This election has concluded");
+      return;
+    }
+
     const hasVoted = userVotes[electionId];
     if (hasVoted) {
       toast.error("You have already voted in this election");
@@ -467,13 +495,36 @@ const Forum = () => {
       });
 
     if (error) {
-      toast.error("Failed to vote");
+      if (error.code === '23505') {
+        toast.error("You have already voted in this election");
+        await loadUserVotes();
+      } else {
+        toast.error("Failed to cast vote");
+        console.error(error);
+      }
+    } else {
+      toast.success("Vote cast successfully!");
+      setUserVotes(prev => ({ ...prev, [electionId]: nomineeId }));
+    }
+  };
+
+  const handleConcludeElection = async (electionId: string) => {
+    if (!isAdmin) return;
+    
+    setConcluding(true);
+    const { error } = await supabase
+      .from("elections")
+      .update({ status: "concluded" })
+      .eq("id", electionId);
+
+    if (error) {
+      toast.error("Failed to conclude election");
       console.error(error);
     } else {
-      toast.success("Vote cast successfully");
-      setUserVotes(prev => ({ ...prev, [electionId]: nomineeId }));
-      loadNominees(electionId);
+      toast.success("Election concluded");
+      loadElections();
     }
+    setConcluding(false);
   };
 
   const handleMention = (username: string) => {
