@@ -11,6 +11,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { formatDateDDMMYY } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
+const STORAGE_KEY = "forum_scroll_position";
+
 interface ForumPost {
   id: string;
   user_id: string;
@@ -31,9 +33,47 @@ const Forum = () => {
   const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const saveScrollPosition = () => {
+    if (messagesContainerRef.current) {
+      localStorage.setItem(STORAGE_KEY, messagesContainerRef.current.scrollTop.toString());
+    }
+  };
+
+  const restoreScrollPosition = () => {
+    const savedPosition = localStorage.getItem(STORAGE_KEY);
+    if (savedPosition && messagesContainerRef.current && !shouldScrollToBottom) {
+      messagesContainerRef.current.scrollTop = parseInt(savedPosition);
+    } else {
+      scrollToBottom();
+    }
+  };
+
+  const getUserColor = (userId: string): string => {
+    const colors = [
+      "hsl(346, 77%, 50%)", // vibrant red
+      "hsl(262, 83%, 58%)", // purple
+      "hsl(221, 83%, 53%)", // blue
+      "hsl(142, 71%, 45%)", // green
+      "hsl(24, 95%, 53%)",  // orange
+      "hsl(280, 67%, 55%)", // violet
+      "hsl(173, 80%, 40%)", // teal
+      "hsl(48, 96%, 53%)",  // yellow
+      "hsl(339, 90%, 51%)", // pink
+      "hsl(199, 89%, 48%)", // cyan
+    ];
+    
+    let hash = 0;
+    for (let i = 0; i < userId.length; i++) {
+      hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
   };
 
   useEffect(() => {
@@ -50,19 +90,30 @@ const Forum = () => {
           schema: 'public',
           table: 'forum_posts'
         },
-        () => {
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setShouldScrollToBottom(true);
+          }
           loadPosts();
         }
       )
       .subscribe();
 
     return () => {
+      saveScrollPosition();
       supabase.removeChannel(channel);
     };
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
+    if (posts.length > 0) {
+      if (shouldScrollToBottom) {
+        scrollToBottom();
+        setShouldScrollToBottom(false);
+      } else {
+        restoreScrollPosition();
+      }
+    }
   }, [posts]);
 
   const getCurrentUser = async () => {
@@ -121,6 +172,7 @@ const Forum = () => {
       console.error(error);
     } else {
       setNewMessage("");
+      setShouldScrollToBottom(true);
       toast.success("Message sent");
     }
     setSending(false);
@@ -187,12 +239,17 @@ const Forum = () => {
       </div>
 
       {/* Messages */}
-      <div className="container max-w-4xl mx-auto px-4 py-6">
-        <div className="space-y-4 mb-4">
+      <div 
+        ref={messagesContainerRef}
+        className="container max-w-4xl mx-auto px-3 md:px-4 py-4 md:py-6 overflow-y-auto"
+        style={{ height: "calc(100vh - 220px)" }}
+        onScroll={saveScrollPosition}
+      >
+        <div className="space-y-3 md:space-y-4 mb-4">
           {posts.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">
+            <Card className="border-none shadow-sm">
+              <CardContent className="py-8 md:py-12 text-center">
+                <p className="text-muted-foreground text-sm md:text-base">
                   No messages yet. Be the first to start a conversation!
                 </p>
               </CardContent>
@@ -200,29 +257,48 @@ const Forum = () => {
           ) : (
             posts.map((post) => {
               const isOwnPost = post.user_id === currentUserId;
+              const userColor = getUserColor(post.user_id);
               return (
                 <div
                   key={post.id}
-                  className={`flex gap-3 ${isOwnPost ? "flex-row-reverse" : ""}`}
+                  className={`flex gap-2 md:gap-3 ${isOwnPost ? "flex-row-reverse" : ""}`}
                 >
-                  <Avatar className="h-10 w-10 shrink-0">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                  <Avatar 
+                    className="h-8 w-8 md:h-10 md:w-10 shrink-0 ring-2 ring-offset-1"
+                    style={{ "--tw-ring-color": userColor } as React.CSSProperties}
+                  >
+                    <AvatarFallback 
+                      className="text-white text-xs md:text-sm font-semibold"
+                      style={{ backgroundColor: userColor }}
+                    >
                       {getInitials(post.profiles.first_name, post.profiles.last_name)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className={`flex-1 max-w-[85%] md:max-w-[70%] ${isOwnPost ? "items-end" : ""}`}>
+                  <div className={`flex-1 max-w-[80%] md:max-w-[70%] ${isOwnPost ? "items-end" : ""}`}>
                     <div className={`flex items-baseline gap-2 mb-1 ${isOwnPost ? "flex-row-reverse" : ""}`}>
-                      <span className="font-semibold text-sm">
+                      <span 
+                        className="font-bold text-xs md:text-sm"
+                        style={{ color: userColor }}
+                      >
                         {post.profiles.first_name} {post.profiles.last_name}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-[10px] md:text-xs text-muted-foreground">
                         {formatTime(post.created_at)}
                       </span>
                     </div>
                     <div className={`relative group ${isOwnPost ? "flex flex-col items-end" : ""}`}>
-                      <Card className={`${isOwnPost ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                        <CardContent className="p-3">
-                          <p className="text-sm whitespace-pre-wrap break-words">
+                      <Card 
+                        className="border-2 shadow-sm"
+                        style={{ 
+                          borderColor: userColor,
+                          backgroundColor: isOwnPost ? userColor : "hsl(var(--card))"
+                        }}
+                      >
+                        <CardContent className="p-2.5 md:p-3">
+                          <p 
+                            className="text-xs md:text-sm whitespace-pre-wrap break-words leading-relaxed"
+                            style={{ color: isOwnPost ? "white" : "hsl(var(--foreground))" }}
+                          >
                             {post.message}
                           </p>
                         </CardContent>
@@ -231,10 +307,10 @@ const Forum = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="absolute -right-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                          className="absolute -right-8 md:-right-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 md:h-8 md:w-8"
                           onClick={() => handleDeletePost(post.id)}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-destructive" />
                         </Button>
                       )}
                     </div>
@@ -248,8 +324,8 @@ const Forum = () => {
       </div>
 
       {/* Message Input */}
-      <div className="fixed bottom-16 md:bottom-4 left-0 right-0 bg-background border-t border-border">
-        <div className="container max-w-4xl mx-auto px-4 py-4">
+      <div className="fixed bottom-16 md:bottom-4 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border shadow-lg">
+        <div className="container max-w-4xl mx-auto px-3 md:px-4 py-3 md:py-4">
           <div className="flex gap-2">
             <Textarea
               placeholder="Type your message..."
@@ -261,19 +337,19 @@ const Forum = () => {
                   handleSendMessage();
                 }
               }}
-              className="min-h-[60px] max-h-[120px] resize-none"
+              className="min-h-[52px] md:min-h-[60px] max-h-[100px] md:max-h-[120px] resize-none text-sm md:text-base"
               maxLength={1000}
             />
             <Button
               onClick={handleSendMessage}
               disabled={sending || !newMessage.trim()}
               size="icon"
-              className="h-[60px] w-[60px] shrink-0"
+              className="h-[52px] w-[52px] md:h-[60px] md:w-[60px] shrink-0"
             >
-              <Send className="h-5 w-5" />
+              <Send className="h-4 w-4 md:h-5 md:w-5" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-1 text-right">
+          <p className="text-[10px] md:text-xs text-muted-foreground mt-1 text-right">
             {newMessage.length}/1000
           </p>
         </div>
