@@ -315,15 +315,6 @@ const Dashboard = () => {
             </div>
           </Button>
 
-          <Button
-            className="h-12 md:h-16 bg-primary hover:bg-primary/90 text-sm md:text-base"
-            onClick={() => navigate("/profile")}
-          >
-            <div className="flex flex-col items-center gap-1">
-              <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
-              <span>Profile</span>
-            </div>
-          </Button>
         </div>
 
         {/* Forum Button */}

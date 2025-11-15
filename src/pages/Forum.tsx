@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Send, Trash2, Reply, X, Edit2, Plus, MessageSquare, BarChart3 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
@@ -859,49 +860,62 @@ const Forum = () => {
         {/* Poll View */}
         {currentView === 'poll' && selectedPoll && (
           <div className="h-full flex flex-col">
-            <div className="flex-1 overflow-y-auto">
-              <div className="container max-w-4xl mx-auto px-3 md:px-4 py-3 md:py-4">
-                <Card>
+            <div className="flex-1 overflow-y-auto bg-muted/20">
+              <div className="container max-w-2xl mx-auto px-2 md:px-3 py-2 md:py-3">
+                {/* Poll Question Card */}
+                <Card className="mb-3 md:mb-4">
                   <CardContent className="p-3 md:p-4">
-                    <h3 className="font-semibold text-sm md:text-base mb-3 md:mb-4">{selectedPoll.question}</h3>
-                    <div className="space-y-2">
-                      {pollOptions[selectedPoll.id]?.map(option => {
-                        const totalVotes = pollOptions[selectedPoll.id]?.reduce((sum, opt) => sum + opt.votes_count, 0) || 0;
-                        const percentage = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
-                        const isSelected = userVotes[selectedPoll.id] === option.id;
-                        const userVoted = !!userVotes[selectedPoll.id];
-
-                        return (
-                          <div key={option.id}>
-                            <Button
-                              variant={isSelected ? "default" : "outline"}
-                              className="w-full justify-start h-auto py-2 md:py-3 text-xs md:text-sm"
-                              onClick={() => handleVote(selectedPoll.id, option.id)}
-                              disabled={userVoted}
-                            >
-                              <div className="flex-1 text-left">
-                                <div className="font-medium">{option.option_text}</div>
-                                {userVoted && (
-                                  <div className="text-xs text-muted-foreground mt-1">
-                                    {option.votes_count} votes ({percentage}%)
-                                  </div>
-                                )}
-                              </div>
-                            </Button>
-                            {userVoted && (
-                              <Progress value={percentage} className="h-1 md:h-2 mt-1" />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <h3 className="font-bold text-sm md:text-base text-foreground">{selectedPoll.question}</h3>
                     {userVotes[selectedPoll.id] && (
-                      <p className="text-xs text-muted-foreground mt-3 md:mt-4">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Total votes: {pollOptions[selectedPoll.id]?.reduce((sum, opt) => sum + opt.votes_count, 0) || 0}
                       </p>
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Poll Options - Each as a Card */}
+                <div className="space-y-2">
+                  {pollOptions[selectedPoll.id]?.map(option => {
+                    const totalVotes = pollOptions[selectedPoll.id]?.reduce((sum, opt) => sum + opt.votes_count, 0) || 0;
+                    const percentage = totalVotes > 0 ? Math.round((option.votes_count / totalVotes) * 100) : 0;
+                    const isSelected = userVotes[selectedPoll.id] === option.id;
+                    const userVoted = !!userVotes[selectedPoll.id];
+
+                    return (
+                      <Card 
+                        key={option.id} 
+                        className={`cursor-pointer transition-all hover:shadow-md ${
+                          isSelected ? 'border-primary border-2 bg-primary/5' : 'border-border'
+                        } ${userVoted ? 'cursor-not-allowed opacity-90' : 'hover:border-primary/50'}`}
+                        onClick={() => !userVoted && handleVote(selectedPoll.id, option.id)}
+                      >
+                        <CardContent className="p-3 md:p-4">
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <p className="font-medium text-xs md:text-sm text-foreground flex-1">
+                              {option.option_text}
+                            </p>
+                            {isSelected && (
+                              <Badge variant="default" className="text-xs shrink-0">
+                                Your Vote
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {userVoted && (
+                            <div className="space-y-1">
+                              <Progress value={percentage} className="h-1.5 md:h-2" />
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>{option.votes_count} {option.votes_count === 1 ? 'vote' : 'votes'}</span>
+                                <span className="font-semibold">{percentage}%</span>
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
