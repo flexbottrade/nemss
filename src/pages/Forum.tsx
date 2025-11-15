@@ -678,31 +678,43 @@ Congratulations! 🎉`;
   };
 
   const handleConcludeElection = async (electionId: string) => {
-    if (!isAdmin || !currentUserId) return;
+    console.log("🔵 Starting conclude election for:", electionId);
+    console.log("🔵 Is admin:", isAdmin, "Current user:", currentUserId);
+    
+    if (!isAdmin || !currentUserId) {
+      console.log("🔴 Not authorized - isAdmin:", isAdmin, "currentUserId:", currentUserId);
+      return;
+    }
     
     setConcluding(true);
     
     try {
+      console.log("🔵 Fetching election data...");
       // Get fresh election details and nominees from database
       const { data: election, error: electionError } = await supabase
         .from("elections")
         .select("*")
         .eq("id", electionId)
         .maybeSingle();
+      
+      console.log("🔵 Election data:", election);
+      console.log("🔵 Election error:", electionError);
 
       if (electionError) {
+        console.log("🔴 Election fetch error:", electionError);
         toast.error("Database error: " + electionError.message);
-        console.error("Election fetch error:", electionError);
         setConcluding(false);
         return;
       }
 
       if (!election) {
+        console.log("🔴 Election not found");
         toast.error("Election not found");
         setConcluding(false);
         return;
       }
 
+      console.log("🔵 Fetching nominees...");
       const { data: electionNominees, error: nomineesError } = await supabase
         .from("election_nominees")
         .select(`
@@ -714,32 +726,43 @@ Congratulations! 🎉`;
         `)
         .eq("election_id", electionId)
         .order("votes_count", { ascending: false });
+      
+      console.log("🔵 Nominees data:", electionNominees);
+      console.log("🔵 Nominees error:", nomineesError);
 
       if (nomineesError) {
+        console.log("🔴 Nominees fetch error:", nomineesError);
         toast.error("Failed to load nominees");
-        console.error(nomineesError);
         setConcluding(false);
         return;
       }
 
       // Update election status
+      console.log("🔵 Updating election status to concluded...");
       const { error: updateError } = await supabase
         .from("elections")
         .update({ status: "concluded" })
         .eq("id", electionId);
+      
+      console.log("🔵 Update error:", updateError);
 
       if (updateError) {
-        toast.error("Failed to conclude election");
-        console.error(updateError);
+        console.log("🔴 Update election error:", updateError);
+        toast.error("Failed to conclude election: " + updateError.message);
         setConcluding(false);
         return;
       }
 
+      console.log("🟢 Election updated successfully");
+
       // Post announcement if there are votes
       const totalVotes = (electionNominees || []).reduce((sum: number, n: any) => sum + (n.votes_count || 0), 0);
       const winner = (electionNominees || [])[0];
+      
+      console.log("🔵 Total votes:", totalVotes, "Winner:", winner);
 
       if (winner && winner.profiles && totalVotes > 0) {
+        console.log("🔵 Posting announcement...");
         const announcementMessage = `🏆 Election Results for ${election.position}
 
 Winner: ${winner.profiles.first_name} ${winner.profiles.last_name} (${winner.profiles.member_id})
@@ -758,15 +781,18 @@ Congratulations! 🎉`;
           });
 
         if (postError) {
-          console.error("Failed to post announcement:", postError);
+          console.error("🔴 Failed to post announcement:", postError);
+        } else {
+          console.log("🟢 Announcement posted successfully");
         }
       }
 
+      console.log("🟢 Election concluded successfully");
       toast.success("Election concluded successfully");
       loadElections();
     } catch (error) {
-      console.error("Error concluding election:", error);
-      toast.error("Failed to conclude election");
+      console.error("🔴 Exception in conclude election:", error);
+      toast.error("Failed to conclude election: " + (error as Error).message);
     } finally {
       setConcluding(false);
     }
