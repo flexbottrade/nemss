@@ -103,6 +103,7 @@ const Forum = () => {
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionSearch, setMentionSearch] = useState("");
   const [allUsers, setAllUsers] = useState<Array<{ id: string; username: string; name: string }>>([]);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -141,6 +142,10 @@ const Forum = () => {
         (payload) => {
           console.log('Post change detected:', payload);
           loadPosts();
+          // Reload unread counts on post changes
+          if (currentUserId) {
+            loadUnreadCounts();
+          }
         }
       )
       .subscribe();
@@ -366,15 +371,94 @@ const Forum = () => {
   };
 
   const loadTopics = async () => {
-    const { data, error } = await supabase
+    const { data, error} = await supabase
       .from("forum_topics")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false});
 
     if (error) {
       console.error("Failed to load topics:", error);
     } else {
       setTopics(data || []);
+      if (currentUserId) {
+        await loadUnreadCounts();
+      }
+    }
+  };
+
+  const loadUnreadCounts = async () => {
+    if (!currentUserId) return;
+
+    try {
+      // Load read status for all topics and general
+      const { data: readStatus, error } = await supabase
+        .from("forum_read_status")
+        .select("topic_id, last_read_at")
+        .eq("user_id", currentUserId);
+
+      if (error) throw error;
+
+      const counts: Record<string, number> = {};
+
+      // Count unread for general discussion (topic_id is null)
+      const generalRead = readStatus?.find(r => r.topic_id === null);
+      const generalLastRead = generalRead?.last_read_at || new Date(0).toISOString();
+      
+      const { count: generalCount, error: generalError } = await supabase
+        .from("forum_posts")
+        .select("*", { count: "exact", head: true })
+        .is("topic_id", null)
+        .gt("created_at", generalLastRead);
+
+      if (!generalError && generalCount !== null) {
+        counts["general"] = generalCount;
+      }
+
+      // Count unread for each topic
+      for (const topic of topics) {
+        const topicRead = readStatus?.find(r => r.topic_id === topic.id);
+        const topicLastRead = topicRead?.last_read_at || new Date(0).toISOString();
+
+        const { count: topicCount, error: topicError } = await supabase
+          .from("forum_posts")
+          .select("*", { count: "exact", head: true })
+          .eq("topic_id", topic.id)
+          .gt("created_at", topicLastRead);
+
+        if (!topicError && topicCount !== null) {
+          counts[topic.id] = topicCount;
+        }
+      }
+
+      setUnreadCounts(counts);
+    } catch (error) {
+      console.error("Error loading unread counts:", error);
+    }
+  };
+
+  const markAsRead = async (topicId: string | null) => {
+    if (!currentUserId) return;
+
+    try {
+      const { error } = await supabase
+        .from("forum_read_status")
+        .upsert({
+          user_id: currentUserId,
+          topic_id: topicId,
+          last_read_at: new Date().toISOString(),
+        }, {
+          onConflict: "user_id,topic_id"
+        });
+
+      if (error) throw error;
+
+      // Update local unread counts
+      setUnreadCounts(prev => ({
+        ...prev,
+        [topicId || "general"]: 0
+      }));
+    } catch (error) {
+      console.error("Error marking as read:", error);
     }
   };
 
@@ -881,10 +965,14 @@ Congratulations! 🎉`;
     u.username.toLowerCase().includes(mentionSearch.toLowerCase())
   );
 
-  const handleNavigateToView = (type: ViewType, id?: string) => {
+  const handleNavigateToView = async (type: ViewType, id?: string) => {
     setCurrentView(type);
     if (type === 'topic' && id) {
       setSelectedTopicId(id);
+      await markAsRead(id);
+    } else if (type === 'general') {
+      setSelectedTopicId(null);
+      await markAsRead(null);
     } else if (type === 'election' && id) {
       setSelectedElectionId(id);
     }
@@ -1098,7 +1186,14 @@ Congratulations! 🎉`;
                           <p className="text-[10px] md:text-xs text-muted-foreground">Open chat for all members</p>
                         </div>
                       </div>
-                      <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground rotate-180 shrink-0" />
+                      <div className="flex items-center gap-2 shrink-0">
+                        {unreadCounts["general"] > 0 && (
+                          <Badge variant="default" className="h-5 min-w-5 px-1.5 text-[10px] font-semibold">
+                            {unreadCounts["general"]}
+                          </Badge>
+                        )}
+                        <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground rotate-180" />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -1195,7 +1290,14 @@ Congratulations! 🎉`;
                                   {topic.description}
                                 </p>
                               </div>
-                              <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground rotate-180 shrink-0" />
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {unreadCounts[topic.id] > 0 && (
+                                <Badge variant="default" className="h-5 min-w-5 px-1.5 text-[10px] font-semibold">
+                                  {unreadCounts[topic.id]}
+                                </Badge>
+                              )}
+                              <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground rotate-180" />
                             </div>
                             {isAdmin && (
                               <div className="flex gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
