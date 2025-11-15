@@ -682,38 +682,58 @@ Congratulations! 🎉`;
     
     setConcluding(true);
     
-    // Get election details and nominees
-    const election = elections.find(e => e.id === electionId);
-    const electionNominees = nominees[electionId] || [];
-    
-    if (!election) {
-      toast.error("Election not found");
-      setConcluding(false);
-      return;
-    }
+    try {
+      // Get fresh election details and nominees from database
+      const { data: election, error: electionError } = await supabase
+        .from("elections")
+        .select("*")
+        .eq("id", electionId)
+        .single();
 
-    // Update election status
-    const { error: updateError } = await supabase
-      .from("elections")
-      .update({ status: "concluded" })
-      .eq("id", electionId);
+      if (electionError || !election) {
+        toast.error("Election not found");
+        setConcluding(false);
+        return;
+      }
 
-    if (updateError) {
-      toast.error("Failed to conclude election");
-      console.error(updateError);
-      setConcluding(false);
-      return;
-    }
+      const { data: electionNominees, error: nomineesError } = await supabase
+        .from("election_nominees")
+        .select(`
+          id,
+          election_id,
+          nominee_id,
+          votes_count,
+          profiles:nominee_id(first_name, last_name, member_id)
+        `)
+        .eq("election_id", electionId)
+        .order("votes_count", { ascending: false });
 
-    // Find winner(s)
-    const totalVotes = electionNominees.reduce((sum, n) => sum + n.votes_count, 0);
-    const winner = electionNominees.reduce((max, n) => 
-      !max || n.votes_count > max.votes_count ? n : max, null as Nominee | null
-    );
+      if (nomineesError) {
+        toast.error("Failed to load nominees");
+        console.error(nomineesError);
+        setConcluding(false);
+        return;
+      }
 
-    if (winner && totalVotes > 0) {
-      // Post announcement to general chat
-      const announcementMessage = `🏆 Election Results for ${election.position}
+      // Update election status
+      const { error: updateError } = await supabase
+        .from("elections")
+        .update({ status: "concluded" })
+        .eq("id", electionId);
+
+      if (updateError) {
+        toast.error("Failed to conclude election");
+        console.error(updateError);
+        setConcluding(false);
+        return;
+      }
+
+      // Post announcement if there are votes
+      const totalVotes = (electionNominees || []).reduce((sum: number, n: any) => sum + (n.votes_count || 0), 0);
+      const winner = (electionNominees || [])[0];
+
+      if (winner && winner.profiles && totalVotes > 0) {
+        const announcementMessage = `🏆 Election Results for ${election.position}
 
 Winner: ${winner.profiles.first_name} ${winner.profiles.last_name} (${winner.profiles.member_id})
 Votes: ${winner.votes_count} (${Math.round((winner.votes_count / totalVotes) * 100)}%)
@@ -721,23 +741,28 @@ Total Votes Cast: ${totalVotes}
 
 Congratulations! 🎉`;
 
-      const { error: postError } = await supabase
-        .from("forum_posts")
-        .insert({
-          user_id: currentUserId,
-          message: announcementMessage,
-          reply_to: null,
-          topic_id: null
-        });
+        const { error: postError } = await supabase
+          .from("forum_posts")
+          .insert({
+            user_id: currentUserId,
+            message: announcementMessage,
+            reply_to: null,
+            topic_id: null
+          });
 
-      if (postError) {
-        console.error("Failed to post announcement:", postError);
+        if (postError) {
+          console.error("Failed to post announcement:", postError);
+        }
       }
-    }
 
-    toast.success("Election concluded");
-    loadElections();
-    setConcluding(false);
+      toast.success("Election concluded successfully");
+      loadElections();
+    } catch (error) {
+      console.error("Error concluding election:", error);
+      toast.error("Failed to conclude election");
+    } finally {
+      setConcluding(false);
+    }
   };
 
   const handleMention = (username: string) => {
