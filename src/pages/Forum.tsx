@@ -78,7 +78,7 @@ const Forum = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("forum_posts")
-      .select("*, profiles!forum_posts_user_id_fkey(first_name, last_name, member_id)")
+      .select("*, profiles(first_name, last_name, member_id)")
       .order("created_at", { ascending: true });
 
     if (error) {
