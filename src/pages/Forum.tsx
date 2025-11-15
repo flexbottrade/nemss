@@ -98,7 +98,7 @@ const Forum = () => {
   const [showNomineeDialog, setShowNomineeDialog] = useState(false);
   const [editingTopic, setEditingTopic] = useState<ForumTopic | null>(null);
   const [editingElection, setEditingElection] = useState<Election | null>(null);
-  const [deletingItem, setDeletingItem] = useState<{ type: 'topic' | 'election'; id: string } | null>(null);
+  const [deletingItem, setDeletingItem] = useState<{ type: 'topic' | 'election' | 'post'; id: string } | null>(null);
   const [replyingTo, setReplyingTo] = useState<ForumPost | null>(null);
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionSearch, setMentionSearch] = useState("");
@@ -462,11 +462,13 @@ const Forum = () => {
     setSending(false);
   };
 
-  const handleDeletePost = async (postId: string) => {
+  const handleDeletePost = async () => {
+    if (!deletingItem || deletingItem.type !== 'post') return;
+
     const { error } = await supabase
       .from("forum_posts")
       .delete()
-      .eq("id", postId);
+      .eq("id", deletingItem.id);
 
     if (error) {
       toast.error("Failed to delete post");
@@ -474,6 +476,7 @@ const Forum = () => {
     } else {
       toast.success("Post deleted");
     }
+    setDeletingItem(null);
   };
 
   const handleDeleteTopic = async () => {
@@ -732,9 +735,23 @@ const Forum = () => {
       <ConfirmationDialog
         open={!!deletingItem}
         onOpenChange={(open) => !open && setDeletingItem(null)}
-        onConfirm={deletingItem?.type === 'topic' ? handleDeleteTopic : handleDeleteElection}
-        title={`Delete ${deletingItem?.type === 'topic' ? 'Topic' : 'Election'}?`}
-        description={`Are you sure you want to delete this ${deletingItem?.type}? This action cannot be undone.`}
+        onConfirm={
+          deletingItem?.type === 'topic' 
+            ? handleDeleteTopic 
+            : deletingItem?.type === 'election' 
+            ? handleDeleteElection 
+            : handleDeletePost
+        }
+        title={`Delete ${
+          deletingItem?.type === 'topic' 
+            ? 'Topic' 
+            : deletingItem?.type === 'election' 
+            ? 'Election' 
+            : 'Message'
+        }?`}
+        description={`Are you sure you want to delete this ${
+          deletingItem?.type === 'post' ? 'message' : deletingItem?.type
+        }? This action cannot be undone.`}
         confirmText="Delete"
       />
 
@@ -1188,7 +1205,7 @@ const Forum = () => {
                                   size="icon"
                                   variant="ghost"
                                   className="h-5 w-5 md:h-6 md:w-6 text-destructive"
-                                  onClick={() => handleDeletePost(post.id)}
+                                  onClick={() => setDeletingItem({ type: 'post', id: post.id })}
                                 >
                                   <Trash2 className="h-2.5 w-2.5 md:h-3 md:w-3" />
                                 </Button>
