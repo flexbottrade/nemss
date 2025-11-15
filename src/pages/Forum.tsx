@@ -153,17 +153,43 @@ const Forum = () => {
   // Realtime subscription for topics
   useEffect(() => {
     const topicsChannel = supabase
-      .channel('forum-topics-realtime')
+      .channel('forum-topics-realtime-v2')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'forum_topics'
         },
         (payload) => {
-          console.log('Topic change detected:', payload);
-          loadTopics();
+          console.log('Topic inserted:', payload);
+          setTopics(prev => [payload.new as ForumTopic, ...prev]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'forum_topics'
+        },
+        (payload) => {
+          console.log('Topic updated:', payload);
+          setTopics(prev => prev.map(t => 
+            t.id === (payload.new as ForumTopic).id ? (payload.new as ForumTopic) : t
+          ));
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'forum_topics'
+        },
+        (payload) => {
+          console.log('Topic deleted:', payload);
+          setTopics(prev => prev.filter(t => t.id !== (payload.old as ForumTopic).id));
         }
       )
       .subscribe();
@@ -176,17 +202,45 @@ const Forum = () => {
   // Realtime subscription for elections
   useEffect(() => {
     const electionsChannel = supabase
-      .channel('elections-realtime')
+      .channel('elections-realtime-v2')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'elections'
         },
         (payload) => {
-          console.log('Election change detected:', payload);
-          loadElections();
+          console.log('Election inserted:', payload);
+          setElections(prev => [payload.new as Election, ...prev]);
+          const newElection = payload.new as Election;
+          loadNominees(newElection.id);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'elections'
+        },
+        (payload) => {
+          console.log('Election updated:', payload);
+          setElections(prev => prev.map(e => 
+            e.id === (payload.new as Election).id ? (payload.new as Election) : e
+          ));
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'elections'
+        },
+        (payload) => {
+          console.log('Election deleted:', payload);
+          setElections(prev => prev.filter(e => e.id !== (payload.old as Election).id));
         }
       )
       .subscribe();
@@ -334,12 +388,77 @@ const Forum = () => {
       console.error("Failed to load elections:", error);
     } else {
       setElections(data || []);
+      
+      // Auto-conclude expired elections
+      const now = new Date();
+      const expiredElections = data?.filter(e => 
+        e.status === 'active' && new Date(e.deadline) < now
+      ) || [];
+      
+      for (const election of expiredElections) {
+        await autoConcludeElection(election.id);
+      }
+      
       data?.forEach(election => {
         loadNominees(election.id);
       });
       if (currentUserId) {
         loadUserVotes();
       }
+    }
+  };
+
+  const autoConcludeElection = async (electionId: string) => {
+    if (!currentUserId) return;
+    
+    // Get election details and nominees first
+    const { data: electionData } = await supabase
+      .from("elections")
+      .select("*")
+      .eq("id", electionId)
+      .single();
+    
+    const { data: nomineesData } = await supabase
+      .from("election_nominees")
+      .select(`
+        id,
+        election_id,
+        nominee_id,
+        votes_count,
+        profiles:nominee_id(first_name, last_name, member_id)
+      `)
+      .eq("election_id", electionId)
+      .order("votes_count", { ascending: false });
+
+    if (!electionData || !nomineesData) return;
+
+    // Update election status
+    await supabase
+      .from("elections")
+      .update({ status: "concluded" })
+      .eq("id", electionId);
+
+    // Post announcement if there are votes
+    const totalVotes = nomineesData.reduce((sum: number, n: any) => sum + n.votes_count, 0);
+    const winner = nomineesData[0];
+
+    if (winner && totalVotes > 0) {
+      const announcementMessage = `🏆 Election Results for ${electionData.position}
+
+Winner: ${winner.profiles.first_name} ${winner.profiles.last_name} (${winner.profiles.member_id})
+Votes: ${winner.votes_count} (${Math.round((winner.votes_count / totalVotes) * 100)}%)
+Total Votes Cast: ${totalVotes}
+
+Congratulations! 🎉`;
+
+      await supabase
+        .from("forum_posts")
+        .insert({
+          user_id: currentUserId,
+          message: announcementMessage,
+          reply_to: null,
+          topic_id: null
+        });
     }
   };
 
@@ -559,21 +678,65 @@ const Forum = () => {
   };
 
   const handleConcludeElection = async (electionId: string) => {
-    if (!isAdmin) return;
+    if (!isAdmin || !currentUserId) return;
     
     setConcluding(true);
-    const { error } = await supabase
+    
+    // Get election details and nominees
+    const election = elections.find(e => e.id === electionId);
+    const electionNominees = nominees[electionId] || [];
+    
+    if (!election) {
+      toast.error("Election not found");
+      setConcluding(false);
+      return;
+    }
+
+    // Update election status
+    const { error: updateError } = await supabase
       .from("elections")
       .update({ status: "concluded" })
       .eq("id", electionId);
 
-    if (error) {
+    if (updateError) {
       toast.error("Failed to conclude election");
-      console.error(error);
-    } else {
-      toast.success("Election concluded");
-      loadElections();
+      console.error(updateError);
+      setConcluding(false);
+      return;
     }
+
+    // Find winner(s)
+    const totalVotes = electionNominees.reduce((sum, n) => sum + n.votes_count, 0);
+    const winner = electionNominees.reduce((max, n) => 
+      !max || n.votes_count > max.votes_count ? n : max, null as Nominee | null
+    );
+
+    if (winner && totalVotes > 0) {
+      // Post announcement to general chat
+      const announcementMessage = `🏆 Election Results for ${election.position}
+
+Winner: ${winner.profiles.first_name} ${winner.profiles.last_name} (${winner.profiles.member_id})
+Votes: ${winner.votes_count} (${Math.round((winner.votes_count / totalVotes) * 100)}%)
+Total Votes Cast: ${totalVotes}
+
+Congratulations! 🎉`;
+
+      const { error: postError } = await supabase
+        .from("forum_posts")
+        .insert({
+          user_id: currentUserId,
+          message: announcementMessage,
+          reply_to: null,
+          topic_id: null
+        });
+
+      if (postError) {
+        console.error("Failed to post announcement:", postError);
+      }
+    }
+
+    toast.success("Election concluded");
+    loadElections();
     setConcluding(false);
   };
 
