@@ -123,9 +123,14 @@ const Forum = () => {
       setLoading(false);
     };
     init();
+  }, []);
+
+  // Realtime subscription for posts
+  useEffect(() => {
+    if (currentView !== 'general' && currentView !== 'topic') return;
 
     const postsChannel = supabase
-      .channel('forum-posts')
+      .channel(`forum-posts-${currentView}-${selectedTopicId || 'general'}`)
       .on(
         'postgres_changes',
         {
@@ -133,16 +138,22 @@ const Forum = () => {
           schema: 'public',
           table: 'forum_posts'
         },
-        () => {
-          if (currentView !== 'navigation') {
-            loadPosts();
-          }
+        (payload) => {
+          console.log('Post change detected:', payload);
+          loadPosts();
         }
       )
       .subscribe();
 
+    return () => {
+      supabase.removeChannel(postsChannel);
+    };
+  }, [currentView, selectedTopicId]);
+
+  // Realtime subscription for topics
+  useEffect(() => {
     const topicsChannel = supabase
-      .channel('forum-topics')
+      .channel('forum-topics-realtime')
       .on(
         'postgres_changes',
         {
@@ -150,14 +161,22 @@ const Forum = () => {
           schema: 'public',
           table: 'forum_topics'
         },
-        () => {
+        (payload) => {
+          console.log('Topic change detected:', payload);
           loadTopics();
         }
       )
       .subscribe();
 
+    return () => {
+      supabase.removeChannel(topicsChannel);
+    };
+  }, []);
+
+  // Realtime subscription for elections
+  useEffect(() => {
     const electionsChannel = supabase
-      .channel('elections')
+      .channel('elections-realtime')
       .on(
         'postgres_changes',
         {
@@ -165,31 +184,50 @@ const Forum = () => {
           schema: 'public',
           table: 'elections'
         },
-        () => {
+        (payload) => {
+          console.log('Election change detected:', payload);
           loadElections();
         }
       )
       .subscribe();
 
+    return () => {
+      supabase.removeChannel(electionsChannel);
+    };
+  }, []);
+
+  // Realtime subscription for nominees
+  useEffect(() => {
+    if (currentView !== 'election' || !selectedElectionId) return;
+
     const nomineesChannel = supabase
-      .channel('election-nominees')
+      .channel(`election-nominees-${selectedElectionId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'election_nominees'
+          table: 'election_nominees',
+          filter: `election_id=eq.${selectedElectionId}`
         },
         (payload) => {
-          if (payload.new && 'election_id' in payload.new) {
-            loadNominees(payload.new.election_id as string);
-          }
+          console.log('Nominee change detected:', payload);
+          loadNominees(selectedElectionId);
         }
       )
       .subscribe();
 
+    return () => {
+      supabase.removeChannel(nomineesChannel);
+    };
+  }, [currentView, selectedElectionId]);
+
+  // Realtime subscription for votes
+  useEffect(() => {
+    if (!currentUserId) return;
+
     const votesChannel = supabase
-      .channel('votes-changes')
+      .channel('votes-realtime')
       .on(
         'postgres_changes',
         {
@@ -198,7 +236,10 @@ const Forum = () => {
           table: 'votes'
         },
         (payload) => {
+          console.log('Vote change detected:', payload);
           loadUserVotes();
+          
+          // Reload nominees for the affected election
           if (payload.new && 'election_id' in payload.new) {
             loadNominees((payload.new as any).election_id);
           }
@@ -210,14 +251,9 @@ const Forum = () => {
       .subscribe();
 
     return () => {
-      localStorage.setItem(LAST_VISIT_KEY, new Date().toISOString());
-      supabase.removeChannel(postsChannel);
-      supabase.removeChannel(topicsChannel);
-      supabase.removeChannel(electionsChannel);
-      supabase.removeChannel(nomineesChannel);
       supabase.removeChannel(votesChannel);
     };
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
     if (currentView === 'general' || currentView === 'topic') {
@@ -226,6 +262,10 @@ const Forum = () => {
     if (currentView === 'election' && selectedElectionId) {
       loadNominees(selectedElectionId);
     }
+    
+    return () => {
+      localStorage.setItem(LAST_VISIT_KEY, new Date().toISOString());
+    };
   }, [currentView, selectedTopicId, selectedElectionId]);
 
   useEffect(() => {
