@@ -604,6 +604,9 @@ const Forum = () => {
           setShowTopicDialog(false);
           setEditingTopic(null);
         }}
+        onSuccess={() => {
+          loadTopics();
+        }}
         topic={editingTopic || undefined}
       />
 
@@ -612,6 +615,9 @@ const Forum = () => {
         onClose={() => {
           setShowPollDialog(false);
           setEditingPoll(null);
+        }}
+        onSuccess={() => {
+          loadPolls();
         }}
         poll={editingPoll}
       />

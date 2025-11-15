@@ -10,6 +10,7 @@ import { X, Plus } from "lucide-react";
 interface ForumPollDialogProps {
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   poll?: {
     id: string;
     question: string;
@@ -17,7 +18,7 @@ interface ForumPollDialogProps {
   };
 }
 
-export const ForumPollDialog = ({ open, onClose, poll }: ForumPollDialogProps) => {
+export const ForumPollDialog = ({ open, onClose, onSuccess, poll }: ForumPollDialogProps) => {
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [saving, setSaving] = useState(false);
@@ -105,6 +106,7 @@ export const ForumPollDialog = ({ open, onClose, poll }: ForumPollDialogProps) =
         console.error(optionsError);
       } else {
         toast.success("Poll updated");
+        onSuccess?.();
         onClose();
       }
     } else {
@@ -138,6 +140,7 @@ export const ForumPollDialog = ({ open, onClose, poll }: ForumPollDialogProps) =
         console.error(optionsError);
       } else {
         toast.success("Poll created");
+        onSuccess?.();
         onClose();
       }
     }

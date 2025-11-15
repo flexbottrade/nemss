@@ -10,6 +10,7 @@ import { toast } from "sonner";
 interface ForumTopicDialogProps {
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
   topic?: {
     id: string;
     title: string;
@@ -17,7 +18,7 @@ interface ForumTopicDialogProps {
   };
 }
 
-export const ForumTopicDialog = ({ open, onClose, topic }: ForumTopicDialogProps) => {
+export const ForumTopicDialog = ({ open, onClose, onSuccess, topic }: ForumTopicDialogProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
@@ -58,6 +59,7 @@ export const ForumTopicDialog = ({ open, onClose, topic }: ForumTopicDialogProps
         console.error(error);
       } else {
         toast.success("Topic updated");
+        onSuccess?.();
         onClose();
       }
     } else {
@@ -74,6 +76,7 @@ export const ForumTopicDialog = ({ open, onClose, topic }: ForumTopicDialogProps
         console.error(error);
       } else {
         toast.success("Topic created");
+        onSuccess?.();
         onClose();
       }
     }
