@@ -971,7 +971,7 @@ const Forum = () => {
 
         {/* General or Topic Chat View */}
         {(currentView === 'general' || currentView === 'topic') && (
-          <div className="h-full flex flex-col">
+          <div className="h-full flex flex-col pb-16">
             {/* Topic Description */}
             {currentView === 'topic' && selectedTopic && (
               <div className="shrink-0 border-b border-border bg-muted/30">
@@ -982,7 +982,7 @@ const Forum = () => {
             )}
 
             {/* Messages */}
-            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto pb-2">
+            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto pb-32">
               <div className="container max-w-4xl mx-auto px-2 md:px-4 py-2 md:py-3">
                 <div className="space-y-2">
                   {posts.map((post) => {
@@ -1056,8 +1056,8 @@ const Forum = () => {
               </div>
             </div>
 
-            {/* Message Input - Sticky */}
-            <div className="sticky bottom-0 border-t border-border bg-background">
+            {/* Message Input - Fixed */}
+            <div className="fixed bottom-16 left-0 right-0 border-t border-border bg-background z-10">
               <div className="container max-w-4xl mx-auto px-2 md:px-4 py-2">
                 {replyingTo && (
                   <div className="flex items-center justify-between gap-2 mb-2 p-1.5 md:p-2 bg-muted rounded text-[10px] md:text-xs">
