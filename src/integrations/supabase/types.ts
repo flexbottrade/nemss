@@ -540,6 +540,41 @@ export type Database = {
           },
         ]
       }
+      forum_read_status: {
+        Row: {
+          created_at: string
+          id: string
+          last_read_at: string
+          topic_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_read_at?: string
+          topic_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_read_at?: string
+          topic_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_read_status_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "forum_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forum_topics: {
         Row: {
           created_at: string
