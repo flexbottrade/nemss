@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Wallet, Calendar, TrendingUp, LogOut, Gift, Shield, MessageSquare } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
@@ -24,14 +25,64 @@ const Dashboard = () => {
   const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [newMessagesCount, setNewMessagesCount] = useState(0);
   const itemsPerPage = 10;
 
   useEffect(() => {
     const initializeData = async () => {
-      await Promise.all([loadProfile(), loadStats(), loadPaymentHistory()]);
+      await Promise.all([loadProfile(), loadStats(), loadPaymentHistory(), loadNewMessagesCount()]);
     };
     initializeData();
+
+    // Subscribe to real-time forum updates
+    const channel = supabase
+      .channel('dashboard-forum-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'forum_posts'
+        },
+        () => {
+          loadNewMessagesCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const loadNewMessagesCount = async () => {
+    try {
+      const lastVisit = localStorage.getItem("forum_last_visit");
+      
+      if (!lastVisit) {
+        // If never visited, count all messages
+        const { count, error } = await supabase
+          .from("forum_posts")
+          .select("*", { count: "exact", head: true });
+
+        if (!error) {
+          setNewMessagesCount(count || 0);
+        }
+      } else {
+        // Count messages after last visit
+        const { count, error } = await supabase
+          .from("forum_posts")
+          .select("*", { count: "exact", head: true })
+          .gt("created_at", lastVisit);
+
+        if (!error) {
+          setNewMessagesCount(count || 0);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading new messages count:", error);
+    }
+  };
 
   const loadProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -278,14 +329,26 @@ const Dashboard = () => {
         {/* Forum Button */}
         <Card className="glass-card mt-4 md:mt-6">
           <CardHeader className="p-3 md:p-4">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-primary" />
-              <CardTitle className="text-base md:text-xl font-bold">Member Forum</CardTitle>
+            <div className="flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base md:text-xl font-bold">Member Forum</CardTitle>
+              </div>
+              {newMessagesCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="h-6 min-w-6 rounded-full px-2 flex items-center justify-center text-xs font-bold"
+                >
+                  {newMessagesCount > 99 ? "99+" : newMessagesCount}
+                </Badge>
+              )}
             </div>
           </CardHeader>
           <CardContent className="p-3 md:p-4 pt-0">
             <p className="text-xs md:text-sm text-muted-foreground mb-3 md:mb-4">
-              Join the conversation with other members. Share updates, ask questions, and stay connected.
+              {newMessagesCount > 0 
+                ? `${newMessagesCount} new ${newMessagesCount === 1 ? 'message' : 'messages'} waiting for you!`
+                : 'Join the conversation with other members. Share updates, ask questions, and stay connected.'}
             </p>
             <Button
               onClick={() => navigate("/forum")}

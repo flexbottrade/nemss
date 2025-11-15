@@ -12,6 +12,7 @@ import { formatDateDDMMYY } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const STORAGE_KEY = "forum_scroll_position";
+const LAST_VISIT_KEY = "forum_last_visit";
 
 interface ForumPost {
   id: string;
@@ -77,6 +78,9 @@ const Forum = () => {
   };
 
   useEffect(() => {
+    // Update last visit timestamp when entering forum
+    localStorage.setItem(LAST_VISIT_KEY, new Date().toISOString());
+    
     loadPosts();
     getCurrentUser();
 
@@ -101,6 +105,8 @@ const Forum = () => {
 
     return () => {
       saveScrollPosition();
+      // Update last visit timestamp when leaving forum
+      localStorage.setItem(LAST_VISIT_KEY, new Date().toISOString());
       supabase.removeChannel(channel);
     };
   }, []);
