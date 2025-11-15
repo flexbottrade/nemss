@@ -1,17 +1,23 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Send, Trash2, Reply, X, Edit2 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateDDMMYY } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ForumUsernameDialog } from "@/components/ForumUsernameDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-const STORAGE_KEY = "forum_scroll_position";
 const LAST_VISIT_KEY = "forum_last_visit";
 
 interface ForumPost {
@@ -19,11 +25,21 @@ interface ForumPost {
   user_id: string;
   message: string;
   created_at: string;
+  reply_to: string | null;
   profiles: {
     first_name: string;
     last_name: string;
     member_id: string;
+    forum_username: string | null;
   };
+  reply_post?: {
+    message: string;
+    profiles: {
+      forum_username: string | null;
+      first_name: string;
+      last_name: string;
+    };
+  } | null;
 }
 
 const Forum = () => {
@@ -33,41 +49,34 @@ const Forum = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
+  const [showUsernameDialog, setShowUsernameDialog] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<ForumPost | null>(null);
+  const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [allUsers, setAllUsers] = useState<Array<{ id: string; username: string; name: string }>>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  const saveScrollPosition = () => {
-    if (messagesContainerRef.current) {
-      localStorage.setItem(STORAGE_KEY, messagesContainerRef.current.scrollTop.toString());
-    }
-  };
-
-  const restoreScrollPosition = () => {
-    const savedPosition = localStorage.getItem(STORAGE_KEY);
-    if (savedPosition && messagesContainerRef.current && !shouldScrollToBottom) {
-      messagesContainerRef.current.scrollTop = parseInt(savedPosition);
-    } else {
-      scrollToBottom();
-    }
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   };
 
   const getUserColor = (userId: string): string => {
     const colors = [
-      "hsl(346, 77%, 50%)", // vibrant red
-      "hsl(262, 83%, 58%)", // purple
-      "hsl(221, 83%, 53%)", // blue
-      "hsl(142, 71%, 45%)", // green
-      "hsl(24, 95%, 53%)",  // orange
-      "hsl(280, 67%, 55%)", // violet
-      "hsl(173, 80%, 40%)", // teal
-      "hsl(48, 96%, 53%)",  // yellow
-      "hsl(339, 90%, 51%)", // pink
-      "hsl(199, 89%, 48%)", // cyan
+      "hsl(346, 77%, 50%)",
+      "hsl(262, 83%, 58%)",
+      "hsl(221, 83%, 53%)",
+      "hsl(142, 71%, 45%)",
+      "hsl(24, 95%, 53%)",
+      "hsl(280, 67%, 55%)",
+      "hsl(173, 80%, 40%)",
+      "hsl(48, 96%, 53%)",
+      "hsl(339, 90%, 51%)",
+      "hsl(199, 89%, 48%)",
     ];
     
     let hash = 0;
@@ -78,13 +87,14 @@ const Forum = () => {
   };
 
   useEffect(() => {
-    // Update last visit timestamp when entering forum
-    localStorage.setItem(LAST_VISIT_KEY, new Date().toISOString());
-    
-    loadPosts();
-    getCurrentUser();
+    const init = async () => {
+      await getCurrentUser();
+      await loadPosts();
+      await loadAllUsers();
+      scrollToBottom();
+    };
+    init();
 
-    // Subscribe to real-time updates
     const channel = supabase
       .channel('forum-posts')
       .on(
@@ -94,31 +104,21 @@ const Forum = () => {
           schema: 'public',
           table: 'forum_posts'
         },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setShouldScrollToBottom(true);
-          }
+        () => {
           loadPosts();
         }
       )
       .subscribe();
 
     return () => {
-      saveScrollPosition();
-      // Update last visit timestamp when leaving forum
       localStorage.setItem(LAST_VISIT_KEY, new Date().toISOString());
       supabase.removeChannel(channel);
     };
   }, []);
 
   useEffect(() => {
-    if (posts.length > 0) {
-      if (shouldScrollToBottom) {
-        scrollToBottom();
-        setShouldScrollToBottom(false);
-      } else {
-        restoreScrollPosition();
-      }
+    if (posts.length > 0 && messagesContainerRef.current) {
+      scrollToBottom();
     }
   }, [posts]);
 
@@ -129,13 +129,48 @@ const Forum = () => {
       return;
     }
     setCurrentUserId(user.id);
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("forum_username")
+      .eq("id", user.id)
+      .single();
+
+    if (profile) {
+      setCurrentUsername(profile.forum_username);
+      if (!profile.forum_username) {
+        setShowUsernameDialog(true);
+      }
+    }
+  };
+
+  const loadAllUsers = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, forum_username, first_name, last_name")
+      .not("forum_username", "is", null);
+
+    if (data) {
+      setAllUsers(data.map(u => ({
+        id: u.id,
+        username: u.forum_username!,
+        name: `${u.first_name} ${u.last_name}`
+      })));
+    }
   };
 
   const loadPosts = async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from("forum_posts")
-      .select("*, profiles(first_name, last_name, member_id)")
+      .select(`
+        *,
+        profiles(first_name, last_name, member_id, forum_username),
+        reply_post:reply_to(
+          message,
+          profiles(forum_username, first_name, last_name)
+        )
+      `)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -158,6 +193,12 @@ const Forum = () => {
       return;
     }
 
+    if (!currentUsername) {
+      toast.error("Please set your forum username first");
+      setShowUsernameDialog(true);
+      return;
+    }
+
     setSending(true);
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -170,7 +211,8 @@ const Forum = () => {
       .from("forum_posts")
       .insert({
         user_id: user.id,
-        message: newMessage.trim()
+        message: newMessage.trim(),
+        reply_to: replyingTo?.id || null
       });
 
     if (error) {
@@ -178,7 +220,7 @@ const Forum = () => {
       console.error(error);
     } else {
       setNewMessage("");
-      setShouldScrollToBottom(true);
+      setReplyingTo(null);
       toast.success("Message sent");
     }
     setSending(false);
@@ -195,6 +237,46 @@ const Forum = () => {
       console.error(error);
     } else {
       toast.success("Post deleted");
+    }
+  };
+
+  const handleMention = (username: string) => {
+    const cursorPos = textareaRef.current?.selectionStart || 0;
+    const textBefore = newMessage.substring(0, cursorPos);
+    const textAfter = newMessage.substring(cursorPos);
+    const lastAtIndex = textBefore.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1) {
+      const newText = textBefore.substring(0, lastAtIndex) + `@${username} ` + textAfter;
+      setNewMessage(newText);
+    }
+    
+    setShowMentionMenu(false);
+    setMentionSearch("");
+    textareaRef.current?.focus();
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setNewMessage(text);
+
+    const cursorPos = e.target.selectionStart;
+    const textBefore = text.substring(0, cursorPos);
+    const lastAtIndex = textBefore.lastIndexOf('@');
+    
+    if (lastAtIndex !== -1 && (lastAtIndex === 0 || text[lastAtIndex - 1] === ' ')) {
+      const searchTerm = textBefore.substring(lastAtIndex + 1);
+      if (searchTerm.length > 0 && !searchTerm.includes(' ')) {
+        setMentionSearch(searchTerm);
+        setShowMentionMenu(true);
+      } else if (searchTerm.length === 0) {
+        setMentionSearch("");
+        setShowMentionMenu(true);
+      } else {
+        setShowMentionMenu(false);
+      }
+    } else {
+      setShowMentionMenu(false);
     }
   };
 
@@ -217,29 +299,81 @@ const Forum = () => {
     return formatDateDDMMYY(date);
   };
 
+  const renderMessage = (message: string) => {
+    const parts = message.split(/(@\w+)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('@')) {
+        const username = part.substring(1);
+        const user = allUsers.find(u => u.username === username);
+        if (user) {
+          return (
+            <span key={index} className="font-bold text-primary">
+              {part}
+            </span>
+          );
+        }
+      }
+      return <span key={index}>{part}</span>;
+    });
+  };
+
+  const getDisplayName = (post: ForumPost) => {
+    return post.profiles.forum_username || `${post.profiles.first_name} ${post.profiles.last_name}`;
+  };
+
+  const filteredUsers = allUsers.filter(u => 
+    u.username.toLowerCase().includes(mentionSearch.toLowerCase()) ||
+    u.name.toLowerCase().includes(mentionSearch.toLowerCase())
+  );
+
   if (loading) {
     return <Spinner />;
   }
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      <ForumUsernameDialog
+        open={showUsernameDialog}
+        onClose={() => {
+          setShowUsernameDialog(false);
+          getCurrentUser();
+        }}
+        currentUsername={currentUsername || undefined}
+        userId={currentUserId!}
+      />
+
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="container max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/dashboard")}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold">Member Forum</h1>
-              <p className="text-sm text-muted-foreground">
-                {posts.length} {posts.length === 1 ? "message" : "messages"}
-              </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/dashboard")}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-xl font-bold">Member Forum</h1>
+                <p className="text-sm text-muted-foreground">
+                  {posts.length} {posts.length === 1 ? "message" : "messages"}
+                </p>
+              </div>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  @{currentUsername || "Set Username"}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setShowUsernameDialog(true)}>
+                  <Edit2 className="mr-2 h-4 w-4" />
+                  Edit Username
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -249,7 +383,6 @@ const Forum = () => {
         ref={messagesContainerRef}
         className="container max-w-4xl mx-auto px-3 md:px-4 py-4 md:py-6 overflow-y-auto"
         style={{ height: "calc(100vh - 220px)" }}
-        onScroll={saveScrollPosition}
       >
         <div className="space-y-3 md:space-y-4 mb-4">
           {posts.length === 0 ? (
@@ -286,7 +419,7 @@ const Forum = () => {
                         className="font-bold text-xs md:text-sm"
                         style={{ color: userColor }}
                       >
-                        {post.profiles.first_name} {post.profiles.last_name}
+                        @{getDisplayName(post)}
                       </span>
                       <span className="text-[10px] md:text-xs text-muted-foreground">
                         {formatTime(post.created_at)}
@@ -301,24 +434,47 @@ const Forum = () => {
                         }}
                       >
                         <CardContent className="p-2.5 md:p-3">
+                          {post.reply_to && post.reply_post && (
+                            <div className="mb-2 p-2 bg-black/10 rounded border-l-2 border-white/30">
+                              <p className="text-[10px] md:text-xs font-semibold opacity-80">
+                                @{post.reply_post.profiles.forum_username || 
+                                  `${post.reply_post.profiles.first_name} ${post.reply_post.profiles.last_name}`}
+                              </p>
+                              <p className="text-[10px] md:text-xs opacity-70 line-clamp-2">
+                                {post.reply_post.message}
+                              </p>
+                            </div>
+                          )}
                           <p 
                             className="text-xs md:text-sm whitespace-pre-wrap break-words leading-relaxed"
                             style={{ color: isOwnPost ? "white" : "hsl(var(--foreground))" }}
                           >
-                            {post.message}
+                            {renderMessage(post.message)}
                           </p>
                         </CardContent>
                       </Card>
-                      {isOwnPost && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute -right-8 md:-right-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 md:h-8 md:w-8"
-                          onClick={() => handleDeletePost(post.id)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-destructive" />
-                        </Button>
-                      )}
+                      <div className={`absolute ${isOwnPost ? "-left-8 md:-left-10" : "-right-8 md:-right-10"} top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1`}>
+                        {!isOwnPost && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 md:h-8 md:w-8"
+                            onClick={() => setReplyingTo(post)}
+                          >
+                            <Reply className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                          </Button>
+                        )}
+                        {isOwnPost && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 md:h-8 md:w-8"
+                            onClick={() => handleDeletePost(post.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -332,11 +488,46 @@ const Forum = () => {
       {/* Message Input */}
       <div className="fixed bottom-16 md:bottom-4 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border shadow-lg">
         <div className="container max-w-4xl mx-auto px-3 md:px-4 py-3 md:py-4">
+          {replyingTo && (
+            <div className="mb-2 p-2 bg-muted rounded-lg flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-primary">
+                  Replying to @{getDisplayName(replyingTo)}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {replyingTo.message}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0"
+                onClick={() => setReplyingTo(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+          {showMentionMenu && filteredUsers.length > 0 && (
+            <div className="mb-2 p-2 bg-card rounded-lg border shadow-lg max-h-40 overflow-y-auto">
+              {filteredUsers.map(user => (
+                <button
+                  key={user.id}
+                  className="w-full text-left p-2 hover:bg-muted rounded text-sm"
+                  onClick={() => handleMention(user.username)}
+                >
+                  <span className="font-semibold">@{user.username}</span>
+                  <span className="text-muted-foreground ml-2 text-xs">{user.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex gap-2">
             <Textarea
-              placeholder="Type your message..."
+              ref={textareaRef}
+              placeholder="Type your message... (use @ to mention)"
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              onChange={handleTextareaChange}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();

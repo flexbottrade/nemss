@@ -395,6 +395,7 @@ export type Database = {
           created_at: string
           id: string
           message: string
+          reply_to: string | null
           updated_at: string
           user_id: string
         }
@@ -402,6 +403,7 @@ export type Database = {
           created_at?: string
           id?: string
           message: string
+          reply_to?: string | null
           updated_at?: string
           user_id: string
         }
@@ -409,10 +411,18 @@ export type Database = {
           created_at?: string
           id?: string
           message?: string
+          reply_to?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "forum_posts_reply_to_fkey"
+            columns: ["reply_to"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "forum_posts_user_id_fkey"
             columns: ["user_id"]
@@ -530,6 +540,7 @@ export type Database = {
           created_at: string | null
           email_verified: boolean
           first_name: string
+          forum_username: string | null
           id: string
           last_name: string
           member_id: string
@@ -543,6 +554,7 @@ export type Database = {
           created_at?: string | null
           email_verified?: boolean
           first_name: string
+          forum_username?: string | null
           id: string
           last_name: string
           member_id: string
@@ -556,6 +568,7 @@ export type Database = {
           created_at?: string | null
           email_verified?: boolean
           first_name?: string
+          forum_username?: string | null
           id?: string
           last_name?: string
           member_id?: string
