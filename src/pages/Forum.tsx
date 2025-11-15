@@ -722,170 +722,179 @@ const Forum = () => {
       {/* Content Area */}
       <div className="flex-1 overflow-hidden">
         {currentView === 'navigation' && (
-          <div className="h-full overflow-y-auto">
-            <div className="container max-w-4xl mx-auto px-2 md:px-4 py-2 md:py-4 space-y-2 md:space-y-3">
-              {/* Elections Section */}
-              {elections.length > 0 && (
-                <div className="space-y-2">
-                  {elections.map(election => (
-                    <Card
-                      key={election.id}
-                      className="cursor-pointer hover:bg-accent hover:shadow-md transition-all border-l-4 border-l-primary"
-                      onClick={() => handleNavigateToView('election', election.id)}
+          <div className="h-full flex flex-col">
+            {/* Sticky Top Section - Admin Buttons + General Discussion */}
+            <div className="shrink-0 bg-background sticky top-0 z-10 border-b border-border">
+              <div className="container max-w-4xl mx-auto px-2 md:px-4 py-2 md:py-3 space-y-2">
+                {/* Admin Action Buttons */}
+                {isAdmin && (
+                  <div className="flex gap-1 md:gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => setShowTopicDialog(true)}
+                      className="gap-1 h-8 md:h-9 text-xs md:text-sm flex-1"
                     >
-                      <CardContent className="p-2 md:p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2 flex-1 min-w-0">
-                            <BarChart3 className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0 mt-0.5" />
-                            <div className="flex-1 min-w-0">
-                              <span className="text-[10px] md:text-xs font-medium text-primary uppercase">Election</span>
-                              <h3 className="font-semibold text-xs md:text-sm line-clamp-2 mb-0.5">{election.position}</h3>
-                              <p className="text-[10px] md:text-xs text-muted-foreground">
-                                {userVotes[election.id] ? '✓ Voted' : 'Tap to vote'}
-                              </p>
-                            </div>
-                            <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground rotate-180 shrink-0" />
-                          </div>
-                          {isAdmin && (
-                            <div className="flex gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6 md:h-7 md:w-7"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedElectionId(election.id);
-                                  setShowNomineeDialog(true);
-                                }}
-                              >
-                                <Users className="h-3 w-3 md:h-3.5 md:w-3.5" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6 md:h-7 md:w-7"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingElection(election);
-                                  setShowElectionDialog(true);
-                                }}
-                              >
-                                <Edit2 className="h-3 w-3 md:h-3.5 md:w-3.5" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6 md:h-7 md:w-7 text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeletingItem({ type: 'election', id: election.id });
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3 md:h-3.5 md:w-3.5" />
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-
-              {/* General Discussion Card */}
-              <Card
-                className="cursor-pointer hover:bg-accent hover:shadow-md transition-all"
-                onClick={() => handleNavigateToView('general')}
-              >
-                <CardContent className="p-2 md:p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-1">
-                      <MessageSquare className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0" />
-                      <div>
-                        <h3 className="font-semibold text-xs md:text-sm">General Discussion</h3>
-                        <p className="text-[10px] md:text-xs text-muted-foreground">Open chat for all members</p>
-                      </div>
-                    </div>
-                    <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground rotate-180 shrink-0" />
+                      <Plus className="h-3 w-3 md:h-4 md:w-4" />
+                      Add Topic
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => setShowElectionDialog(true)}
+                      className="gap-1 h-8 md:h-9 text-xs md:text-sm flex-1"
+                    >
+                      <Plus className="h-3 w-3 md:h-4 md:w-4" />
+                      Add Election
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
+                )}
 
-              {/* Topics Section */}
-              {topics.length > 0 && (
-                <div className="space-y-2">
-                  {topics.map(topic => (
-                    <Card
-                      key={topic.id}
-                      className="cursor-pointer hover:bg-accent hover:shadow-md transition-all"
-                      onClick={() => handleNavigateToView('topic', topic.id)}
-                    >
-                      <CardContent className="p-2 md:p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2 flex-1 min-w-0">
-                            <MessageSquare className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0 mt-0.5" />
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-xs md:text-sm line-clamp-2 mb-0.5">{topic.title}</h3>
-                              <p className="text-[10px] md:text-xs text-muted-foreground line-clamp-1">
-                                {topic.description}
-                              </p>
-                            </div>
-                            <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground rotate-180 shrink-0" />
-                          </div>
-                          {isAdmin && (
-                            <div className="flex gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6 md:h-7 md:w-7"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingTopic(topic);
-                                  setShowTopicDialog(true);
-                                }}
-                              >
-                                <Edit2 className="h-3 w-3 md:h-3.5 md:w-3.5" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-6 w-6 md:h-7 md:w-7 text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeletingItem({ type: 'topic', id: topic.id });
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3 md:h-3.5 md:w-3.5" />
-                              </Button>
-                            </div>
-                          )}
+                {/* General Discussion Card */}
+                <Card
+                  className="cursor-pointer hover:bg-accent hover:shadow-md transition-all"
+                  onClick={() => handleNavigateToView('general')}
+                >
+                  <CardContent className="p-2 md:p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1">
+                        <MessageSquare className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0" />
+                        <div>
+                          <h3 className="font-semibold text-xs md:text-sm">General Discussion</h3>
+                          <p className="text-[10px] md:text-xs text-muted-foreground">Open chat for all members</p>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                      </div>
+                      <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground rotate-180 shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
 
-              {isAdmin && (
-                <div className="flex gap-1 md:gap-2 pt-1">
-                  <Button
-                    size="sm"
-                    onClick={() => setShowTopicDialog(true)}
-                    className="gap-1 h-8 md:h-9 text-xs md:text-sm flex-1"
-                  >
-                    <Plus className="h-3 w-3 md:h-4 md:w-4" />
-                    Add Topic
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setShowElectionDialog(true)}
-                    className="gap-1 h-8 md:h-9 text-xs md:text-sm flex-1"
-                  >
-                    <Plus className="h-3 w-3 md:h-4 md:w-4" />
-                    Add Election
-                  </Button>
-                </div>
-              )}
+            {/* Scrollable Section - Elections + Topics */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="container max-w-4xl mx-auto px-2 md:px-4 py-2 md:py-3 space-y-2">
+                {/* Elections Section */}
+                {elections.length > 0 && (
+                  <div className="space-y-2">
+                    {elections.map(election => (
+                      <Card
+                        key={election.id}
+                        className="cursor-pointer hover:bg-accent hover:shadow-md transition-all border-l-4 border-l-primary"
+                        onClick={() => handleNavigateToView('election', election.id)}
+                      >
+                        <CardContent className="p-2 md:p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2 flex-1 min-w-0">
+                              <BarChart3 className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0 mt-0.5" />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-[10px] md:text-xs font-medium text-primary uppercase">Election</span>
+                                <h3 className="font-semibold text-xs md:text-sm line-clamp-2 mb-0.5">{election.position}</h3>
+                                <p className="text-[10px] md:text-xs text-muted-foreground">
+                                  {userVotes[election.id] ? '✓ Voted' : 'Tap to vote'}
+                                </p>
+                              </div>
+                              <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground rotate-180 shrink-0" />
+                            </div>
+                            {isAdmin && (
+                              <div className="flex gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6 md:h-7 md:w-7"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedElectionId(election.id);
+                                    setShowNomineeDialog(true);
+                                  }}
+                                >
+                                  <Users className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6 md:h-7 md:w-7"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingElection(election);
+                                    setShowElectionDialog(true);
+                                  }}
+                                >
+                                  <Edit2 className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6 md:h-7 md:w-7 text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeletingItem({ type: 'election', id: election.id });
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+
+                {/* Topics Section */}
+                {topics.length > 0 && (
+                  <div className="space-y-2">
+                    {topics.map(topic => (
+                      <Card
+                        key={topic.id}
+                        className="cursor-pointer hover:bg-accent hover:shadow-md transition-all"
+                        onClick={() => handleNavigateToView('topic', topic.id)}
+                      >
+                        <CardContent className="p-2 md:p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2 flex-1 min-w-0">
+                              <MessageSquare className="h-4 w-4 md:h-5 md:w-5 text-primary shrink-0 mt-0.5" />
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-xs md:text-sm line-clamp-2 mb-0.5">{topic.title}</h3>
+                                <p className="text-[10px] md:text-xs text-muted-foreground line-clamp-1">
+                                  {topic.description}
+                                </p>
+                              </div>
+                              <ArrowLeft className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground rotate-180 shrink-0" />
+                            </div>
+                            {isAdmin && (
+                              <div className="flex gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6 md:h-7 md:w-7"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingTopic(topic);
+                                    setShowTopicDialog(true);
+                                  }}
+                                >
+                                  <Edit2 className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-6 w-6 md:h-7 md:w-7 text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeletingItem({ type: 'topic', id: topic.id });
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
