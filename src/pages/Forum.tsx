@@ -105,10 +105,12 @@ const Forum = () => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (smooth = true) => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 100);
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+      }
+    }, smooth ? 100 : 0);
   };
 
   const getUserColor = (userId: string): string => {
@@ -215,10 +217,10 @@ const Forum = () => {
   }, []);
 
   useEffect(() => {
-    if (posts.length > 0 && messagesContainerRef.current) {
-      scrollToBottom();
+    if (posts.length > 0) {
+      scrollToBottom(false);
     }
-  }, [posts]);
+  }, [posts.length]);
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -342,6 +344,8 @@ const Forum = () => {
       console.error(error);
     } else {
       setPosts(data as any || []);
+      // Scroll to bottom after posts load
+      setTimeout(() => scrollToBottom(false), 300);
     }
     setLoading(false);
   };
@@ -386,6 +390,8 @@ const Forum = () => {
       setNewMessage("");
       setReplyingTo(null);
       toast.success("Message sent");
+      // Scroll to bottom after sending
+      setTimeout(() => scrollToBottom(false), 200);
     }
     setSending(false);
   };
@@ -558,7 +564,7 @@ const Forum = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="flex flex-col h-screen bg-background pb-16 md:pb-4">
       <ForumUsernameDialog
         open={showUsernameDialog}
         onClose={() => {
@@ -607,7 +613,7 @@ const Forum = () => {
       </AlertDialog>
 
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background border-b border-border">
+      <div className="shrink-0 sticky top-0 z-10 bg-background border-b border-border">
         <div className="container max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -642,9 +648,11 @@ const Forum = () => {
         </div>
       </div>
 
-      {/* Topics Section */}
-      {(topics.length > 0 || isAdmin) && (
-        <div className="container max-w-4xl mx-auto px-3 md:px-4 pt-4">
+      {/* Topics and Polls - Scrollable Section */}
+      <div className="shrink-0 overflow-y-auto max-h-[30vh] border-b border-border">
+        {/* Topics Section */}
+        {(topics.length > 0 || isAdmin) && (
+          <div className="container max-w-4xl mx-auto px-3 md:px-4 pt-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-primary" />
@@ -710,9 +718,9 @@ const Forum = () => {
         </div>
       )}
 
-      {/* Polls Section */}
-      {(polls.length > 0 || isAdmin) && (
-        <div className="container max-w-4xl mx-auto px-3 md:px-4 pt-2">
+        {/* Polls Section */}
+        {(polls.length > 0 || isAdmin) && (
+          <div className="container max-w-4xl mx-auto px-3 md:px-4 pt-2 pb-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" />
@@ -802,18 +810,19 @@ const Forum = () => {
                   </CardContent>
                 </Card>
               );
-            })}
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Messages */}
-      <div 
-        ref={messagesContainerRef}
-        className="container max-w-4xl mx-auto px-3 md:px-4 py-4 md:py-6 overflow-y-auto"
-        style={{ height: "calc(100vh - 220px)" }}
-      >
-        <div className="space-y-3 md:space-y-4 mb-4">
+      <div className="flex-1 overflow-hidden">
+        <div 
+          ref={messagesContainerRef}
+          className="container max-w-4xl mx-auto px-3 md:px-4 h-full overflow-y-auto"
+        >
+          <div className="py-4 md:py-6 space-y-3 md:space-y-4">
           {posts.length === 0 ? (
             <Card className="border-none shadow-sm">
               <CardContent className="py-8 md:py-12 text-center">
@@ -908,14 +917,15 @@ const Forum = () => {
                   </div>
                 </div>
               );
-            })
-          )}
-          <div ref={messagesEndRef} />
+              })
+            )}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
       </div>
 
       {/* Message Input */}
-      <div className="fixed bottom-16 md:bottom-4 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border shadow-lg">
+      <div className="shrink-0 bg-background border-t border-border shadow-lg">
         <div className="container max-w-4xl mx-auto px-3 md:px-4 py-3 md:py-4">
           {replyingTo && (
             <div className="mb-2 p-2 bg-muted rounded-lg flex items-start justify-between">
