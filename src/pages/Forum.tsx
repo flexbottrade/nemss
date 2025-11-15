@@ -189,7 +189,7 @@ const Forum = () => {
       .subscribe();
 
     const votesChannel = supabase
-      .channel('votes')
+      .channel('votes-changes')
       .on(
         'postgres_changes',
         {
@@ -198,11 +198,12 @@ const Forum = () => {
           table: 'votes'
         },
         (payload) => {
-          if (payload.new && 'voter_id' in payload.new && (payload.new as any).voter_id === currentUserId) {
-            loadUserVotes();
-          }
+          loadUserVotes();
           if (payload.new && 'election_id' in payload.new) {
             loadNominees((payload.new as any).election_id);
+          }
+          if (payload.old && 'election_id' in payload.old) {
+            loadNominees((payload.old as any).election_id);
           }
         }
       )
@@ -222,7 +223,10 @@ const Forum = () => {
     if (currentView === 'general' || currentView === 'topic') {
       loadPosts();
     }
-  }, [currentView, selectedTopicId]);
+    if (currentView === 'election' && selectedElectionId) {
+      loadNominees(selectedElectionId);
+    }
+  }, [currentView, selectedTopicId, selectedElectionId]);
 
   useEffect(() => {
     if (posts.length > 0 && currentView !== 'navigation') {
@@ -303,8 +307,11 @@ const Forum = () => {
     const { data, error } = await supabase
       .from("election_nominees")
       .select(`
-        *,
-        profiles(first_name, last_name, member_id)
+        id,
+        election_id,
+        nominee_id,
+        votes_count,
+        profiles:nominee_id(first_name, last_name, member_id)
       `)
       .eq("election_id", electionId)
       .order("votes_count", { ascending: false });
@@ -957,10 +964,52 @@ const Forum = () => {
               <div className="container max-w-4xl mx-auto px-2 md:px-4 py-2 md:py-4">
                 <Card className="mb-3">
                   <CardContent className="p-3 md:p-4">
-                    <h2 className="text-sm md:text-base font-semibold mb-2">{selectedElection.position}</h2>
-                    <p className="text-xs md:text-sm text-muted-foreground">
+                    <div className="flex items-center justify-between mb-2">
+                      <h2 className="text-sm md:text-base font-semibold">{selectedElection.position}</h2>
+                      {(selectedElection.status === 'concluded' || new Date(selectedElection.deadline) < new Date()) && (
+                        <Badge variant="secondary" className="text-[10px] md:text-xs">Concluded</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs md:text-sm text-muted-foreground mb-2">
                       Deadline: {formatDateDDMMYY(new Date(selectedElection.deadline))}
                     </p>
+                    {(() => {
+                      const totalVotes = nominees[selectedElection.id]?.reduce((sum, n) => sum + n.votes_count, 0) || 0;
+                      const winner = nominees[selectedElection.id]?.reduce((max, n) => 
+                        !max || n.votes_count > max.votes_count ? n : max, null as Nominee | null
+                      );
+                      const isConcluded = selectedElection.status === 'concluded' || new Date(selectedElection.deadline) < new Date();
+                      
+                      return (
+                        <>
+                          <p className="text-xs md:text-sm text-muted-foreground">
+                            Total Votes: {totalVotes}
+                          </p>
+                          {isConcluded && winner && (
+                            <div className="mt-2 p-2 bg-primary/10 border border-primary rounded">
+                              <p className="text-[10px] md:text-xs font-medium text-primary mb-1">Winner</p>
+                              <p className="text-xs md:text-sm font-bold">
+                                {winner.profiles.first_name} {winner.profiles.last_name}
+                              </p>
+                              <p className="text-[10px] md:text-xs text-muted-foreground">
+                                {winner.votes_count} votes ({totalVotes > 0 ? Math.round((winner.votes_count / totalVotes) * 100) : 0}%)
+                              </p>
+                            </div>
+                          )}
+                          {isAdmin && !isConcluded && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleConcludeElection(selectedElection.id)}
+                              disabled={concluding}
+                              className="w-full mt-2 text-xs"
+                            >
+                              {concluding ? "Concluding..." : "Conclude Election Now"}
+                            </Button>
+                          )}
+                        </>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
 
@@ -970,14 +1019,16 @@ const Forum = () => {
                     const totalVotes = nominees[selectedElection.id]?.reduce((sum, n) => sum + n.votes_count, 0) || 0;
                     const percentage = totalVotes > 0 ? Math.round((nominee.votes_count / totalVotes) * 100) : 0;
                     const isSelected = userVotes[selectedElection.id] === nominee.nominee_id;
+                    const isConcluded = selectedElection.status === 'concluded' || new Date(selectedElection.deadline) < new Date();
+                    const canVote = !userVoted && !isConcluded;
 
                     return (
                       <Card
                         key={nominee.id}
-                        className={`cursor-pointer transition-all ${
-                          !userVoted ? 'hover:border-primary hover:shadow-md' : ''
+                        className={`transition-all ${
+                          canVote ? 'cursor-pointer hover:border-primary hover:shadow-md' : 'cursor-default'
                         } ${isSelected ? 'border-primary border-2' : ''}`}
-                        onClick={() => !userVoted && handleVote(selectedElection.id, nominee.nominee_id)}
+                        onClick={() => canVote && handleVote(selectedElection.id, nominee.nominee_id)}
                       >
                         <CardContent className="p-2 md:p-3">
                           <div className="flex items-center justify-between gap-2 mb-2">
@@ -987,7 +1038,7 @@ const Forum = () => {
                                   {getInitials(nominee.profiles.first_name, nominee.profiles.last_name)}
                                 </AvatarFallback>
                               </Avatar>
-                              <div>
+                              <div className="flex-1">
                                 <p className="font-semibold text-xs md:text-sm">
                                   {nominee.profiles.first_name} {nominee.profiles.last_name}
                                 </p>
@@ -996,29 +1047,25 @@ const Forum = () => {
                                 </p>
                               </div>
                             </div>
-                            {isSelected && (
-                              <Badge variant="default" className="text-[10px] md:text-xs">
-                                Your Vote
-                              </Badge>
-                            )}
+                            <div className="text-right">
+                              {isSelected && (
+                                <Badge variant="default" className="text-[10px] md:text-xs mb-1">
+                                  Your Vote
+                                </Badge>
+                              )}
+                              <div>
+                                <p className="text-xs md:text-sm font-bold">{nominee.votes_count}</p>
+                                <p className="text-[10px] md:text-xs text-muted-foreground">{percentage}%</p>
+                              </div>
+                            </div>
                           </div>
                           
-                          {userVoted && (
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-primary transition-all duration-300"
-                                    style={{ width: `${percentage}%` }}
-                                  />
-                                </div>
-                                <span className="text-xs font-semibold w-10 text-right">{percentage}%</span>
-                              </div>
-                              <p className="text-[10px] md:text-xs text-muted-foreground">
-                                {nominee.votes_count} {nominee.votes_count === 1 ? 'vote' : 'votes'}
-                              </p>
-                            </div>
-                          )}
+                          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-primary transition-all duration-500"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
                         </CardContent>
                       </Card>
                     );
