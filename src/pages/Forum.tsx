@@ -939,72 +939,71 @@ const Forum = () => {
                 <div className="space-y-3 md:space-y-4">
                   {posts.map((post) => {
                     const isOwnPost = post.user_id === currentUserId;
-                    const userColor = getUserColor(post.user_id);
                     return (
-                      <div
-                        key={post.id}
-                        className={`flex gap-2 ${isOwnPost ? 'flex-row-reverse' : 'flex-row'}`}
-                      >
-                        <Avatar className="h-7 w-7 md:h-9 md:w-9 shrink-0">
-                          <AvatarFallback className="text-xs md:text-sm" style={{ backgroundColor: userColor }}>
-                            {getInitials(post.profiles.first_name, post.profiles.last_name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div className={`flex-1 min-w-0 ${isOwnPost ? 'items-end' : 'items-start'} flex flex-col`}>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-xs md:text-sm" style={{ color: userColor }}>
-                              @{getDisplayName(post)}
-                            </span>
-                            <span className="text-[10px] md:text-xs text-muted-foreground">
-                              {getRelativeTime(post.created_at)}
-                            </span>
-                          </div>
-                          
-                          {post.reply_post && (
-                            <div className={`bg-muted/50 border-l-2 border-primary px-2 py-1 mb-1 rounded text-xs ${isOwnPost ? 'ml-auto' : 'mr-auto'}`}>
-                              <div className="font-semibold text-[10px] md:text-xs">
-                                @{post.reply_post.profiles.forum_username || 
-                                  `${post.reply_post.profiles.first_name} ${post.reply_post.profiles.last_name}`}
+                      <Card key={post.id} className="border border-border hover:shadow-sm transition-shadow">
+                        <CardContent className="p-3 md:p-4">
+                          <div className="flex gap-2 md:gap-3">
+                            <Avatar className="h-8 w-8 md:h-10 md:w-10 shrink-0 bg-primary/10">
+                              <AvatarFallback className="text-xs md:text-sm bg-primary/10 text-primary">
+                                {getInitials(post.profiles.first_name, post.profiles.last_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="font-semibold text-xs md:text-sm text-foreground">
+                                  @{getDisplayName(post)}
+                                </span>
+                                {isOwnPost && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">You</Badge>
+                                )}
+                                <span className="text-[10px] md:text-xs text-muted-foreground">
+                                  {getRelativeTime(post.created_at)}
+                                </span>
                               </div>
-                              <div className="text-[10px] md:text-xs text-muted-foreground line-clamp-2">
-                                {post.reply_post.message}
-                              </div>
-                            </div>
-                          )}
-                          
-                          <Card className={`max-w-[85%] md:max-w-[75%] ${isOwnPost ? 'ml-auto' : 'mr-auto'}`}>
-                            <CardContent className="p-2 md:p-3">
-                              <p className="text-xs md:text-sm break-words" style={{ color: userColor }}>
+                              
+                              {post.reply_post && (
+                                <div className="bg-muted border-l-2 border-primary px-2 md:px-3 py-1.5 md:py-2 mb-2 rounded text-xs">
+                                  <div className="font-semibold text-[10px] md:text-xs text-foreground">
+                                    Replying to @{post.reply_post.profiles.forum_username || 
+                                      `${post.reply_post.profiles.first_name} ${post.reply_post.profiles.last_name}`}
+                                  </div>
+                                  <div className="text-[10px] md:text-xs text-muted-foreground line-clamp-2 mt-0.5">
+                                    {post.reply_post.message}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <p className="text-xs md:text-sm break-words text-foreground mb-2">
                                 {renderMessage(post.message)}
                               </p>
-                            </CardContent>
-                          </Card>
 
-                          <div className="flex gap-1 mt-1">
-                            {!isOwnPost && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-5 w-5 md:h-6 md:w-6"
-                                onClick={() => setReplyingTo(post)}
-                              >
-                                <Reply className="h-3 w-3 md:h-4 md:w-4" />
-                              </Button>
-                            )}
-                            {isOwnPost && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-5 w-5 md:h-6 md:w-6"
-                                onClick={() => handleDeletePost(post.id)}
-                              >
-                                <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
-                              </Button>
-                            )}
+                              <div className="flex gap-1">
+                                {!isOwnPost && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6 md:h-7 md:w-7"
+                                    onClick={() => setReplyingTo(post)}
+                                  >
+                                    <Reply className="h-3 w-3 md:h-4 md:w-4" />
+                                  </Button>
+                                )}
+                                {isOwnPost && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6 md:h-7 md:w-7"
+                                    onClick={() => handleDeletePost(post.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        </CardContent>
+                      </Card>
                     );
                   })}
                   <div ref={messagesEndRef} />
