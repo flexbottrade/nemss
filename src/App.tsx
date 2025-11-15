@@ -24,6 +24,7 @@ import AdminSettings from "./pages/admin/AdminSettings";
 import AdminEvents from "./pages/admin/AdminEvents";
 import Donations from "./pages/admin/Donations";
 import Reports from "./pages/admin/Reports";
+import Forum from "./pages/Forum";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/payments" element={<Payments />} />
           <Route path="/events" element={<Events />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/forum" element={<Forum />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/members" element={<Members />} />
           <Route path="/admin/transactions" element={<Transactions />} />
