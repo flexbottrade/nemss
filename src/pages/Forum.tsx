@@ -4,19 +4,33 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Send, Trash2, Reply, X, Edit2 } from "lucide-react";
+import { ArrowLeft, Send, Trash2, Reply, X, Edit2, Plus, MessageSquare, BarChart3 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateDDMMYY } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ForumUsernameDialog } from "@/components/ForumUsernameDialog";
+import { ForumTopicDialog } from "@/components/ForumTopicDialog";
+import { ForumPollDialog } from "@/components/ForumPollDialog";
+import { useRole } from "@/hooks/useRole";
+import { Progress } from "@/components/ui/progress";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const LAST_VISIT_KEY = "forum_last_visit";
 
@@ -42,15 +56,47 @@ interface ForumPost {
   } | null;
 }
 
+interface ForumTopic {
+  id: string;
+  title: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ForumPoll {
+  id: string;
+  question: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface PollOption {
+  id: string;
+  poll_id: string;
+  option_text: string;
+  votes_count: number;
+}
+
 const Forum = () => {
   const navigate = useNavigate();
+  const { isAdmin } = useRole();
   const [posts, setPosts] = useState<ForumPost[]>([]);
+  const [topics, setTopics] = useState<ForumTopic[]>([]);
+  const [polls, setPolls] = useState<ForumPoll[]>([]);
+  const [pollOptions, setPollOptions] = useState<Record<string, PollOption[]>>({});
+  const [userVotes, setUserVotes] = useState<Record<string, string>>({});
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const [showUsernameDialog, setShowUsernameDialog] = useState(false);
+  const [showTopicDialog, setShowTopicDialog] = useState(false);
+  const [showPollDialog, setShowPollDialog] = useState(false);
+  const [editingTopic, setEditingTopic] = useState<ForumTopic | null>(null);
+  const [editingPoll, setEditingPoll] = useState<any>(null);
+  const [deletingItem, setDeletingItem] = useState<{ type: 'topic' | 'poll'; id: string } | null>(null);
   const [replyingTo, setReplyingTo] = useState<ForumPost | null>(null);
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionSearch, setMentionSearch] = useState("");
@@ -90,12 +136,14 @@ const Forum = () => {
     const init = async () => {
       await getCurrentUser();
       await loadPosts();
+      await loadTopics();
+      await loadPolls();
       await loadAllUsers();
       scrollToBottom();
     };
     init();
 
-    const channel = supabase
+    const postsChannel = supabase
       .channel('forum-posts')
       .on(
         'postgres_changes',
@@ -110,9 +158,59 @@ const Forum = () => {
       )
       .subscribe();
 
+    const topicsChannel = supabase
+      .channel('forum-topics')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'forum_topics'
+        },
+        () => {
+          loadTopics();
+        }
+      )
+      .subscribe();
+
+    const pollsChannel = supabase
+      .channel('forum-polls')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'forum_polls'
+        },
+        () => {
+          loadPolls();
+        }
+      )
+      .subscribe();
+
+    const pollOptionsChannel = supabase
+      .channel('forum-poll-options')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'forum_poll_options'
+        },
+        (payload) => {
+          if (payload.new && 'poll_id' in payload.new) {
+            loadPollOptions(payload.new.poll_id as string);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       localStorage.setItem(LAST_VISIT_KEY, new Date().toISOString());
-      supabase.removeChannel(channel);
+      supabase.removeChannel(postsChannel);
+      supabase.removeChannel(topicsChannel);
+      supabase.removeChannel(pollsChannel);
+      supabase.removeChannel(pollOptionsChannel);
     };
   }, []);
 
@@ -156,6 +254,72 @@ const Forum = () => {
         username: u.forum_username!,
         name: `${u.first_name} ${u.last_name}`
       })));
+    }
+  };
+
+  const loadTopics = async () => {
+    const { data, error } = await supabase
+      .from("forum_topics")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to load topics:", error);
+    } else {
+      setTopics(data || []);
+    }
+  };
+
+  const loadPolls = async () => {
+    const { data, error } = await supabase
+      .from("forum_polls")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to load polls:", error);
+    } else {
+      setPolls(data || []);
+      // Load options for each poll
+      data?.forEach(poll => loadPollOptions(poll.id));
+      // Load user votes
+      if (currentUserId) {
+        loadUserVotes();
+      }
+    }
+  };
+
+  const loadPollOptions = async (pollId: string) => {
+    const { data, error } = await supabase
+      .from("forum_poll_options")
+      .select("*")
+      .eq("poll_id", pollId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Failed to load poll options:", error);
+    } else {
+      setPollOptions(prev => ({ ...prev, [pollId]: data || [] }));
+    }
+  };
+
+  const loadUserVotes = async () => {
+    if (!currentUserId) return;
+
+    const { data, error } = await supabase
+      .from("forum_poll_votes")
+      .select("poll_id, option_id")
+      .eq("user_id", currentUserId);
+
+    if (error) {
+      console.error("Failed to load user votes:", error);
+    } else {
+      const votes: Record<string, string> = {};
+      data?.forEach(vote => {
+        votes[vote.poll_id] = vote.option_id;
+      });
+      setUserVotes(votes);
     }
   };
 
@@ -237,6 +401,69 @@ const Forum = () => {
       console.error(error);
     } else {
       toast.success("Post deleted");
+    }
+  };
+
+  const handleDeleteTopic = async () => {
+    if (!deletingItem || deletingItem.type !== 'topic') return;
+
+    const { error } = await supabase
+      .from("forum_topics")
+      .delete()
+      .eq("id", deletingItem.id);
+
+    if (error) {
+      toast.error("Failed to delete topic");
+      console.error(error);
+    } else {
+      toast.success("Topic deleted");
+    }
+    setDeletingItem(null);
+  };
+
+  const handleDeletePoll = async () => {
+    if (!deletingItem || deletingItem.type !== 'poll') return;
+
+    const { error } = await supabase
+      .from("forum_polls")
+      .delete()
+      .eq("id", deletingItem.id);
+
+    if (error) {
+      toast.error("Failed to delete poll");
+      console.error(error);
+    } else {
+      toast.success("Poll deleted");
+    }
+    setDeletingItem(null);
+  };
+
+  const handleVote = async (pollId: string, optionId: string) => {
+    if (!currentUserId) {
+      toast.error("You must be logged in to vote");
+      return;
+    }
+
+    if (userVotes[pollId]) {
+      toast.error("You have already voted in this poll");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("forum_poll_votes")
+      .insert({
+        poll_id: pollId,
+        option_id: optionId,
+        user_id: currentUserId
+      });
+
+    if (error) {
+      toast.error("Failed to cast vote");
+      console.error(error);
+    } else {
+      toast.success("Vote cast successfully");
+      setUserVotes(prev => ({ ...prev, [pollId]: optionId }));
+      loadPollOptions(pollId);
     }
   };
 
@@ -342,6 +569,43 @@ const Forum = () => {
         userId={currentUserId!}
       />
 
+      <ForumTopicDialog
+        open={showTopicDialog}
+        onClose={() => {
+          setShowTopicDialog(false);
+          setEditingTopic(null);
+        }}
+        topic={editingTopic || undefined}
+      />
+
+      <ForumPollDialog
+        open={showPollDialog}
+        onClose={() => {
+          setShowPollDialog(false);
+          setEditingPoll(null);
+        }}
+        poll={editingPoll}
+      />
+
+      <AlertDialog open={!!deletingItem} onOpenChange={() => setDeletingItem(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this {deletingItem?.type}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={deletingItem?.type === 'topic' ? handleDeleteTopic : handleDeletePoll}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border">
         <div className="container max-w-4xl mx-auto px-4 py-4">
@@ -377,6 +641,171 @@ const Forum = () => {
           </div>
         </div>
       </div>
+
+      {/* Topics Section */}
+      {(topics.length > 0 || isAdmin) && (
+        <div className="container max-w-4xl mx-auto px-3 md:px-4 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Discussion Topics</h2>
+            </div>
+            {isAdmin && (
+              <Button
+                size="sm"
+                onClick={() => setShowTopicDialog(true)}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Topic
+              </Button>
+            )}
+          </div>
+          <div className="space-y-2 mb-4">
+            {topics.map((topic) => (
+              <Card key={topic.id} className="border-l-4 border-l-primary">
+                <CardContent className="p-3 md:p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm md:text-base mb-1">{topic.title}</h3>
+                      <p className="text-xs md:text-sm text-muted-foreground whitespace-pre-wrap">
+                        {topic.description}
+                      </p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground mt-2">
+                        Posted {formatTime(topic.created_at)}
+                      </p>
+                    </div>
+                    {isAdmin && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditingTopic(topic);
+                              setShowTopicDialog(true);
+                            }}
+                          >
+                            <Edit2 className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeletingItem({ type: 'topic', id: topic.id })}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Polls Section */}
+      {(polls.length > 0 || isAdmin) && (
+        <div className="container max-w-4xl mx-auto px-3 md:px-4 pt-2">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Active Polls</h2>
+            </div>
+            {isAdmin && (
+              <Button
+                size="sm"
+                onClick={() => setShowPollDialog(true)}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Poll
+              </Button>
+            )}
+          </div>
+          <div className="space-y-3 mb-4">
+            {polls.map((poll) => {
+              const options = pollOptions[poll.id] || [];
+              const totalVotes = options.reduce((sum, opt) => sum + opt.votes_count, 0);
+              const userVoted = !!userVotes[poll.id];
+
+              return (
+                <Card key={poll.id} className="border-2 border-primary/20">
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <h3 className="font-semibold text-sm md:text-base flex-1">{poll.question}</h3>
+                      {isAdmin && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditingPoll({ ...poll, options });
+                                setShowPollDialog(true);
+                              }}
+                            >
+                              <Edit2 className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => setDeletingItem({ type: 'poll', id: poll.id })}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {options.map((option) => {
+                        const percentage = totalVotes > 0 ? (option.votes_count / totalVotes) * 100 : 0;
+                        const isSelected = userVotes[poll.id] === option.id;
+
+                        return (
+                          <div key={option.id}>
+                            <Button
+                              variant={isSelected ? "default" : "outline"}
+                              className="w-full justify-start mb-1 text-left h-auto py-2 px-3"
+                              onClick={() => !userVoted && handleVote(poll.id, option.id)}
+                              disabled={userVoted}
+                            >
+                              <span className="flex-1 text-xs md:text-sm">{option.option_text}</span>
+                              {userVoted && (
+                                <span className="ml-2 text-xs font-semibold">
+                                  {option.votes_count} ({percentage.toFixed(1)}%)
+                                </span>
+                              )}
+                            </Button>
+                            {userVoted && (
+                              <Progress value={percentage} className="h-1" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] md:text-xs text-muted-foreground mt-3">
+                      {totalVotes} total {totalVotes === 1 ? 'vote' : 'votes'}
+                      {userVoted && " • You voted"}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div 
