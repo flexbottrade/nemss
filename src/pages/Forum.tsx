@@ -688,9 +688,16 @@ Congratulations! 🎉`;
         .from("elections")
         .select("*")
         .eq("id", electionId)
-        .single();
+        .maybeSingle();
 
-      if (electionError || !election) {
+      if (electionError) {
+        toast.error("Database error: " + electionError.message);
+        console.error("Election fetch error:", electionError);
+        setConcluding(false);
+        return;
+      }
+
+      if (!election) {
         toast.error("Election not found");
         setConcluding(false);
         return;
