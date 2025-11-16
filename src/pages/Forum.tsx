@@ -126,6 +126,13 @@ const Forum = () => {
     init();
   }, []);
 
+  // Load unread counts when currentUserId becomes available
+  useEffect(() => {
+    if (currentUserId) {
+      loadUnreadCounts();
+    }
+  }, [currentUserId]);
+
   // Realtime subscription for posts
   useEffect(() => {
     if (currentView !== 'general' && currentView !== 'topic') return;
@@ -380,9 +387,6 @@ const Forum = () => {
       console.error("Failed to load topics:", error);
     } else {
       setTopics(data || []);
-      if (currentUserId) {
-        await loadUnreadCounts();
-      }
     }
   };
 
