@@ -10,7 +10,7 @@ import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateDDMMYY } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ForumUsernameDialog } from "@/components/ForumUsernameDialog";
 import { ForumTopicDialog } from "@/components/ForumTopicDialog";
 import { ElectionDialog } from "@/components/ElectionDialog";
@@ -33,6 +33,7 @@ interface ForumPost {
     last_name: string;
     member_id: string;
     forum_username: string | null;
+    avatar_url: string | null;
   };
   reply_post?: {
     message: string;
@@ -40,6 +41,7 @@ interface ForumPost {
       forum_username: string | null;
       first_name: string;
       last_name: string;
+      avatar_url: string | null;
     };
   } | null;
 }
@@ -326,6 +328,11 @@ const Forum = () => {
   useEffect(() => {
     if (currentView === 'general' || currentView === 'topic') {
       loadPosts();
+      // Mark as read when entering conversation
+      if (currentUserId) {
+        const topicId = currentView === 'general' ? null : selectedTopicId;
+        markAsRead(topicId);
+      }
     }
     if (currentView === 'election' && selectedElectionId) {
       loadNominees(selectedElectionId);
@@ -334,7 +341,7 @@ const Forum = () => {
     return () => {
       localStorage.setItem(LAST_VISIT_KEY, new Date().toISOString());
     };
-  }, [currentView, selectedTopicId, selectedElectionId]);
+  }, [currentView, selectedTopicId, selectedElectionId, currentUserId]);
 
   useEffect(() => {
     if (posts.length > 0 && currentView !== 'navigation') {
@@ -605,10 +612,10 @@ Congratulations! 🎉`;
       .from("forum_posts")
       .select(`
         *,
-        profiles(first_name, last_name, member_id, forum_username),
+        profiles(first_name, last_name, member_id, forum_username, avatar_url),
         reply_post:reply_to(
           message,
-          profiles(forum_username, first_name, last_name)
+          profiles(forum_username, first_name, last_name, avatar_url)
         )
       `)
       .order("created_at", { ascending: true });
@@ -1493,6 +1500,9 @@ Congratulations! 🎉`;
                       <Card key={post.id} className={`border hover:shadow-sm transition-shadow ${cardPadding}`}>
                         <div className="flex gap-1.5 md:gap-2">
                           <Avatar className="h-6 w-6 md:h-8 md:w-8 shrink-0 bg-primary/10">
+                            {post.profiles.avatar_url && (
+                              <AvatarImage src={post.profiles.avatar_url} alt={getDisplayName(post)} />
+                            )}
                             <AvatarFallback className="text-[10px] md:text-xs bg-primary/10 text-primary">
                               {getInitials(post.profiles.first_name, post.profiles.last_name)}
                             </AvatarFallback>
