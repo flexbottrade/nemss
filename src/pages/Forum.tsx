@@ -133,6 +133,13 @@ const Forum = () => {
     }
   }, [currentUserId]);
 
+  // Load posts when entering a conversation view
+  useEffect(() => {
+    if (currentView === 'general' || currentView === 'topic') {
+      loadPosts();
+    }
+  }, [currentView, selectedTopicId]);
+
   // Realtime subscription for posts
   useEffect(() => {
     if (currentView !== 'general' && currentView !== 'topic') return;
