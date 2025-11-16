@@ -133,13 +133,6 @@ const Forum = () => {
     }
   }, [currentUserId]);
 
-  // Load posts when entering a conversation view
-  useEffect(() => {
-    if (currentView === 'general' || currentView === 'topic') {
-      loadPosts();
-    }
-  }, [currentView, selectedTopicId]);
-
   // Realtime subscription for posts
   useEffect(() => {
     if (currentView !== 'general' && currentView !== 'topic') return;
@@ -156,9 +149,11 @@ const Forum = () => {
         (payload) => {
           console.log('Post change detected:', payload);
           loadPosts();
-          // Reload unread counts on post changes
+          
+          // If user is viewing this conversation, mark as read immediately
           if (currentUserId) {
-            loadUnreadCounts();
+            const topicId = currentView === 'general' ? null : selectedTopicId;
+            markAsRead(topicId);
           }
         }
       )
@@ -167,7 +162,7 @@ const Forum = () => {
     return () => {
       supabase.removeChannel(postsChannel);
     };
-  }, [currentView, selectedTopicId]);
+  }, [currentView, selectedTopicId, currentUserId]);
 
   // Realtime subscription for topics
   useEffect(() => {
@@ -346,6 +341,13 @@ const Forum = () => {
       scrollToBottom(false);
     }
   }, [posts.length, currentView]);
+
+  // Reload unread counts when returning to navigation view
+  useEffect(() => {
+    if (currentView === 'navigation' && currentUserId) {
+      loadUnreadCounts();
+    }
+  }, [currentView, currentUserId]);
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
