@@ -152,10 +152,12 @@ const Forum = () => {
           console.log('Post change detected:', payload);
           loadPosts();
           
-          // If user is viewing this conversation, mark as read immediately
+          // If user is viewing this conversation, mark as read immediately and refresh counts
           if (currentUserId) {
             const topicId = currentView === 'general' ? null : selectedTopicId;
-            markAsRead(topicId);
+            markAsRead(topicId).then(() => {
+              loadUnreadCounts();
+            });
           }
         }
       )
@@ -328,16 +330,19 @@ const Forum = () => {
   useEffect(() => {
     if (currentView === 'general' || currentView === 'topic') {
       loadPosts();
-      // Mark as read when entering conversation
+      // Mark as read when entering conversation and refresh counts
       if (currentUserId) {
         const topicId = currentView === 'general' ? null : selectedTopicId;
-        markAsRead(topicId);
+        markAsRead(topicId).then(() => {
+          // Reload unread counts immediately after marking as read
+          loadUnreadCounts();
+        });
       }
     }
     if (currentView === 'election' && selectedElectionId) {
       loadNominees(selectedElectionId);
     }
-    
+
     return () => {
       localStorage.setItem(LAST_VISIT_KEY, new Date().toISOString());
     };
@@ -428,7 +433,8 @@ const Forum = () => {
         .from("forum_posts")
         .select("*", { count: "exact", head: true })
         .is("topic_id", null)
-        .gt("created_at", generalLastRead);
+        .gt("created_at", generalLastRead)
+        .neq("user_id", currentUserId);
 
       if (!generalError && generalCount !== null) {
         counts["general"] = generalCount;
@@ -443,7 +449,8 @@ const Forum = () => {
           .from("forum_posts")
           .select("*", { count: "exact", head: true })
           .eq("topic_id", topic.id)
-          .gt("created_at", topicLastRead);
+          .gt("created_at", topicLastRead)
+          .neq("user_id", currentUserId);
 
         if (!topicError && topicCount !== null) {
           counts[topic.id] = topicCount;
