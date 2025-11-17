@@ -166,6 +166,50 @@ const Forum = () => {
     };
   }, [currentView, selectedTopicId, currentUserId]);
 
+  // Realtime subscription for posts in OTHER conversations (to update badges)
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const allPostsChannel = supabase
+      .channel('all-forum-posts-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'forum_posts'
+        },
+        (payload: any) => {
+          const newPost = payload.new;
+          
+          // Only update counts if message is from someone else
+          if (newPost.user_id === currentUserId) return;
+          
+          // Determine which conversation this post belongs to
+          const postTopicId = newPost.topic_id;
+          const postConversation = postTopicId || 'general';
+          
+          // Determine current conversation
+          const currentConversation = currentView === 'general' ? 'general' : 
+                                      currentView === 'topic' ? selectedTopicId : 
+                                      null;
+          
+          // If the post is in a DIFFERENT conversation than the one being viewed, increment count
+          if (currentConversation !== postConversation) {
+            setUnreadCounts(prev => ({
+              ...prev,
+              [postConversation]: (prev[postConversation] || 0) + 1
+            }));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(allPostsChannel);
+    };
+  }, [currentUserId, currentView, selectedTopicId]);
+
   // Realtime subscription for topics
   useEffect(() => {
     const topicsChannel = supabase
@@ -336,11 +380,6 @@ const Forum = () => {
     }
     if (currentView === 'election' && selectedElectionId) {
       loadNominees(selectedElectionId);
-    }
-    
-    // Reload unread counts when returning to navigation view
-    if (currentView === 'navigation' && currentUserId) {
-      loadUnreadCounts();
     }
 
     return () => {
