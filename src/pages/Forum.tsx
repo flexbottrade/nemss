@@ -152,12 +152,10 @@ const Forum = () => {
           console.log('Post change detected:', payload);
           loadPosts();
           
-          // If user is viewing this conversation, mark as read immediately and refresh counts
+          // If user is viewing this conversation, mark as read immediately (keeps badge at 0)
           if (currentUserId) {
             const topicId = currentView === 'general' ? null : selectedTopicId;
-            markAsRead(topicId).then(() => {
-              loadUnreadCounts();
-            });
+            markAsRead(topicId);
           }
         }
       )
@@ -330,17 +328,19 @@ const Forum = () => {
   useEffect(() => {
     if (currentView === 'general' || currentView === 'topic') {
       loadPosts();
-      // Mark as read when entering conversation and refresh counts
+      // Mark as read when entering conversation (local state updated by markAsRead)
       if (currentUserId) {
         const topicId = currentView === 'general' ? null : selectedTopicId;
-        markAsRead(topicId).then(() => {
-          // Reload unread counts immediately after marking as read
-          loadUnreadCounts();
-        });
+        markAsRead(topicId);
       }
     }
     if (currentView === 'election' && selectedElectionId) {
       loadNominees(selectedElectionId);
+    }
+    
+    // Reload unread counts when returning to navigation view
+    if (currentView === 'navigation' && currentUserId) {
+      loadUnreadCounts();
     }
 
     return () => {
@@ -353,13 +353,6 @@ const Forum = () => {
       scrollToBottom(false);
     }
   }, [posts.length, currentView]);
-
-  // Reload unread counts when returning to navigation view
-  useEffect(() => {
-    if (currentView === 'navigation' && currentUserId) {
-      loadUnreadCounts();
-    }
-  }, [currentView, currentUserId]);
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
