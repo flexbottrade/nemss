@@ -128,12 +128,12 @@ const Forum = () => {
     init();
   }, []);
 
-  // Load unread counts when currentUserId becomes available
+  // Load unread counts when currentUserId and topics become available
   useEffect(() => {
-    if (currentUserId) {
+    if (currentUserId && topics.length >= 0) {
       loadUnreadCounts();
     }
-  }, [currentUserId]);
+  }, [currentUserId, topics]);
 
   // Realtime subscription for posts
   useEffect(() => {
