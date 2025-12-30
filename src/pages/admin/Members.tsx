@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, UserCog, ShieldOff, Edit, DollarSign, UserPlus } from "lucide-react";
+import { Search, UserCog, ShieldOff, Edit, DollarSign, UserPlus, Ban } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import { EditMemberNameDialog } from "@/components/admin/EditMemberNameDialog";
 import { MemberPaymentsDialog } from "@/components/admin/MemberPaymentsDialog";
 import { AssignRoleDialog } from "@/components/admin/AssignRoleDialog";
 import { AddMemberDialog } from "@/components/admin/AddMemberDialog";
+import { MemberWaiverDialog } from "@/components/admin/MemberWaiverDialog";
 import { Spinner } from "@/components/ui/spinner";
 
 const Members = () => {
@@ -39,6 +40,7 @@ const Members = () => {
   const [paymentsDialog, setPaymentsDialog] = useState(false);
   const [assignRoleDialog, setAssignRoleDialog] = useState(false);
   const [addMemberDialog, setAddMemberDialog] = useState(false);
+  const [waiverDialog, setWaiverDialog] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
 
   useEffect(() => {
@@ -56,12 +58,13 @@ const Members = () => {
 
   const loadMembers = async () => {
     // Parallel fetch all required data
-    const [profilesResult, variableDuesResult, duesPaymentsResult, eventPaymentsResult, eventsResult] = await Promise.all([
+    const [profilesResult, variableDuesResult, duesPaymentsResult, eventPaymentsResult, eventsResult, waiversResult] = await Promise.all([
       supabase.from("profiles").select("*").eq("email_verified", true).order("first_name", { ascending: true }),
       supabase.from("variable_dues_settings").select("*"),
       supabase.from("dues_payments").select("*").eq("status", "approved"),
       supabase.from("event_payments").select("*, events(amount, event_date)").eq("status", "approved"),
-      supabase.from("events").select("*")
+      supabase.from("events").select("*"),
+      supabase.from("member_waivers").select("*")
     ]);
 
     const data = profilesResult.data;
@@ -93,13 +96,29 @@ const Members = () => {
     const currentMonth = today.getMonth() + 1;
 
     const membersData = data?.map(member => {
+      // Get member's waivers
+      const memberWaivers = waiversResult.data?.filter(w => w.user_id === member.id) || [];
+      const duesWaivers = memberWaivers.filter(w => w.waiver_type === 'dues');
+      const eventWaivers = memberWaivers.filter(w => w.waiver_type === 'event');
+      const waivedEventIds = eventWaivers.map(w => w.event_id);
+
       let totalDuesExpected = 0;
       for (let year = 2023; year <= currentYear; year++) {
         const dueSetting = variableDuesResult.data?.find(d => d.year === year);
         if (!dueSetting?.is_waived) {
           const monthlyAmount = dueSetting?.monthly_amount || 3000;
           const monthsInYear = year === currentYear ? currentMonth : 12;
-          totalDuesExpected += monthlyAmount * monthsInYear;
+          
+          // Check for individual member waivers for this year
+          const yearWaivers = duesWaivers.filter(w => w.year === year);
+          const waivedMonths = yearWaivers.flatMap(w => w.months || []);
+          
+          // Only count months that are not waived
+          for (let month = 1; month <= monthsInYear; month++) {
+            if (!waivedMonths.includes(month)) {
+              totalDuesExpected += monthlyAmount;
+            }
+          }
         }
       }
 
@@ -109,7 +128,10 @@ const Members = () => {
 
       const memberEventPayments = eventPaymentsResult.data?.filter(p => p.user_id === member.id) || [];
       const paidEventIds = memberEventPayments.map(p => p.event_id);
-      const unpaidEvents = eventsResult.data?.filter(event => !paidEventIds.includes(event.id)) || [];
+      // Filter out waived events from unpaid events
+      const unpaidEvents = eventsResult.data?.filter(event => 
+        !paidEventIds.includes(event.id) && !waivedEventIds.includes(event.id)
+      ) || [];
       const totalEventsOwed = unpaidEvents.reduce((sum, e) => sum + Number(e.amount), 0);
 
       return {
@@ -326,18 +348,32 @@ const Members = () => {
 
                   <div className="flex gap-2 pt-2">
                     {isFinancialSecretary && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedMember(member);
-                          setPaymentsDialog(true);
-                        }}
-                        className="flex-1 h-8 text-xs"
-                      >
-                        <DollarSign className="h-3 w-3 mr-1" />
-                        Payments
-                      </Button>
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedMember(member);
+                            setPaymentsDialog(true);
+                          }}
+                          className="flex-1 h-8 text-xs"
+                        >
+                          <DollarSign className="h-3 w-3 mr-1" />
+                          Payments
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedMember(member);
+                            setWaiverDialog(true);
+                          }}
+                          className="h-8 text-xs"
+                          title="Manage Waivers"
+                        >
+                          <Ban className="h-3 w-3" />
+                        </Button>
+                      </>
                     )}
                     {isSuperAdmin ? (
                       <div className="flex gap-2 flex-1">
@@ -420,6 +456,13 @@ const Members = () => {
       <AddMemberDialog
         open={addMemberDialog}
         onOpenChange={setAddMemberDialog}
+        onSuccess={loadMembers}
+      />
+
+      <MemberWaiverDialog
+        open={waiverDialog}
+        onOpenChange={setWaiverDialog}
+        member={selectedMember}
         onSuccess={loadMembers}
       />
     </div>

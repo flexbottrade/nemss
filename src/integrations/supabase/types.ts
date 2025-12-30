@@ -638,6 +638,53 @@ export type Database = {
         }
         Relationships: []
       }
+      member_waivers: {
+        Row: {
+          created_at: string
+          created_by: string
+          event_id: string | null
+          id: string
+          months: number[] | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+          waiver_type: string
+          year: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          event_id?: string | null
+          id?: string
+          months?: number[] | null
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+          waiver_type: string
+          year?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          event_id?: string | null
+          id?: string
+          months?: number[] | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+          waiver_type?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_waivers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_logs: {
         Row: {
           amount: number
