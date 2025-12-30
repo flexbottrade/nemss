@@ -346,9 +346,9 @@ const Members = () => {
                     )}
                   </div>
 
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex flex-col gap-2 pt-2">
                     {isFinancialSecretary && (
-                      <>
+                      <div className="grid grid-cols-2 gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -356,10 +356,10 @@ const Members = () => {
                             setSelectedMember(member);
                             setPaymentsDialog(true);
                           }}
-                          className="flex-1 h-8 text-xs"
+                          className="h-8 text-xs"
                         >
                           <DollarSign className="h-3 w-3 mr-1" />
-                          Payments
+                          Pay
                         </Button>
                         <Button
                           variant="outline"
@@ -369,11 +369,11 @@ const Members = () => {
                             setWaiverDialog(true);
                           }}
                           className="h-8 text-xs"
-                          title="Manage Waivers"
                         >
-                          <Ban className="h-3 w-3" />
+                          <Ban className="h-3 w-3 mr-1" />
+                          Waive
                         </Button>
-                      </>
+                      </div>
                     )}
                     {isSuperAdmin ? (
                       <div className="flex gap-2 flex-1">
