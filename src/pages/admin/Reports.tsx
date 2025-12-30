@@ -97,6 +97,11 @@ const Reports = () => {
     
     const { data: adjustments } = await adjustmentQuery;
 
+    // Fetch member waivers for the report
+    const { data: memberWaivers } = await supabase
+      .from("member_waivers")
+      .select("*, profiles(first_name, last_name), events(title)");
+
     // Create transaction array (bank statement style)
     const transactions: any[] = [];
 
@@ -191,9 +196,10 @@ const Reports = () => {
     doc.text(`Current Balance: NGN ${currentBalance.toLocaleString()}`, 14, 64);
 
     // Transactions Table (Bank Statement Style)
+    let yPos = 72;
     if (transactions.length > 0) {
       autoTable(doc, {
-        startY: 72,
+        startY: yPos,
         head: [['Date', 'Payer', 'Description', 'Amount']],
         body: transactions.map(t => [
           formatDateDDMMYY(t.date),
@@ -217,8 +223,72 @@ const Reports = () => {
           }
         }
       });
+      yPos = (doc as any).lastAutoTable.finalY + 10;
     } else {
       doc.text("No transactions found for the selected period", 14, 80);
+      yPos = 90;
+    }
+
+    // Add Waivers Section
+    if (memberWaivers && memberWaivers.length > 0) {
+      // Check if we need a new page
+      if (yPos > 200) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Member Waivers Summary", 14, yPos);
+      yPos += 8;
+
+      const duesWaivers = memberWaivers.filter((w: any) => w.waiver_type === 'dues');
+      const eventWaivers = memberWaivers.filter((w: any) => w.waiver_type === 'event');
+
+      if (duesWaivers.length > 0) {
+        doc.setFontSize(10);
+        doc.text("Dues Waivers:", 14, yPos);
+        yPos += 6;
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Member', 'Year', 'Months Waived', 'Notes']],
+          body: duesWaivers.map((w: any) => [
+            `${w.profiles?.first_name} ${w.profiles?.last_name}`,
+            w.year,
+            (w.months || []).map((m: number) => getMonthName(m)).join(', '),
+            w.notes || '-'
+          ]),
+          theme: 'grid',
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [255, 165, 0] },
+        });
+        yPos = (doc as any).lastAutoTable.finalY + 10;
+      }
+
+      if (eventWaivers.length > 0) {
+        if (yPos > 220) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        doc.setFontSize(10);
+        doc.text("Event Waivers:", 14, yPos);
+        yPos += 6;
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Member', 'Event', 'Notes']],
+          body: eventWaivers.map((w: any) => [
+            `${w.profiles?.first_name} ${w.profiles?.last_name}`,
+            w.events?.title || '-',
+            w.notes || '-'
+          ]),
+          theme: 'grid',
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [255, 165, 0] },
+        });
+      }
     }
 
     doc.save("finance-report.pdf");
@@ -255,6 +325,11 @@ const Reports = () => {
       .select("*")
       .eq("status", "approved");
 
+    // Fetch member waivers
+    const { data: allWaivers } = await supabase
+      .from("member_waivers")
+      .select("*");
+
     const memberData = members?.map(member => {
       // Calculate dues
       const payments = duesPayments?.filter(p => p.user_id === member.id) || [];
@@ -276,6 +351,12 @@ const Reports = () => {
       const currentDate = new Date();
       let expectedDues = 0;
       
+      // Get member's waivers
+      const memberWaivers = allWaivers?.filter((w: any) => w.user_id === member.id) || [];
+      const duesWaivers = memberWaivers.filter((w: any) => w.waiver_type === 'dues');
+      const eventWaivers = memberWaivers.filter((w: any) => w.waiver_type === 'event');
+      const waivedEventIds = eventWaivers.map((w: any) => w.event_id);
+      
       // Start from January 2023 for all members
       let date = new Date(2023, 0, 1);
       while (date <= currentDate) {
@@ -283,8 +364,13 @@ const Reports = () => {
         const month = date.getMonth() + 1;
         const monthKey = `${year}-${month}`;
         
+        // Check if this month is waived for this member
+        const yearWaivers = duesWaivers.filter((w: any) => w.year === year);
+        const waivedMonths = yearWaivers.flatMap((w: any) => w.months || []);
+        const isMonthWaived = waivedMonths.includes(month);
+        
         // Check if this month has been paid
-        if (!paidMonths.has(monthKey)) {
+        if (!paidMonths.has(monthKey) && !isMonthWaived) {
           // Find the monthly amount for this year
           const yearSetting = variableDuesSettings?.find(s => s.year === year);
           const monthlyAmount = yearSetting 
@@ -298,17 +384,18 @@ const Reports = () => {
       }
 
       const monthsPaid = payments.reduce((sum, p) => sum + p.months_paid, 0);
+      const hasWaivers = memberWaivers.length > 0;
 
-      // Calculate event payments owed
+      // Calculate event payments owed (excluding waived events)
       const memberEventPayments = eventPayments?.filter(ep => ep.user_id === member.id) || [];
       const paidEventIds = memberEventPayments.map(ep => ep.event_id);
       
-      // Find events that happened but member hasn't paid for
+      // Find events that happened but member hasn't paid for (excluding waived)
       const unpaidEvents = allEvents?.filter(event => {
         const eventDate = new Date(event.event_date);
         const memberJoinDate = new Date(member.created_at);
-        // Only count events that happened after member joined and before today
-        return eventDate >= memberJoinDate && eventDate <= new Date() && !paidEventIds.includes(event.id);
+        return eventDate >= memberJoinDate && eventDate <= new Date() && 
+          !paidEventIds.includes(event.id) && !waivedEventIds.includes(event.id);
       }) || [];
 
       const eventsOutstanding = unpaidEvents.reduce((sum, event) => sum + Number(event.amount), 0);
@@ -321,7 +408,8 @@ const Reports = () => {
         outstanding: totalOutstanding,
         duesOutstanding: expectedDues,
         eventsOutstanding,
-        status: totalOutstanding > 0 ? "Owing" : "Up-to-date"
+        hasWaivers,
+        status: totalOutstanding > 0 ? "Owing" : hasWaivers ? "Waived/Up-to-date" : "Up-to-date"
       };
     }) || [];
 
