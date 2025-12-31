@@ -295,7 +295,7 @@ export const MemberWaiverDialog = ({ open, onOpenChange, member, onSuccess }: Me
     .flatMap(w => w.months || []);
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 10 }, (_, i) => currentYear - i + 1);
+  const years = Array.from({ length: currentYear - 2023 + 2 }, (_, i) => currentYear + 1 - i);
 
   const duesWaivers = existingWaivers.filter(w => w.waiver_type === 'dues');
   const eventWaivers = existingWaivers.filter(w => w.waiver_type === 'event');
