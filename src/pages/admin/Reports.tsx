@@ -538,14 +538,16 @@ const Reports = () => {
       // Get member IDs who paid for this event
       const paidMemberIds = approvedPayments.map((p: any) => p.user_id);
 
-      // Get waived member IDs for this event
-      const waivedMemberIds = eventWaivers
-        ?.filter((w: any) => w.event_id === event.id)
-        .map((w: any) => w.user_id) || [];
+      // Get waived members for this event with their notes
+      const eventWaiversForEvent = eventWaivers?.filter((w: any) => w.event_id === event.id) || [];
+      const waivedMemberIds = eventWaiversForEvent.map((w: any) => w.user_id);
 
       // Separate members into paid, waived, and unpaid
       const paidMembers = allMembers?.filter(m => paidMemberIds.includes(m.id)) || [];
-      const waivedMembers = allMembers?.filter(m => waivedMemberIds.includes(m.id) && !paidMemberIds.includes(m.id)) || [];
+      const waivedMembers = allMembers?.filter(m => waivedMemberIds.includes(m.id) && !paidMemberIds.includes(m.id)).map(m => {
+        const waiver = eventWaiversForEvent.find((w: any) => w.user_id === m.id);
+        return { ...m, waiverReason: waiver?.notes || '-' };
+      }) || [];
       const unpaidMembers = allMembers?.filter(m => !paidMemberIds.includes(m.id) && !waivedMemberIds.includes(m.id)) || [];
 
       doc.setFontSize(12);
@@ -598,10 +600,11 @@ const Reports = () => {
 
         autoTable(doc, {
           startY: yPos,
-          head: [['Name', 'Member ID']],
+          head: [['Name', 'Member ID', 'Reason']],
           body: waivedMembers.map(m => [
             `${m.first_name} ${m.last_name}`,
-            m.member_id
+            m.member_id,
+            m.waiverReason
           ]),
           theme: 'grid',
           styles: { fontSize: 8 },
