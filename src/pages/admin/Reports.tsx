@@ -401,6 +401,12 @@ const Reports = () => {
       const eventsOutstanding = unpaidEvents.reduce((sum, event) => sum + Number(event.amount), 0);
       const totalOutstanding = expectedDues + eventsOutstanding;
 
+      // Determine status based on outstanding balance (excluding waived amounts)
+      let status = "Up to Date";
+      if (totalOutstanding > 0) {
+        status = "Owing";
+      }
+
       return {
         ...member,
         totalPaid,
@@ -409,7 +415,7 @@ const Reports = () => {
         duesOutstanding: expectedDues,
         eventsOutstanding,
         hasWaivers,
-        status: totalOutstanding > 0 ? "Owing" : hasWaivers ? "Waived/Up-to-date" : "Up-to-date"
+        status
       };
     }) || [];
 
@@ -480,6 +486,12 @@ const Reports = () => {
       .neq("role", "admin")
       .order("first_name");
 
+    // Fetch event waivers
+    const { data: eventWaivers } = await supabase
+      .from("member_waivers")
+      .select("*")
+      .eq("waiver_type", "event");
+
     let query = supabase
       .from("events")
       .select("*, event_payments(user_id, amount, status, profiles(first_name, last_name))")
@@ -526,9 +538,15 @@ const Reports = () => {
       // Get member IDs who paid for this event
       const paidMemberIds = approvedPayments.map((p: any) => p.user_id);
 
-      // Separate members into paid and unpaid
+      // Get waived member IDs for this event
+      const waivedMemberIds = eventWaivers
+        ?.filter((w: any) => w.event_id === event.id)
+        .map((w: any) => w.user_id) || [];
+
+      // Separate members into paid, waived, and unpaid
       const paidMembers = allMembers?.filter(m => paidMemberIds.includes(m.id)) || [];
-      const unpaidMembers = allMembers?.filter(m => !paidMemberIds.includes(m.id)) || [];
+      const waivedMembers = allMembers?.filter(m => waivedMemberIds.includes(m.id) && !paidMemberIds.includes(m.id)) || [];
+      const unpaidMembers = allMembers?.filter(m => !paidMemberIds.includes(m.id) && !waivedMemberIds.includes(m.id)) || [];
 
       doc.setFontSize(12);
       doc.text(`${event.title}`, 14, yPos);
@@ -536,7 +554,7 @@ const Reports = () => {
       doc.text(`Date: ${formatDateDDMMYY(new Date(event.event_date))}`, 14, yPos + 6);
       doc.text(`Amount: NGN ${Number(event.amount).toLocaleString()}`, 14, yPos + 12);
       doc.text(`Total Collected: NGN ${totalCollected.toLocaleString()}`, 14, yPos + 18);
-      doc.text(`Paid: ${paidMembers.length} | Unpaid: ${unpaidMembers.length}`, 14, yPos + 24);
+      doc.text(`Paid: ${paidMembers.length} | Waived: ${waivedMembers.length} | Unpaid: ${unpaidMembers.length}`, 14, yPos + 24);
 
       yPos += 32;
 
@@ -558,6 +576,36 @@ const Reports = () => {
           theme: 'grid',
           styles: { fontSize: 8 },
           headStyles: { fillColor: [0, 150, 0] },
+          margin: { left: 14 }
+        });
+
+        yPos = (doc as any).lastAutoTable.finalY + 8;
+      }
+
+      // Add table for waived members
+      if (waivedMembers.length > 0) {
+        // Check if we need a new page for waived table
+        if (yPos > 200) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        doc.setFontSize(10);
+        doc.setTextColor(255, 140, 0); // Orange for waived
+        doc.text("Members Waived:", 14, yPos);
+        doc.setTextColor(0, 0, 0);
+        yPos += 6;
+
+        autoTable(doc, {
+          startY: yPos,
+          head: [['Name', 'Member ID']],
+          body: waivedMembers.map(m => [
+            `${m.first_name} ${m.last_name}`,
+            m.member_id
+          ]),
+          theme: 'grid',
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [255, 165, 0] }, // Orange header
           margin: { left: 14 }
         });
 
