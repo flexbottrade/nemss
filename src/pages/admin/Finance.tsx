@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
@@ -14,6 +14,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,6 +37,9 @@ const Finance = () => {
   const [dataLoading, setDataLoading] = useState(true);
   const [adjustments, setAdjustments] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [editingAdjustment, setEditingAdjustment] = useState<any>(null);
+  const [deletingAdjustmentId, setDeletingAdjustmentId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     adjustment_type: "income",
     amount: "",
@@ -97,23 +110,87 @@ const Finance = () => {
       return;
     }
 
-    const { error } = await supabase.from("finance_adjustments").insert({
-      adjustment_type: formData.adjustment_type,
-      amount: parseFloat(formData.amount),
-      reason: formData.reason,
-      created_by: user.id,
-    });
+    if (editingAdjustment) {
+      // Update existing adjustment
+      const { error } = await supabase
+        .from("finance_adjustments")
+        .update({
+          adjustment_type: formData.adjustment_type,
+          amount: parseFloat(formData.amount),
+          reason: formData.reason,
+        })
+        .eq("id", editingAdjustment.id);
 
-    if (error) {
-      console.error("Finance adjustment error:", error);
-      toast.error("Failed to add adjustment: " + error.message);
-      return;
+      if (error) {
+        console.error("Finance adjustment update error:", error);
+        toast.error("Failed to update adjustment: " + error.message);
+        return;
+      }
+      toast.success("Adjustment updated");
+    } else {
+      // Create new adjustment
+      const { error } = await supabase.from("finance_adjustments").insert({
+        adjustment_type: formData.adjustment_type,
+        amount: parseFloat(formData.amount),
+        reason: formData.reason,
+        created_by: user.id,
+      });
+
+      if (error) {
+        console.error("Finance adjustment error:", error);
+        toast.error("Failed to add adjustment: " + error.message);
+        return;
+      }
+      toast.success("Adjustment added");
     }
 
-    toast.success("Adjustment added");
     setIsDialogOpen(false);
+    setEditingAdjustment(null);
     setFormData({ adjustment_type: "income", amount: "", reason: "" });
     loadData();
+  };
+
+  const handleEdit = (adjustment: any) => {
+    setEditingAdjustment(adjustment);
+    setFormData({
+      adjustment_type: adjustment.adjustment_type === "inflow" || adjustment.adjustment_type === "income" ? "income" : "expense",
+      amount: String(adjustment.amount),
+      reason: adjustment.reason || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setDeletingAdjustmentId(id);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingAdjustmentId) return;
+
+    const { error } = await supabase
+      .from("finance_adjustments")
+      .delete()
+      .eq("id", deletingAdjustmentId);
+
+    if (error) {
+      console.error("Delete adjustment error:", error);
+      toast.error("Failed to delete adjustment: " + error.message);
+    } else {
+      toast.success("Adjustment deleted");
+      loadData();
+    }
+
+    setIsDeleteDialogOpen(false);
+    setDeletingAdjustmentId(null);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      setEditingAdjustment(null);
+      setFormData({ adjustment_type: "income", amount: "", reason: "" });
+    }
+    setIsDialogOpen(open);
   };
 
   if (loading || (!isAdmin && !isFinancialSecretary)) {
@@ -219,13 +296,35 @@ const Finance = () => {
                         {formatDateDDMMYY(adj.created_at)}
                       </p>
                     </div>
-                    <div
-                      className={`text-base md:text-lg font-bold mt-2 md:mt-0 ${
-                        (adj.adjustment_type === "inflow" || adj.adjustment_type === "income") ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {(adj.adjustment_type === "inflow" || adj.adjustment_type === "income") ? "+" : "-"}₦
-                      {Number(adj.amount).toLocaleString()}
+                    <div className="flex items-center gap-2 mt-2 md:mt-0">
+                      <div
+                        className={`text-base md:text-lg font-bold ${
+                          (adj.adjustment_type === "inflow" || adj.adjustment_type === "income") ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {(adj.adjustment_type === "inflow" || adj.adjustment_type === "income") ? "+" : "-"}₦
+                        {Number(adj.amount).toLocaleString()}
+                      </div>
+                      {isFinancialSecretary && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleEdit(adj)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteClick(adj.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -234,12 +333,15 @@ const Finance = () => {
           </CardContent>
         </Card>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add Finance Adjustment</DialogTitle>
+              <DialogTitle>{editingAdjustment ? "Edit Finance Adjustment" : "Add Finance Adjustment"}</DialogTitle>
               <DialogDescription>
-                Record financial inflows (money coming in) or outflows (money going out)
+                {editingAdjustment 
+                  ? "Update the details of this financial adjustment"
+                  : "Record financial inflows (money coming in) or outflows (money going out)"
+                }
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -280,14 +382,31 @@ const Finance = () => {
                 />
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleSave}>Save</Button>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button onClick={handleSave}>{editingAdjustment ? "Update" : "Save"}</Button>
+                <Button variant="outline" onClick={() => handleDialogClose(false)}>
                   Cancel
                 </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Adjustment</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this adjustment? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
         </div>
       </main>
     </div>
