@@ -35,6 +35,7 @@ const Finance = () => {
   const navigate = useNavigate();
   const { isAdmin, isFinancialSecretary, loading } = useRole();
   const [dataLoading, setDataLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [adjustments, setAdjustments] = useState<any[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -104,50 +105,57 @@ const Finance = () => {
       return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error("User not authenticated");
-      return;
-    }
+    if (saving) return;
+    setSaving(true);
 
-    if (editingAdjustment) {
-      // Update existing adjustment
-      const { error } = await supabase
-        .from("finance_adjustments")
-        .update({
-          adjustment_type: formData.adjustment_type,
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("User not authenticated");
+        return;
+      }
+
+      if (editingAdjustment) {
+        // Update existing adjustment
+        const { error } = await supabase
+          .from("finance_adjustments")
+          .update({
+            adjustment_type: formData.adjustment_type === "income" ? "inflow" : "outflow",
+            amount: parseFloat(formData.amount),
+            reason: formData.reason,
+          })
+          .eq("id", editingAdjustment.id);
+
+        if (error) {
+          console.error("Finance adjustment update error:", error);
+          toast.error("Failed to update adjustment: " + error.message);
+          return;
+        }
+        toast.success("Adjustment updated - figures recalculated");
+      } else {
+        // Create new adjustment
+        const { error } = await supabase.from("finance_adjustments").insert({
+          adjustment_type: formData.adjustment_type === "income" ? "inflow" : "outflow",
           amount: parseFloat(formData.amount),
           reason: formData.reason,
-        })
-        .eq("id", editingAdjustment.id);
+          created_by: user.id,
+        });
 
-      if (error) {
-        console.error("Finance adjustment update error:", error);
-        toast.error("Failed to update adjustment: " + error.message);
-        return;
+        if (error) {
+          console.error("Finance adjustment error:", error);
+          toast.error("Failed to add adjustment: " + error.message);
+          return;
+        }
+        toast.success("Adjustment added");
       }
-      toast.success("Adjustment updated");
-    } else {
-      // Create new adjustment
-      const { error } = await supabase.from("finance_adjustments").insert({
-        adjustment_type: formData.adjustment_type,
-        amount: parseFloat(formData.amount),
-        reason: formData.reason,
-        created_by: user.id,
-      });
 
-      if (error) {
-        console.error("Finance adjustment error:", error);
-        toast.error("Failed to add adjustment: " + error.message);
-        return;
-      }
-      toast.success("Adjustment added");
+      setIsDialogOpen(false);
+      setEditingAdjustment(null);
+      setFormData({ adjustment_type: "income", amount: "", reason: "" });
+      await loadData();
+    } finally {
+      setSaving(false);
     }
-
-    setIsDialogOpen(false);
-    setEditingAdjustment(null);
-    setFormData({ adjustment_type: "income", amount: "", reason: "" });
-    loadData();
   };
 
   const handleEdit = (adjustment: any) => {
@@ -166,23 +174,27 @@ const Finance = () => {
   };
 
   const handleDeleteConfirm = async () => {
-    if (!deletingAdjustmentId) return;
+    if (!deletingAdjustmentId || saving) return;
+    setSaving(true);
 
-    const { error } = await supabase
-      .from("finance_adjustments")
-      .delete()
-      .eq("id", deletingAdjustmentId);
+    try {
+      const { error } = await supabase
+        .from("finance_adjustments")
+        .delete()
+        .eq("id", deletingAdjustmentId);
 
-    if (error) {
-      console.error("Delete adjustment error:", error);
-      toast.error("Failed to delete adjustment: " + error.message);
-    } else {
-      toast.success("Adjustment deleted");
-      loadData();
+      if (error) {
+        console.error("Delete adjustment error:", error);
+        toast.error("Failed to delete adjustment: " + error.message);
+      } else {
+        toast.success("Adjustment deleted - figures recalculated");
+        await loadData();
+      }
+    } finally {
+      setSaving(false);
+      setIsDeleteDialogOpen(false);
+      setDeletingAdjustmentId(null);
     }
-
-    setIsDeleteDialogOpen(false);
-    setDeletingAdjustmentId(null);
   };
 
   const handleDialogClose = (open: boolean) => {
@@ -382,8 +394,10 @@ const Finance = () => {
                 />
               </div>
               <div className="flex gap-2">
-                <Button onClick={handleSave}>{editingAdjustment ? "Update" : "Save"}</Button>
-                <Button variant="outline" onClick={() => handleDialogClose(false)}>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? "Saving..." : (editingAdjustment ? "Update" : "Save")}
+                </Button>
+                <Button variant="outline" onClick={() => handleDialogClose(false)} disabled={saving}>
                   Cancel
                 </Button>
               </div>
@@ -396,13 +410,17 @@ const Finance = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Adjustment</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete this adjustment? This action cannot be undone.
+                Are you sure you want to delete this adjustment? This action cannot be undone and will recalculate all financial figures.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Delete
+              <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteConfirm} 
+                disabled={saving}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {saving ? "Deleting..." : "Delete"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
