@@ -321,24 +321,38 @@ const Members = () => {
             {filteredMembers.map((member) => (
               <Card key={member.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="p-3 pb-2">
-                  <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start">
                     <div>
                       <CardTitle className="text-sm md:text-base">
                         {member.first_name} {member.last_name}
                       </CardTitle>
                       <p className="text-xs text-muted-foreground">ID: {member.member_id}</p>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedMember(member);
-                        setEditNameDialog(true);
-                      }}
-                      className="h-7 w-7 p-0"
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedMember(member);
+                          setEditNameDialog(true);
+                        }}
+                        className="h-7 w-7 p-0"
+                        title="Edit Name"
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      {(isSuperAdmin || isFinancialSecretary) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteMemberDialog({ open: true, member, confirmText: "" })}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          title="Delete Member"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-3 pt-2 space-y-2">
@@ -445,17 +459,6 @@ const Members = () => {
                         )}
                       </div>
                     ) : null}
-                    {(isSuperAdmin || isFinancialSecretary) && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setDeleteMemberDialog({ open: true, member, confirmText: "" })}
-                        className="h-8 text-xs w-full"
-                      >
-                        <Trash2 className="h-3 w-3 mr-1" />
-                        Delete Member
-                      </Button>
-                    )}
                   </div>
                 </CardContent>
               </Card>
