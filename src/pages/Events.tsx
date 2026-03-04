@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Eye, RefreshCw } from "lucide-react";
+import { PaymentProofViewer } from "@/components/PaymentProofViewer";
+import { deleteProofFiles } from "@/lib/upload-proofs";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "sonner";
 import { EventPaymentModal } from "@/components/EventPaymentModal";
@@ -88,13 +90,7 @@ const Events = () => {
     if (!deleteDialog.payment) return;
 
     try {
-      // Delete proof from storage if exists
-      if (deleteDialog.payment.payment_proof_url) {
-        const oldPath = deleteDialog.payment.payment_proof_url.split('payment-proofs/')[1];
-        if (oldPath) {
-          await supabase.storage.from("payment-proofs").remove([oldPath]);
-        }
-      }
+      await deleteProofFiles(deleteDialog.payment.payment_proof_url);
 
       // Delete payment record
       const { error } = await supabase
@@ -185,16 +181,8 @@ const Events = () => {
                           <p className="text-xs text-muted-foreground">{eventPayment.admin_note}</p>
                         </div>
                       )}
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-xs flex items-center gap-1"
-                          onClick={() => window.open(eventPayment.payment_proof_url, "_blank")}
-                        >
-                          <Eye className="w-3 h-3" />
-                          View Proof
-                        </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <PaymentProofViewer proofUrl={eventPayment.payment_proof_url} />
                         {paymentStatus === "pending" && (
                           <Button
                             size="sm"

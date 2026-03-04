@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Eye, EyeOff } from "lucide-react";
 
 interface AddMemberDialogProps {
   open: boolean;
@@ -15,29 +14,15 @@ interface AddMemberDialogProps {
 
 export const AddMemberDialog = ({ open, onOpenChange, onSuccess }: AddMemberDialogProps) => {
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     phoneNumber: "",
-    password: "",
-    confirmPassword: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
 
     if (!formData.email || !formData.email.includes('@')) {
       toast.error("Please enter a valid email address");
@@ -54,11 +39,9 @@ export const AddMemberDialog = ({ open, onOpenChange, onSuccess }: AddMemberDial
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // Call edge function to create member with admin privileges
       const { data, error } = await supabase.functions.invoke('create-member', {
         body: {
           email: formData.email,
-          password: formData.password,
           firstName: formData.firstName,
           lastName: formData.lastName,
           phoneNumber: formData.phoneNumber,
@@ -71,14 +54,12 @@ export const AddMemberDialog = ({ open, onOpenChange, onSuccess }: AddMemberDial
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast.success("Member added successfully!");
+      toast.success("Member added successfully! Default password: member09set");
       setFormData({
         firstName: "",
         lastName: "",
         email: "",
         phoneNumber: "",
-        password: "",
-        confirmPassword: "",
       });
       onOpenChange(false);
       onSuccess();
@@ -95,7 +76,7 @@ export const AddMemberDialog = ({ open, onOpenChange, onSuccess }: AddMemberDial
         <DialogHeader>
           <DialogTitle>Add New Member</DialogTitle>
           <DialogDescription>
-            Enter the member's information to create their account.
+            Enter the member's information. A default password (member09set) will be assigned.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -142,49 +123,11 @@ export const AddMemberDialog = ({ open, onOpenChange, onSuccess }: AddMemberDial
                 required
               />
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <div className="relative">
-                <Input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
+
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-xs text-muted-foreground">
+                <strong>Note:</strong> The member will be created with a default password: <code className="bg-background px-1 py-0.5 rounded">member09set</code>. The member should change this after first login.
+              </p>
             </div>
           </div>
           

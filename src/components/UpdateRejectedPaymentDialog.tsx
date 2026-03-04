@@ -8,6 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { PaymentProofUpload } from "@/components/PaymentProofUpload";
+import { uploadProofFiles, deleteProofFiles } from "@/lib/upload-proofs";
 
 interface UpdateRejectedPaymentDialogProps {
   open: boolean;
@@ -32,6 +34,7 @@ export const UpdateRejectedPaymentDialog = ({
 }: UpdateRejectedPaymentDialogProps) => {
   const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState<any>({});
+  const [proofFiles, setProofFiles] = useState<File[]>([]);
 
   useEffect(() => {
     if (payment && paymentType === "dues") {
@@ -40,20 +43,13 @@ export const UpdateRejectedPaymentDialog = ({
         selectedMonths: Array.from({ length: payment.months_paid }, (_, i) => 
           ((payment.start_month - 1 + i) % 12) + 1
         ),
-        proof: null,
       });
     } else if (payment && paymentType === "event") {
-      setFormData({
-        eventId: payment.event_id,
-        proof: null,
-      });
+      setFormData({ eventId: payment.event_id });
     } else if (payment && paymentType === "donation") {
-      setFormData({
-        donationId: payment.donation_id,
-        amount: payment.amount.toString(),
-        proof: null,
-      });
+      setFormData({ donationId: payment.donation_id, amount: payment.amount.toString() });
     }
+    setProofFiles([]);
   }, [payment, paymentType]);
 
   const getMonthlyDues = (year: number) => {
@@ -67,13 +63,13 @@ export const UpdateRejectedPaymentDialog = ({
       if (selected.includes(month)) {
         return { ...prev, selectedMonths: selected.filter((m: number) => m !== month) };
       } else {
-        return { ...prev, selectedMonths: [...selected, month].sort((a, b) => a - b) };
+        return { ...prev, selectedMonths: [...selected, month].sort((a: number, b: number) => a - b) };
       }
     });
   };
 
   const handleUpdate = async () => {
-    if (!formData.proof) {
+    if (proofFiles.length === 0) {
       toast.error("Please upload new payment proof");
       return;
     }
@@ -93,29 +89,14 @@ export const UpdateRejectedPaymentDialog = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Delete old proof if it exists
-      if (payment.payment_proof_url) {
-        const oldPath = payment.payment_proof_url.split('payment-proofs/')[1];
-        if (oldPath) {
-          await supabase.storage.from("payment-proofs").remove([oldPath]);
-        }
-      }
+      // Delete old proofs
+      await deleteProofFiles(payment.payment_proof_url);
 
-      // Upload new proof
-      const fileName = `${user.id}/${Date.now()}_${formData.proof.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("payment-proofs")
-        .upload(fileName, formData.proof);
+      // Upload new proofs
+      const proofUrlValue = await uploadProofFiles(user.id, proofFiles);
 
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("payment-proofs")
-        .getPublicUrl(fileName);
-
-      // Update payment based on type
       let updateData: any = {
-        payment_proof_url: publicUrl,
+        payment_proof_url: proofUrlValue,
         status: "pending",
         updated_at: new Date().toISOString(),
       };
@@ -131,48 +112,27 @@ export const UpdateRejectedPaymentDialog = ({
         };
       } else if (paymentType === "event") {
         const selectedEvent = events.find(e => e.id === formData.eventId);
-        updateData = {
-          ...updateData,
-          event_id: formData.eventId,
-          amount: selectedEvent?.amount || payment.amount,
-        };
+        updateData = { ...updateData, event_id: formData.eventId, amount: selectedEvent?.amount || payment.amount };
       } else if (paymentType === "donation") {
-        updateData = {
-          ...updateData,
-          donation_id: formData.donationId,
-          amount: parseFloat(formData.amount),
-        };
+        updateData = { ...updateData, donation_id: formData.donationId, amount: parseFloat(formData.amount) };
       }
 
-      const tableName = paymentType === "dues" ? "dues_payments" 
-        : paymentType === "event" ? "event_payments" 
-        : "donation_payments";
+      const tableName = paymentType === "dues" ? "dues_payments" : paymentType === "event" ? "event_payments" : "donation_payments";
 
-      const { error } = await supabase
-        .from(tableName)
-        .update(updateData)
-        .eq("id", payment.id);
-
+      const { error } = await supabase.from(tableName).update(updateData).eq("id", payment.id);
       if (error) throw error;
 
-      // Get user profile for email notification
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("first_name, last_name, member_id")
-        .eq("id", user.id)
-        .single();
-
       // Send email notification
+      const { data: profile } = await supabase.from("profiles").select("first_name, last_name, member_id").eq("id", user.id).single();
+
       let details = "";
       if (paymentType === "dues") {
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         details = `${formData.year} - ${formData.selectedMonths.map((m: number) => monthNames[m - 1]).join(", ")}`;
       } else if (paymentType === "event") {
-        const selectedEvent = events.find(e => e.id === formData.eventId);
-        details = selectedEvent?.title || "Event Payment";
+        details = events.find(e => e.id === formData.eventId)?.title || "Event Payment";
       } else if (paymentType === "donation") {
-        const selectedDonation = donations.find(d => d.id === formData.donationId);
-        details = selectedDonation?.title || "Donation";
+        details = donations.find(d => d.id === formData.donationId)?.title || "Donation";
       }
 
       try {
@@ -183,13 +143,9 @@ export const UpdateRejectedPaymentDialog = ({
             member_name: profile ? `${profile.first_name} ${profile.last_name}` : "Unknown User",
             member_id: profile?.member_id || "N/A",
             amount: updateData.amount,
-            date: new Date().toLocaleDateString('en-NG', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            }),
+            date: new Date().toLocaleDateString('en-NG', { year: 'numeric', month: 'long', day: 'numeric' }),
             details,
-            payment_proof_url: `payment-proofs/${fileName}`,
+            payment_proof_url: proofUrlValue,
           },
         });
       } catch (notificationError) {
@@ -197,6 +153,7 @@ export const UpdateRejectedPaymentDialog = ({
       }
 
       toast.success("Payment updated and resubmitted successfully!");
+      setProofFiles([]);
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
@@ -212,9 +169,7 @@ export const UpdateRejectedPaymentDialog = ({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Update & Resubmit Payment</DialogTitle>
-          <DialogDescription>
-            Update your rejected payment details and proof, then resubmit for approval.
-          </DialogDescription>
+          <DialogDescription>Update your rejected payment details and proof, then resubmit for approval.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -222,46 +177,29 @@ export const UpdateRejectedPaymentDialog = ({
             <>
               <div className="space-y-2">
                 <Label>Year</Label>
-                <Select 
-                  value={formData.year?.toString()} 
-                  onValueChange={(value) => setFormData({ ...formData, year: parseInt(value), selectedMonths: [] })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={formData.year?.toString()} onValueChange={(value) => setFormData({ ...formData, year: parseInt(value), selectedMonths: [] })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {[2024, 2025, 2026].map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
+                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label>Select Months</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((month, idx) => (
                     <div key={month} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`month-${idx + 1}`}
-                        checked={formData.selectedMonths?.includes(idx + 1)}
-                        onCheckedChange={() => toggleMonth(idx + 1)}
-                      />
-                      <label htmlFor={`month-${idx + 1}`} className="text-sm cursor-pointer">
-                        {month}
-                      </label>
+                      <Checkbox id={`month-${idx + 1}`} checked={formData.selectedMonths?.includes(idx + 1)} onCheckedChange={() => toggleMonth(idx + 1)} />
+                      <label htmlFor={`month-${idx + 1}`} className="text-sm cursor-pointer">{month}</label>
                     </div>
                   ))}
                 </div>
               </div>
-
               {formData.selectedMonths?.length > 0 && (
                 <div className="p-4 bg-muted rounded-lg">
-                  <p className="text-sm font-medium">
-                    Total Amount: ₦{(getMonthlyDues(formData.year) * formData.selectedMonths.length).toLocaleString()}
-                  </p>
+                  <p className="text-sm font-medium">Total Amount: ₦{(getMonthlyDues(formData.year) * formData.selectedMonths.length).toLocaleString()}</p>
                 </div>
               )}
             </>
@@ -270,18 +208,11 @@ export const UpdateRejectedPaymentDialog = ({
           {paymentType === "event" && (
             <div className="space-y-2">
               <Label>Event</Label>
-              <Select 
-                value={formData.eventId} 
-                onValueChange={(value) => setFormData({ ...formData, eventId: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select event" />
-                </SelectTrigger>
+              <Select value={formData.eventId} onValueChange={(value) => setFormData({ ...formData, eventId: value })}>
+                <SelectTrigger><SelectValue placeholder="Select event" /></SelectTrigger>
                 <SelectContent>
                   {events.map((event) => (
-                    <SelectItem key={event.id} value={event.id}>
-                      {event.title} - ₦{event.amount.toLocaleString()}
-                    </SelectItem>
+                    <SelectItem key={event.id} value={event.id}>{event.title} - ₦{event.amount.toLocaleString()}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -292,52 +223,31 @@ export const UpdateRejectedPaymentDialog = ({
             <>
               <div className="space-y-2">
                 <Label>Donation</Label>
-                <Select 
-                  value={formData.donationId} 
-                  onValueChange={(value) => setFormData({ ...formData, donationId: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select donation" />
-                  </SelectTrigger>
+                <Select value={formData.donationId} onValueChange={(value) => setFormData({ ...formData, donationId: value })}>
+                  <SelectTrigger><SelectValue placeholder="Select donation" /></SelectTrigger>
                   <SelectContent>
                     {donations.map((donation) => (
-                      <SelectItem key={donation.id} value={donation.id}>
-                        {donation.title} (Min: ₦{donation.minimum_amount.toLocaleString()})
-                      </SelectItem>
+                      <SelectItem key={donation.id} value={donation.id}>{donation.title} (Min: ₦{donation.minimum_amount.toLocaleString()})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label>Amount (₦)</Label>
-                <Input
-                  type="number"
-                  value={formData.amount || ""}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  placeholder="Enter amount"
-                />
+                <Input type="number" value={formData.amount || ""} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} placeholder="Enter amount" />
               </div>
             </>
           )}
 
-          <div className="space-y-2">
-            <Label>New Payment Proof</Label>
-            <Input
-              type="file"
-              accept="image/*,.pdf"
-              onChange={(e) => setFormData({ ...formData, proof: e.target.files?.[0] || null })}
-            />
-            <p className="text-xs text-muted-foreground">
-              Upload a new screenshot or receipt of your payment
-            </p>
-          </div>
+          <PaymentProofUpload
+            files={proofFiles}
+            onFilesChange={setProofFiles}
+            label="New Payment Proof(s)"
+          />
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={uploading}>Cancel</Button>
           <Button onClick={handleUpdate} disabled={uploading}>
             {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Update & Resubmit

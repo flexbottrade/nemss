@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PaymentProofUpload } from "@/components/PaymentProofUpload";
+import { uploadProofFiles } from "@/lib/upload-proofs";
 
 interface ManualDuesPaymentDialogProps {
   open: boolean;
@@ -42,8 +44,8 @@ export const ManualDuesPaymentDialog = ({
   const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
   const [paidMonths, setPaidMonths] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
+  const [proofFiles, setProofFiles] = useState<File[]>([]);
   
-  // For editing existing payment
   const [editAmount, setEditAmount] = useState(existingPayment?.amount.toString() || "");
   const [editMonth, setEditMonth] = useState(existingPayment?.start_month.toString() || "");
 
@@ -62,7 +64,6 @@ export const ManualDuesPaymentDialog = ({
   }, [existingPayment]);
 
   const loadYearData = async () => {
-    // Fetch monthly amount for selected year
     const { data: duesSettings } = await supabase
       .from("variable_dues_settings")
       .select("monthly_amount")
@@ -71,7 +72,6 @@ export const ManualDuesPaymentDialog = ({
     
     setMonthlyAmount(duesSettings?.monthly_amount ? Number(duesSettings.monthly_amount) : null);
 
-    // Fetch already paid months for this user and year
     const { data: payments } = await supabase
       .from("dues_payments")
       .select("start_month, months_paid")
@@ -79,7 +79,6 @@ export const ManualDuesPaymentDialog = ({
       .eq("start_year", parseInt(selectedYear))
       .eq("status", "approved");
     
-    // Calculate all paid months from payments (start_month through start_month + months_paid - 1)
     const paid: number[] = [];
     payments?.forEach(p => {
       for (let i = 0; i < p.months_paid; i++) {
@@ -96,70 +95,76 @@ export const ManualDuesPaymentDialog = ({
     e.preventDefault();
     setLoading(true);
 
-    let error;
-    if (existingPayment) {
-      // Update existing payment
-      const { error: updateError } = await supabase
-        .from("dues_payments")
-        .update({
+    try {
+      let proofUrlValue: string | null = null;
+      if (proofFiles.length > 0) {
+        proofUrlValue = await uploadProofFiles(memberId, proofFiles);
+      }
+
+      let error;
+      if (existingPayment) {
+        const updateData: any = {
           amount: parseFloat(editAmount),
           start_month: parseInt(editMonth),
-        })
-        .eq("id", existingPayment.id);
-      error = updateError;
-    } else {
-      // Create new payments for consecutive month groups
-      if (selectedMonths.length === 0 || !monthlyAmount) {
-        toast.error("Please select at least one month");
-        setLoading(false);
-        return;
-      }
+        };
+        if (proofUrlValue) updateData.payment_proof_url = proofUrlValue;
 
-      // Sort selected months
-      const sortedMonths = [...selectedMonths].sort((a, b) => a - b);
-      
-      // Group consecutive months
-      const paymentGroups: Array<{ start_month: number; months_paid: number }> = [];
-      let currentGroup = { start_month: sortedMonths[0], months_paid: 1 };
-      
-      for (let i = 1; i < sortedMonths.length; i++) {
-        if (sortedMonths[i] === sortedMonths[i - 1] + 1) {
-          // Consecutive month, extend current group
-          currentGroup.months_paid++;
-        } else {
-          // Non-consecutive, start new group
-          paymentGroups.push(currentGroup);
-          currentGroup = { start_month: sortedMonths[i], months_paid: 1 };
+        const { error: updateError } = await supabase
+          .from("dues_payments")
+          .update(updateData)
+          .eq("id", existingPayment.id);
+        error = updateError;
+      } else {
+        if (selectedMonths.length === 0 || !monthlyAmount) {
+          toast.error("Please select at least one month");
+          setLoading(false);
+          return;
         }
+
+        const sortedMonths = [...selectedMonths].sort((a, b) => a - b);
+        
+        const paymentGroups: Array<{ start_month: number; months_paid: number }> = [];
+        let currentGroup = { start_month: sortedMonths[0], months_paid: 1 };
+        
+        for (let i = 1; i < sortedMonths.length; i++) {
+          if (sortedMonths[i] === sortedMonths[i - 1] + 1) {
+            currentGroup.months_paid++;
+          } else {
+            paymentGroups.push(currentGroup);
+            currentGroup = { start_month: sortedMonths[i], months_paid: 1 };
+          }
+        }
+        paymentGroups.push(currentGroup);
+
+        const payments = paymentGroups.map(group => ({
+          user_id: memberId,
+          amount: monthlyAmount * group.months_paid,
+          start_year: parseInt(selectedYear),
+          start_month: group.start_month,
+          months_paid: group.months_paid,
+          status: "approved",
+          is_manually_updated: true,
+          ...(proofUrlValue ? { payment_proof_url: proofUrlValue } : {}),
+        }));
+
+        const { error: insertError } = await supabase
+          .from("dues_payments")
+          .insert(payments);
+        error = insertError;
       }
-      // Add the last group
-      paymentGroups.push(currentGroup);
 
-      // Create one payment record per consecutive group
-      const payments = paymentGroups.map(group => ({
-        user_id: memberId,
-        amount: monthlyAmount * group.months_paid,
-        start_year: parseInt(selectedYear),
-        start_month: group.start_month,
-        months_paid: group.months_paid,
-        status: "approved",
-        is_manually_updated: true,
-      }));
-
-      const { error: insertError } = await supabase
-        .from("dues_payments")
-        .insert(payments);
-      error = insertError;
-    }
-
-    setLoading(false);
-
-    if (error) {
-      toast.error(`Failed to ${existingPayment ? "update" : "add"} dues payment`);
-    } else {
-      toast.success(`Dues payment ${existingPayment ? "updated" : "added"} successfully`);
-      onSuccess();
-      onOpenChange(false);
+      if (error) {
+        toast.error(`Failed to ${existingPayment ? "update" : "add"} dues payment`);
+      } else {
+        toast.success(`Dues payment ${existingPayment ? "updated" : "added"} successfully`);
+        setProofFiles([]);
+        onSuccess();
+        onOpenChange(false);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to process payment");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -180,14 +185,13 @@ export const ManualDuesPaymentDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{existingPayment ? "Edit" : "Add"} Manual Dues Payment for {memberName}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             {existingPayment ? (
-              // Edit mode - simple form
               <>
                 <div className="space-y-2">
                   <Label>Year</Label>
@@ -196,44 +200,28 @@ export const ManualDuesPaymentDialog = ({
                 <div className="space-y-2">
                   <Label htmlFor="edit_month">Month</Label>
                   <Select value={editMonth} onValueChange={setEditMonth}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {months.map((month, index) => (
-                        <SelectItem key={index + 1} value={(index + 1).toString()}>
-                          {month}
-                        </SelectItem>
+                        <SelectItem key={index + 1} value={(index + 1).toString()}>{month}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit_amount">Amount (₦)</Label>
-                  <Input
-                    id="edit_amount"
-                    type="number"
-                    value={editAmount}
-                    onChange={(e) => setEditAmount(e.target.value)}
-                    required
-                    min="0"
-                  />
+                  <Input id="edit_amount" type="number" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} required min="0" />
                 </div>
               </>
             ) : (
-              // Add mode - multi-select months
               <>
                 <div className="space-y-2">
                   <Label htmlFor="year">Select Year</Label>
                   <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {years.map((year) => (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -263,22 +251,9 @@ export const ManualDuesPaymentDialog = ({
                           const isSelected = selectedMonths.includes(monthNum);
                           
                           return (
-                            <div
-                              key={monthNum}
-                              className={`flex items-center space-x-2 p-2 rounded border ${
-                                isPaid ? 'bg-muted opacity-50' : ''
-                              }`}
-                            >
-                              <Checkbox
-                                id={`month-${monthNum}`}
-                                checked={isSelected}
-                                disabled={isPaid}
-                                onCheckedChange={() => toggleMonth(monthNum)}
-                              />
-                              <label
-                                htmlFor={`month-${monthNum}`}
-                                className="text-sm cursor-pointer flex-1"
-                              >
+                            <div key={monthNum} className={`flex items-center space-x-2 p-2 rounded border ${isPaid ? 'bg-muted opacity-50' : ''}`}>
+                              <Checkbox id={`month-${monthNum}`} checked={isSelected} disabled={isPaid} onCheckedChange={() => toggleMonth(monthNum)} />
+                              <label htmlFor={`month-${monthNum}`} className="text-sm cursor-pointer flex-1">
                                 {month.slice(0, 3)}
                                 {isPaid && <span className="text-xs ml-1">(Paid)</span>}
                               </label>
@@ -289,24 +264,23 @@ export const ManualDuesPaymentDialog = ({
                     </div>
                     {paidMonths.length === 12 && (
                       <div className="p-3 bg-muted rounded-lg">
-                        <p className="text-sm text-muted-foreground text-center">
-                          All months for {selectedYear} have been paid
-                        </p>
+                        <p className="text-sm text-muted-foreground text-center">All months for {selectedYear} have been paid</p>
                       </div>
                     )}
                   </>
                 )}
               </>
             )}
+
+            <PaymentProofUpload
+              files={proofFiles}
+              onFilesChange={setProofFiles}
+              label="Payment Proof (optional)"
+            />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={loading || (!existingPayment && (selectedMonths.length === 0 || paidMonths.length === 12))}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={loading || (!existingPayment && (selectedMonths.length === 0 || paidMonths.length === 12))}>
               {loading ? "Saving..." : existingPayment ? "Update Payment" : "Add Payment"}
             </Button>
           </DialogFooter>

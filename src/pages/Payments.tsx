@@ -16,6 +16,9 @@ import { UpdatePaymentProofDialog } from "@/components/UpdatePaymentProofDialog"
 import { UpdateRejectedPaymentDialog } from "@/components/UpdateRejectedPaymentDialog";
 import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { formatDateDDMMYY } from "@/lib/utils";
+import { PaymentProofViewer } from "@/components/PaymentProofViewer";
+import { PaymentProofUpload } from "@/components/PaymentProofUpload";
+import { uploadProofFiles, deleteProofFiles } from "@/lib/upload-proofs";
 
 const Payments = () => {
   const navigate = useNavigate();
@@ -41,7 +44,7 @@ const Payments = () => {
   const [formData, setFormData] = useState({
     year: new Date().getFullYear(),
     selectedMonths: [] as number[],
-    proof: null as File | null,
+    proofFiles: [] as File[],
   });
 
   useEffect(() => {
@@ -97,8 +100,8 @@ const Payments = () => {
       toast.error("Please select at least one month");
       return;
     }
-    if (!formData.proof) {
-      toast.error("Please upload payment proof");
+    if (formData.proofFiles.length === 0) {
+      toast.error("Please upload at least one payment proof");
       return;
     }
 
@@ -113,16 +116,7 @@ const Payments = () => {
     if (!user) return;
 
     try {
-      const fileName = `${user.id}/${Date.now()}_${formData.proof.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("payment-proofs")
-        .upload(fileName, formData.proof);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("payment-proofs")
-        .getPublicUrl(fileName);
+      const proofUrlValue = await uploadProofFiles(user.id, formData.proofFiles);
 
       const sortedMonths = [...formData.selectedMonths].sort((a, b) => a - b);
       const amount = monthlyDues * sortedMonths.length;
@@ -133,7 +127,7 @@ const Payments = () => {
         start_year: formData.year,
         months_paid: sortedMonths.length,
         amount,
-        payment_proof_url: publicUrl,
+        payment_proof_url: proofUrlValue,
         status: "pending",
       }).select().single();
 
@@ -167,7 +161,7 @@ const Payments = () => {
               day: 'numeric'
             }),
             details: details,
-            payment_proof_url: `payment-proofs/${fileName}`,
+            payment_proof_url: proofUrlValue,
           },
         });
       } catch (notificationError) {
@@ -179,7 +173,7 @@ const Payments = () => {
       setFormData({
         year: new Date().getFullYear(),
         selectedMonths: [],
-        proof: null,
+        proofFiles: [],
       });
       loadData();
     } catch (error: any) {
@@ -227,13 +221,8 @@ const Payments = () => {
     if (!deleteDialog.payment) return;
 
     try {
-      // Delete proof from storage if exists
-      if (deleteDialog.payment.payment_proof_url) {
-        const oldPath = deleteDialog.payment.payment_proof_url.split('payment-proofs/')[1];
-        if (oldPath) {
-          await supabase.storage.from("payment-proofs").remove([oldPath]);
-        }
-      }
+      // Delete proofs from storage if exists
+      await deleteProofFiles(deleteDialog.payment.payment_proof_url);
 
       // Delete payment record
       const { error } = await supabase
@@ -337,16 +326,8 @@ const Payments = () => {
                         </div>
                       )}
                       {payment.payment_proof_url && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs flex items-center gap-1"
-                            onClick={() => window.open(payment.payment_proof_url, "_blank")}
-                          >
-                            <Eye className="w-3 h-3" />
-                            View Proof
-                          </Button>
+                        <div className="flex flex-wrap gap-2">
+                          <PaymentProofViewer proofUrl={payment.payment_proof_url} />
                           {payment.status === "pending" && (
                             <Button
                               size="sm"
@@ -509,15 +490,11 @@ const Payments = () => {
               )}
 
               {formData.selectedMonths.length > 0 && (
-                <div>
-                  <Label className="text-xs md:text-sm text-foreground">Upload Payment Proof (Image)</Label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setFormData({ ...formData, proof: e.target.files?.[0] || null })}
-                    className="w-full px-2 md:px-3 py-1.5 md:py-2 border border-border rounded-md bg-input text-foreground text-xs md:text-sm mt-2"
-                  />
-                </div>
+                <PaymentProofUpload
+                  files={formData.proofFiles}
+                  onFilesChange={(files) => setFormData({ ...formData, proofFiles: files })}
+                  label="Upload Payment Proof(s)"
+                />
               )}
 
               <div className="flex gap-2">
