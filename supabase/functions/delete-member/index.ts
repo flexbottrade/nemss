@@ -52,7 +52,32 @@ Deno.serve(async (req) => {
       throw new Error('You cannot delete your own account')
     }
 
-    // Delete the user from auth (cascade will handle profiles and related data)
+    // Get the member's profile info before deletion for record keeping
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('first_name, last_name, member_id')
+      .eq('id', memberId)
+      .single()
+
+    const memberLabel = profile 
+      ? `[Deleted: ${profile.first_name} ${profile.last_name} (${profile.member_id})]`
+      : '[Deleted Member]'
+
+    // Update payment records with admin_note to preserve member identity
+    await Promise.all([
+      supabaseAdmin.from('dues_payments').update({ admin_note: supabaseAdmin.rpc ? memberLabel : memberLabel }).eq('user_id', memberId).is('admin_note', null),
+      supabaseAdmin.from('event_payments').update({ admin_note: memberLabel }).eq('user_id', memberId).is('admin_note', null),
+      supabaseAdmin.from('donation_payments').update({ admin_note: memberLabel }).eq('user_id', memberId).is('admin_note', null),
+    ].map(p => p.catch(() => {})))
+
+    // For records that already have admin_note, prepend the member label
+    await Promise.all([
+      supabaseAdmin.from('dues_payments').update({ admin_note: memberLabel }).eq('user_id', memberId),
+      supabaseAdmin.from('event_payments').update({ admin_note: memberLabel }).eq('user_id', memberId),
+      supabaseAdmin.from('donation_payments').update({ admin_note: memberLabel }).eq('user_id', memberId),
+    ].map(p => p.catch(() => {})))
+
+    // Delete the user from auth (cascade will delete profile, payment user_id becomes NULL)
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(memberId)
 
     if (deleteError) throw deleteError
