@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Search, UserCog, ShieldOff, Edit, DollarSign, UserPlus, Ban } from "lucide-react";
+import { Search, UserCog, ShieldOff, Edit, DollarSign, UserPlus, Ban, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useRole } from "@/hooks/useRole";
 import { toast } from "sonner";
@@ -41,6 +42,12 @@ const Members = () => {
   const [assignRoleDialog, setAssignRoleDialog] = useState(false);
   const [addMemberDialog, setAddMemberDialog] = useState(false);
   const [waiverDialog, setWaiverDialog] = useState(false);
+  const [deleteMemberDialog, setDeleteMemberDialog] = useState<{
+    open: boolean;
+    member: any;
+    confirmText: string;
+  }>({ open: false, member: null, confirmText: "" });
+  const [deletingMember, setDeletingMember] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
 
   useEffect(() => {
@@ -195,6 +202,34 @@ const Members = () => {
         setConfirmDialog({ ...confirmDialog, open: false });
       },
     });
+  };
+
+  const handleDeleteMember = async () => {
+    if (!deleteMemberDialog.member) return;
+    const member = deleteMemberDialog.member;
+    const expectedText = `DELETE ${member.first_name} ${member.last_name}`;
+    if (deleteMemberDialog.confirmText !== expectedText) {
+      toast.error(`Please type "${expectedText}" to confirm`);
+      return;
+    }
+
+    setDeletingMember(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke('delete-member', {
+        body: { memberId: member.id },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${member.first_name} ${member.last_name} has been deleted`);
+      setDeleteMemberDialog({ open: false, member: null, confirmText: "" });
+      loadMembers();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete member");
+    } finally {
+      setDeletingMember(false);
+    }
   };
 
   // Sort members: positions first (in hierarchy order), then alphabetically by first name
@@ -410,6 +445,17 @@ const Members = () => {
                         )}
                       </div>
                     ) : null}
+                    {(isSuperAdmin || isFinancialSecretary) && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setDeleteMemberDialog({ open: true, member, confirmText: "" })}
+                        className="h-8 text-xs w-full"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete Member
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -465,6 +511,54 @@ const Members = () => {
         member={selectedMember}
         onSuccess={loadMembers}
       />
+
+      <Dialog
+        open={deleteMemberDialog.open}
+        onOpenChange={(open) => {
+          if (!open) setDeleteMemberDialog({ open: false, member: null, confirmText: "" });
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">⚠️ Delete Member Permanently</DialogTitle>
+            <DialogDescription className="space-y-3 pt-2">
+              <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive font-medium">
+                WARNING: This action is IRREVERSIBLE. This will permanently delete the member's account, profile, and ALL associated data including payment records, votes, and forum posts.
+              </div>
+              {deleteMemberDialog.member && (
+                <div className="text-sm">
+                  <p><strong>Member:</strong> {deleteMemberDialog.member.first_name} {deleteMemberDialog.member.last_name}</p>
+                  <p><strong>ID:</strong> {deleteMemberDialog.member.member_id}</p>
+                </div>
+              )}
+              <p className="text-sm">
+                To confirm, type: <code className="bg-muted px-1.5 py-0.5 rounded font-bold">DELETE {deleteMemberDialog.member?.first_name} {deleteMemberDialog.member?.last_name}</code>
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={deleteMemberDialog.confirmText}
+            onChange={(e) => setDeleteMemberDialog(prev => ({ ...prev, confirmText: e.target.value }))}
+            placeholder={`Type DELETE ${deleteMemberDialog.member?.first_name} ${deleteMemberDialog.member?.last_name}`}
+            className="font-mono"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteMemberDialog({ open: false, member: null, confirmText: "" })}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={
+                deletingMember ||
+                deleteMemberDialog.confirmText !== `DELETE ${deleteMemberDialog.member?.first_name} ${deleteMemberDialog.member?.last_name}`
+              }
+              onClick={handleDeleteMember}
+            >
+              {deletingMember ? "Deleting..." : "Delete Permanently"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
