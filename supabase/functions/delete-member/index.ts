@@ -64,18 +64,9 @@ Deno.serve(async (req) => {
       : '[Deleted Member]'
 
     // Update payment records with admin_note to preserve member identity
-    await Promise.all([
-      supabaseAdmin.from('dues_payments').update({ admin_note: supabaseAdmin.rpc ? memberLabel : memberLabel }).eq('user_id', memberId).is('admin_note', null),
-      supabaseAdmin.from('event_payments').update({ admin_note: memberLabel }).eq('user_id', memberId).is('admin_note', null),
-      supabaseAdmin.from('donation_payments').update({ admin_note: memberLabel }).eq('user_id', memberId).is('admin_note', null),
-    ].map(p => p.catch(() => {})))
-
-    // For records that already have admin_note, prepend the member label
-    await Promise.all([
-      supabaseAdmin.from('dues_payments').update({ admin_note: memberLabel }).eq('user_id', memberId),
-      supabaseAdmin.from('event_payments').update({ admin_note: memberLabel }).eq('user_id', memberId),
-      supabaseAdmin.from('donation_payments').update({ admin_note: memberLabel }).eq('user_id', memberId),
-    ].map(p => p.catch(() => {})))
+    await supabaseAdmin.from('dues_payments').update({ admin_note: memberLabel }).eq('user_id', memberId)
+    await supabaseAdmin.from('event_payments').update({ admin_note: memberLabel }).eq('user_id', memberId)
+    await supabaseAdmin.from('donation_payments').update({ admin_note: memberLabel }).eq('user_id', memberId)
 
     // Delete the user from auth (cascade will delete profile, payment user_id becomes NULL)
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(memberId)
