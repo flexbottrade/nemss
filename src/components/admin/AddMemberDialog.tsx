@@ -121,7 +121,8 @@ export const AddMemberDialog = ({ open, onOpenChange, onSuccess }: AddMemberDial
                 id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                readOnly
+                className="bg-muted cursor-not-allowed"
                 required
               />
             </div>
