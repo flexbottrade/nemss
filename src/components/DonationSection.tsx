@@ -7,6 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Gift, Copy, CheckCircle2, XCircle, Clock, RefreshCw, Eye } from "lucide-react";
+import { PaymentProofViewer } from "@/components/PaymentProofViewer";
+import { PaymentProofUpload } from "@/components/PaymentProofUpload";
+import { uploadProofFiles, deleteProofFiles } from "@/lib/upload-proofs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UpdateRejectedPaymentDialog } from "@/components/UpdateRejectedPaymentDialog";
@@ -16,7 +19,7 @@ import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 export const DonationSection = () => {
   const [selectedDonation, setSelectedDonation] = useState<any>(null);
   const [amount, setAmount] = useState("");
-  const [proof, setProof] = useState<File | null>(null);
+  const [proofFiles, setProofFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [updateProofDialog, setUpdateProofDialog] = useState<{ open: boolean; payment: any }>({
     open: false,
@@ -73,8 +76,8 @@ export const DonationSection = () => {
       toast.error(`Minimum donation amount is ₦${selectedDonation.minimum_amount.toLocaleString()}`);
       return;
     }
-    if (!proof) {
-      toast.error("Please upload payment proof");
+    if (proofFiles.length === 0) {
+      toast.error("Please upload at least one payment proof");
       return;
     }
 
@@ -83,22 +86,13 @@ export const DonationSection = () => {
     if (!user) return;
 
     try {
-      const fileName = `${user.id}/${Date.now()}_${proof.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from("payment-proofs")
-        .upload(fileName, proof);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("payment-proofs")
-        .getPublicUrl(fileName);
+      const proofUrlValue = await uploadProofFiles(user.id, proofFiles);
 
       const { data: insertedPayment, error } = await supabase.from("donation_payments").insert({
         user_id: user.id,
         donation_id: selectedDonation.id,
         amount: parseFloat(amount),
-        payment_proof_url: publicUrl,
+        payment_proof_url: proofUrlValue,
         status: "pending",
       }).select().single();
 
@@ -126,7 +120,7 @@ export const DonationSection = () => {
               day: 'numeric'
             }),
             details: selectedDonation.title,
-            payment_proof_url: `payment-proofs/${fileName}`,
+            payment_proof_url: proofUrlValue,
           },
         });
       } catch (notificationError) {
@@ -136,7 +130,7 @@ export const DonationSection = () => {
       toast.success("Donation submitted successfully!");
       setSelectedDonation(null);
       setAmount("");
-      setProof(null);
+      setProofFiles([]);
       refetchPayments();
     } catch (error: any) {
       toast.error(error.message || "Failed to submit donation");
@@ -149,13 +143,7 @@ export const DonationSection = () => {
     if (!deleteDialog.payment) return;
 
     try {
-      // Delete proof from storage if exists
-      if (deleteDialog.payment.payment_proof_url) {
-        const oldPath = deleteDialog.payment.payment_proof_url.split('payment-proofs/')[1];
-        if (oldPath) {
-          await supabase.storage.from("payment-proofs").remove([oldPath]);
-        }
-      }
+      await deleteProofFiles(deleteDialog.payment.payment_proof_url);
 
       // Delete payment record
       const { error } = await supabase
@@ -212,24 +200,16 @@ export const DonationSection = () => {
                   </Button>
                 </div>
                 {payment?.payment_proof_url && (
-                  <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-border">
-                    {payment.status === "rejected" && payment.admin_note && (
-                      <div className="mb-1 p-2 rounded-md bg-destructive/10 border border-destructive/20">
-                        <p className="text-xs font-semibold text-destructive mb-1">Rejection Reason:</p>
-                        <p className="text-xs text-muted-foreground">{payment.admin_note}</p>
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs flex items-center gap-1"
-                        onClick={() => window.open(payment.payment_proof_url, "_blank")}
-                      >
-                        <Eye className="w-3 h-3" />
-                        View Proof
-                      </Button>
-                      {paymentStatus === "pending" && (
+                    <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-border">
+                     {payment.status === "rejected" && payment.admin_note && (
+                       <div className="mb-1 p-2 rounded-md bg-destructive/10 border border-destructive/20">
+                         <p className="text-xs font-semibold text-destructive mb-1">Rejection Reason:</p>
+                         <p className="text-xs text-muted-foreground">{payment.admin_note}</p>
+                       </div>
+                     )}
+                     <div className="flex flex-wrap gap-2">
+                       <PaymentProofViewer proofUrl={payment.payment_proof_url} />
+                       {paymentStatus === "pending" && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -320,15 +300,11 @@ export const DonationSection = () => {
               </div>
             )}
 
-            <div>
-              <Label className="text-xs md:text-sm">Upload Payment Proof</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setProof(e.target.files?.[0] || null)}
-                className="mt-1 text-xs h-8 md:h-10"
-              />
-            </div>
+            <PaymentProofUpload
+              files={proofFiles}
+              onFilesChange={setProofFiles}
+              label="Upload Payment Proof(s)"
+            />
 
             <div className="flex gap-2">
               <Button 

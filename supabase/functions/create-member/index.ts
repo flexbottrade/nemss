@@ -2,12 +2,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.78.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
       }
     )
 
-    // Verify the requesting user is an admin
+    // Verify the requesting user is an admin or financial secretary
     const authHeader = req.headers.get('Authorization')!
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
@@ -37,21 +37,20 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .single()
 
-    if (!roleData || (roleData.role !== 'admin' && roleData.role !== 'super_admin')) {
-      throw new Error('Unauthorized: Admin access required')
+    if (!roleData || (roleData.role !== 'admin' && roleData.role !== 'super_admin' && roleData.role !== 'financial_secretary')) {
+      throw new Error('Unauthorized: Admin or Financial Secretary access required')
     }
 
-    const { email, password, firstName, lastName, phoneNumber } = await req.json()
+    const { email, firstName, lastName, phoneNumber } = await req.json()
 
-    // Generate member ID
-    const { data: memberIdData, error: memberIdError } = await supabaseAdmin.rpc('generate_member_id')
-    if (memberIdError) throw memberIdError
+    // Default password for all manually added members
+    const defaultPassword = 'member09set'
 
     // Create user with email already confirmed
     const { data: newUser, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password,
-      email_confirm: true, // Auto-confirm email
+      password: defaultPassword,
+      email_confirm: true,
       user_metadata: {
         first_name: firstName,
         last_name: lastName,
@@ -61,8 +60,7 @@ Deno.serve(async (req) => {
 
     if (signUpError) throw signUpError
 
-    // The profile will be created automatically by the trigger
-    // but we need to ensure email_verified is set to true
+    // Ensure email_verified is set to true
     await supabaseAdmin
       .from('profiles')
       .update({ email_verified: true })

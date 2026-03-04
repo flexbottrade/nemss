@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatDateDDMMYY } from "@/lib/utils";
+import { PaymentProofUpload } from "@/components/PaymentProofUpload";
+import { uploadProofFiles } from "@/lib/upload-proofs";
 
 interface ManualEventPaymentDialogProps {
   open: boolean;
@@ -40,14 +42,12 @@ export const ManualEventPaymentDialog = ({
   const [amount, setAmount] = useState(existingPayment?.amount.toString() || "");
   const [paidEventIds, setPaidEventIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [proofFiles, setProofFiles] = useState<File[]>([]);
 
-  // Update amount when event is selected
   useEffect(() => {
     if (selectedEvent && !existingPayment) {
       const event = events.find(e => e.id === selectedEvent);
-      if (event) {
-        setAmount(event.amount.toString());
-      }
+      if (event) setAmount(event.amount.toString());
     }
   }, [selectedEvent, events, existingPayment]);
 
@@ -63,19 +63,11 @@ export const ManualEventPaymentDialog = ({
   }, [existingPayment]);
 
   const loadEvents = async () => {
-    const { data: eventsData } = await supabase
-      .from("events")
-      .select("*")
-      .order("event_date", { ascending: false });
+    const { data: eventsData } = await supabase.from("events").select("*").order("event_date", { ascending: false });
     setEvents(eventsData || []);
 
-    // Load paid events for this user
     const { data: paymentsData } = await supabase
-      .from("event_payments")
-      .select("event_id")
-      .eq("user_id", memberId)
-      .eq("status", "approved");
-    
+      .from("event_payments").select("event_id").eq("user_id", memberId).eq("status", "approved");
     setPaidEventIds(paymentsData?.map(p => p.event_id) || []);
   };
 
@@ -83,36 +75,42 @@ export const ManualEventPaymentDialog = ({
     e.preventDefault();
     setLoading(true);
 
-    const paymentData = {
-      user_id: memberId,
-      event_id: selectedEvent,
-      amount: parseFloat(amount),
-      status: "approved",
-      is_manually_updated: true,
-    };
+    try {
+      let proofUrlValue: string | null = null;
+      if (proofFiles.length > 0) {
+        proofUrlValue = await uploadProofFiles(memberId, proofFiles);
+      }
 
-    let error;
-    if (existingPayment) {
-      const { error: updateError } = await supabase
-        .from("event_payments")
-        .update(paymentData)
-        .eq("id", existingPayment.id);
-      error = updateError;
-    } else {
-      const { error: insertError } = await supabase
-        .from("event_payments")
-        .insert(paymentData);
-      error = insertError;
-    }
+      const paymentData: any = {
+        user_id: memberId,
+        event_id: selectedEvent,
+        amount: parseFloat(amount),
+        status: "approved",
+        is_manually_updated: true,
+        ...(proofUrlValue ? { payment_proof_url: proofUrlValue } : {}),
+      };
 
-    setLoading(false);
+      let error;
+      if (existingPayment) {
+        const { error: updateError } = await supabase.from("event_payments").update(paymentData).eq("id", existingPayment.id);
+        error = updateError;
+      } else {
+        const { error: insertError } = await supabase.from("event_payments").insert(paymentData);
+        error = insertError;
+      }
 
-    if (error) {
-      toast.error(`Failed to ${existingPayment ? "update" : "add"} event payment`);
-    } else {
-      toast.success(`Event payment ${existingPayment ? "updated" : "added"} successfully`);
-      onSuccess();
-      onOpenChange(false);
+      if (error) {
+        toast.error(`Failed to ${existingPayment ? "update" : "add"} event payment`);
+      } else {
+        toast.success(`Event payment ${existingPayment ? "updated" : "added"} successfully`);
+        setProofFiles([]);
+        onSuccess();
+        onOpenChange(false);
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to process payment");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,18 +125,12 @@ export const ManualEventPaymentDialog = ({
             <div className="space-y-2">
               <Label htmlFor="event">Event</Label>
               <Select value={selectedEvent} onValueChange={setSelectedEvent} disabled={!!existingPayment}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select event" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select event" /></SelectTrigger>
                 <SelectContent>
                   {events.map((event) => {
                     const isPaid = paidEventIds.includes(event.id);
                     return (
-                      <SelectItem 
-                        key={event.id} 
-                        value={event.id}
-                        disabled={isPaid && !existingPayment}
-                      >
+                      <SelectItem key={event.id} value={event.id} disabled={isPaid && !existingPayment}>
                         {event.title} - {formatDateDDMMYY(event.event_date)}
                         {isPaid && !existingPayment && " (Paid)"}
                       </SelectItem>
@@ -149,20 +141,16 @@ export const ManualEventPaymentDialog = ({
             </div>
             <div className="space-y-2">
               <Label htmlFor="amount">Amount (₦)</Label>
-              <Input
-                id="amount"
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                required
-                min="0"
-              />
+              <Input id="amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required min="0" />
             </div>
+            <PaymentProofUpload
+              files={proofFiles}
+              onFilesChange={setProofFiles}
+              label="Payment Proof (optional)"
+            />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={loading || !selectedEvent}>
               {loading ? "Saving..." : existingPayment ? "Update Payment" : "Add Payment"}
             </Button>

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Copy, Upload, CreditCard } from "lucide-react";
+import { PaymentProofUpload } from "@/components/PaymentProofUpload";
+import { uploadProofFiles } from "@/lib/upload-proofs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -23,7 +25,7 @@ interface EventPaymentModalProps {
 export const EventPaymentModal = ({ open, onOpenChange, event, userId, onSuccess }: EventPaymentModalProps) => {
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
-  const [paymentProof, setPaymentProof] = useState<File | null>(null);
+  const [proofFiles, setProofFiles] = useState<File[]>([]);
 
   const { data: paymentAccounts = [] } = useQuery({
     queryKey: ["payment-accounts"],
@@ -82,7 +84,7 @@ export const EventPaymentModal = ({ open, onOpenChange, event, userId, onSuccess
       queryClient.invalidateQueries({ queryKey: ["event-payments"] });
       toast.success("Payment submitted successfully! Awaiting admin approval.");
       onOpenChange(false);
-      setPaymentProof(null);
+      setProofFiles([]);
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
@@ -96,38 +98,19 @@ export const EventPaymentModal = ({ open, onOpenChange, event, userId, onSuccess
     toast.success("Account number copied!");
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setPaymentProof(e.target.files[0]);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!paymentProof) {
-      toast.error("Please upload payment proof");
+    if (proofFiles.length === 0) {
+      toast.error("Please upload at least one payment proof");
       return;
     }
 
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const fileExt = paymentProof.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `${userId || user?.id}/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('payment-proofs')
-        .upload(filePath, paymentProof);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('payment-proofs')
-        .getPublicUrl(filePath);
-
-      await createPaymentMutation.mutateAsync(publicUrl);
+      const proofUrlValue = await uploadProofFiles(userId || user?.id || '', proofFiles);
+      await createPaymentMutation.mutateAsync(proofUrlValue);
     } catch (error) {
       toast.error("Failed to upload payment proof");
       console.error(error);
@@ -176,26 +159,11 @@ export const EventPaymentModal = ({ open, onOpenChange, event, userId, onSuccess
             ))}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="payment-proof" className="text-sm">
-              Upload Payment Proof
-            </Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="payment-proof"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="text-xs md:text-sm"
-                required
-              />
-            </div>
-            {paymentProof && (
-              <p className="text-xs text-muted-foreground">
-                Selected: {paymentProof.name}
-              </p>
-            )}
-          </div>
+          <PaymentProofUpload
+            files={proofFiles}
+            onFilesChange={setProofFiles}
+            label="Upload Payment Proof(s)"
+          />
 
           <Button
             type="submit"
