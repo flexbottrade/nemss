@@ -14,6 +14,7 @@ import { ConfirmationDialog } from "@/components/ConfirmationDialog";
 import { RejectPaymentDialog } from "@/components/admin/RejectPaymentDialog";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateDDMMYY } from "@/lib/utils";
+import { PaymentProofViewer } from "@/components/PaymentProofViewer";
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -186,15 +187,7 @@ const Transactions = () => {
               {payment.status}
             </span>
             {payment.payment_proof_url && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                onClick={() => window.open(payment.payment_proof_url, "_blank")}
-              >
-                <ExternalLink className="w-3 h-3 mr-1" />
-                View Proof
-              </Button>
+              <PaymentProofViewer proofUrl={payment.payment_proof_url} />
             )}
             {payment.status === "pending" && isFinancialSecretary && (
               <>
