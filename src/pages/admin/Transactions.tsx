@@ -186,15 +186,29 @@ const Transactions = () => {
               {payment.status}
             </span>
             {payment.payment_proof_url && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                onClick={() => window.open(payment.payment_proof_url, "_blank")}
-              >
-                <ExternalLink className="w-3 h-3 mr-1" />
-                View Proof
-              </Button>
+  Array.isArray(payment.payment_proof_url) ? (
+    payment.payment_proof_url.map((url: string, idx: number) => (
+      <Button
+        key={idx}
+        size="sm"
+        variant="outline"
+        className="h-7 text-xs mb-1"
+        onClick={() => window.open(url.startsWith('https://') ? url : url.replace('https:/','https://'), "_blank")}
+      >
+        <ExternalLink className="w-3 h-3 mr-1" />
+        View Proof {idx + 1}
+      </Button>
+    ))
+  ) : (
+    <Button
+      size="sm"
+      variant="outline"
+      className="h-7 text-xs"
+      onClick={() => window.open(payment.payment_proof_url.startsWith('https://') ? payment.payment_proof_url : payment.payment_proof_url.replace('https:/','https://'), "_blank")}
+    >
+      <ExternalLink className="w-3 h-3 mr-1" />
+      View Proof
+    </Button>
             )}
             {payment.status === "pending" && isFinancialSecretary && (
               <>
