@@ -106,10 +106,16 @@ const Reports = () => {
     const transactions: any[] = [];
 
     // Add dues payments as inflow
+    const getPayerName = (p: any) => {
+      if (p.profiles) return `${p.profiles.first_name} ${p.profiles.last_name}`;
+      const match = p.admin_note?.match(/\[Deleted: (.+?) \(/);
+      return match ? `${match[1]} (Deleted)` : 'Deleted Member';
+    };
+
     duesPayments?.forEach(p => {
       transactions.push({
         date: new Date(p.created_at),
-        payer: `${p.profiles?.first_name} ${p.profiles?.last_name}`,
+        payer: getPayerName(p),
         description: `Dues Payment (${formatDuesPeriod(p.start_month, p.start_year, p.months_paid)} - ${p.months_paid}m)`,
         amount: Number(p.amount),
         type: 'inflow'
@@ -120,7 +126,7 @@ const Reports = () => {
     eventPayments?.forEach(p => {
       transactions.push({
         date: new Date(p.created_at),
-        payer: `${p.profiles?.first_name} ${p.profiles?.last_name}`,
+        payer: getPayerName(p),
         description: `Event: ${p.events?.title}`,
         amount: Number(p.amount),
         type: 'inflow'
@@ -131,7 +137,7 @@ const Reports = () => {
     donationPayments?.forEach(p => {
       transactions.push({
         date: new Date(p.created_at),
-        payer: `${p.profiles?.first_name} ${p.profiles?.last_name}`,
+        payer: getPayerName(p),
         description: `Donation: ${p.donations?.title}`,
         amount: Number(p.amount),
         type: 'inflow'

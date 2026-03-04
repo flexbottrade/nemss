@@ -151,10 +151,25 @@ const Transactions = () => {
       <CardContent className="pt-2 md:pt-3 p-2 md:p-3">
         <div className="flex flex-col md:flex-row justify-between gap-3">
           <div className="flex-1">
-            <p className="font-semibold text-xs md:text-sm">
-              {payment.profiles?.first_name} {payment.profiles?.last_name}
+            <div className="flex items-center gap-1.5">
+              <p className="font-semibold text-xs md:text-sm">
+                {payment.profiles 
+                  ? `${payment.profiles.first_name} ${payment.profiles.last_name}`
+                  : payment.admin_note?.match(/\[Deleted: (.+?) \(/)
+                    ? payment.admin_note.match(/\[Deleted: (.+?) \(/)?.[1]
+                    : 'Deleted Member'}
+              </p>
+              {!payment.profiles && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-destructive/15 text-destructive font-medium">Deleted</span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {payment.profiles 
+                ? `ID: ${payment.profiles.member_id}`
+                : payment.admin_note?.match(/\(([^)]+)\)\]/)
+                  ? `ID: ${payment.admin_note.match(/\(([^)]+)\)\]/)?.[1]}`
+                  : 'Member Deleted'}
             </p>
-            <p className="text-xs text-muted-foreground">ID: {payment.profiles?.member_id}</p>
             {type === "event" && payment.events && (
               <p className="text-xs mt-0.5">Event: {payment.events.title}</p>
             )}

@@ -523,7 +523,7 @@ const Members = () => {
             <DialogTitle className="text-destructive">⚠️ Delete Member Permanently</DialogTitle>
             <DialogDescription className="space-y-3 pt-2">
               <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive font-medium">
-                WARNING: This action is IRREVERSIBLE. This will permanently delete the member's account, profile, and ALL associated data including payment records, votes, and forum posts.
+                WARNING: This action is IRREVERSIBLE. This will permanently delete the member's account and profile. Their payment and transaction records will be preserved for record-keeping but marked as belonging to a deleted member.
               </div>
               {deleteMemberDialog.member && (
                 <div className="text-sm">
