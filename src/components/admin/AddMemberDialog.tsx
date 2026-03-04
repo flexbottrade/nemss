@@ -21,6 +21,19 @@ export const AddMemberDialog = ({ open, onOpenChange, onSuccess }: AddMemberDial
     phoneNumber: "",
   });
 
+  const generateEmail = (firstName: string, lastName: string) => {
+    if (firstName && lastName) {
+      return `${firstName.toLowerCase().trim()}.${lastName.toLowerCase().trim()}@nemss09.com`;
+    }
+    return "";
+  };
+
+  const handleNameChange = (field: "firstName" | "lastName", value: string) => {
+    const updated = { ...formData, [field]: value };
+    updated.email = generateEmail(updated.firstName, updated.lastName);
+    setFormData(updated);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -87,7 +100,7 @@ export const AddMemberDialog = ({ open, onOpenChange, onSuccess }: AddMemberDial
                 <Input
                   id="firstName"
                   value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                  onChange={(e) => handleNameChange("firstName", e.target.value)}
                   required
                 />
               </div>
@@ -96,7 +109,7 @@ export const AddMemberDialog = ({ open, onOpenChange, onSuccess }: AddMemberDial
                 <Input
                   id="lastName"
                   value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                  onChange={(e) => handleNameChange("lastName", e.target.value)}
                   required
                 />
               </div>
